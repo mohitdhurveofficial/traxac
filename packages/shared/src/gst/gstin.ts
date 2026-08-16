@@ -1,6 +1,6 @@
 import { isValidStateCode } from "./states.js";
 
-const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[ZC]{1}[0-9A-Z]{1}$/;
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[A-Z]{1}[0-9A-Z]{1}$/;
 
 /** Char value for GSTIN checksum: 0-9 => 0-9, A-Z => 10-35. */
 function charValue(ch: string): number {

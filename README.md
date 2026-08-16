@@ -1,0 +1,74 @@
+# Traxac
+
+Multi-tenant Indian GST billing SaaS with e-Invoice (IRN) and e-Way Bill built in.
+
+The point of the product: a trader raises an invoice the way they already think
+about it — customer, items, transport — and the compliance layer (IRN, QR, EWB,
+validity, extensions, cancellations) happens underneath without them learning
+the GST API vocabulary.
+
+## Stack
+
+| Layer | Choice | Why |
+| --- | --- | --- |
+| Language | TypeScript (Node 20+, ESM) | one language across API, worker and web |
+| Database | PostgreSQL + Drizzle ORM | SQL-first migrations, no hidden magic |
+| API | Fastify | API-first so a mobile client reuses the same endpoints |
+| Queue | Postgres `SELECT … FOR UPDATE SKIP LOCKED` | no extra infrastructure to run on Railway |
+| Storage | S3-compatible (local driver in dev) | PDFs, signed e-Invoice JSON, attachments |
+| Web | React + Vite + Tailwind | desktop-first, fully responsive |
+| Deploy | Railway | separate development and production configuration |
+
+## Workspace layout
+
+```
+packages/
+  shared/       GST domain: tax engine, GSTIN/HSN validation, EWB rules, API contracts (zod)
+  database/     Drizzle schema, migrations, typed client
+  core/         config, logging, crypto, auth, tenant isolation, domain services
+  gst-gateway/  transport-agnostic provider interfaces for IRP and EWB
+  nic-client/   NIC API client (auth, encryption, retries)
+apps/
+  api/          Fastify HTTP layer over core services
+  worker/       background job runner for compliance operations
+  web/          React application
+```
+
+## Money and correctness
+
+Every monetary amount is an integer number of **paise**, stored as `bigint`.
+The tax engine (`packages/shared/src/gst/calculate.ts`) is pure and
+deterministic, and the same function runs in the browser preview, the API and
+the worker — a preview can never disagree with what is filed.
+
+## Government integrations
+
+Traxac never fabricates an IRN, QR code or e-Way Bill number. The gateway
+packages define provider interfaces; the NIC client speaks the real protocol
+against:
+
+- e-Invoice / IRP — <https://einvoice1.gst.gov.in> (sandbox: `einv-apisandbox.nic.in`)
+- e-Way Bill — <https://ewaybillgst.gov.in>
+
+Until production credentials are provisioned, `GST_ENVIRONMENT=sandbox` routes
+to the NIC sandbox. With no credentials configured at all, compliance actions
+fail loudly with `CREDENTIALS_MISSING` rather than returning fake data.
+
+## Local development
+
+```bash
+pnpm install
+createdb traxac_dev
+cp .env.example .env && pnpm gen:env   # generates the master encryption key
+pnpm db:migrate
+pnpm dev
+```
+
+## Tests
+
+```bash
+pnpm test
+```
+
+The tax engine, GSTIN checksum, e-Way Bill validity rules and credential
+encryption are covered by unit tests.

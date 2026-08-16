@@ -1,33 +1,67 @@
-/**
- * GST rate slabs and supply-type determination.
- */
+/** GST supply classification helpers. */
 
 export type SupplyType = "intra_state" | "inter_state";
-export type TransactionType = "b2b" | "b2c" | "export" | "import";
 
-/** Standard GST slabs in percent. Cess handled separately where applicable. */
-export const GST_SLABS = [0, 0.25, 3, 5, 12, 18, 28] as const;
-export type GstSlab = (typeof GST_SLABS)[number];
+/**
+ * Supply category drives both the IRP `TranDtls`/`DocDtls` fields and the tax
+ * treatment (IGST vs CGST+SGST, zero-rated exports, SEZ).
+ */
+export const SUPPLY_CATEGORIES = [
+  "b2b",
+  "b2c",
+  "export_wp",      // export with payment of tax
+  "export_wop",     // export without payment (LUT/bond)
+  "sez_wp",
+  "sez_wop",
+  "deemed_export",
+] as const;
+export type SupplyCategory = (typeof SUPPLY_CATEGORIES)[number];
 
-export interface RateBreakdownInput {
-  /** Seller (supplier) GSTIN state code. */
+/** IRP `TranDtls.SupTyp` code for each category. */
+export const IRP_SUPPLY_TYPE: Record<SupplyCategory, string> = {
+  b2b: "B2B",
+  b2c: "B2C",
+  export_wp: "EXPWP",
+  export_wop: "EXPWOP",
+  sez_wp: "SEZWP",
+  sez_wop: "SEZWOP",
+  deemed_export: "DEXP",
+};
+
+/** Standard ad-valorem GST slabs in percent. */
+export const GST_SLABS = [0, 0.1, 0.25, 1, 1.5, 3, 5, 6, 7.5, 12, 18, 28] as const;
+
+export interface SupplyTypeInput {
+  /** Supplier's GSTIN state code (first two digits). */
   supplierStateCode: string;
   /** Place of supply state code. */
   placeOfSupplyStateCode: string;
-  /** Buyer is outside India (export / SEZ). */
-  isExport?: boolean;
+  supplyCategory?: SupplyCategory;
+  /**
+   * Section 10(1)(b) / SEZ cases where IGST applies even though supplier and
+   * place of supply share a state.
+   */
+  forceIgst?: boolean;
 }
 
-export function determineSupplyType(
-  input: RateBreakdownInput,
-): SupplyType {
-  if (input.isExport) return "inter_state";
-  return input.supplierStateCode === input.placeOfSupplyStateCode
-    ? "intra_state"
-    : "inter_state";
+/**
+ * Exports, SEZ supplies and supplies to "Other Country/Territory" are always
+ * inter-state; otherwise the state codes decide.
+ */
+export function determineSupplyType(input: SupplyTypeInput): SupplyType {
+  if (input.forceIgst) return "inter_state";
+  const cat = input.supplyCategory;
+  if (cat && cat !== "b2b" && cat !== "b2c") return "inter_state";
+  const pos = input.placeOfSupplyStateCode;
+  if (pos === "96" || pos === "97") return "inter_state";
+  return input.supplierStateCode === pos ? "intra_state" : "inter_state";
 }
 
-/** True when the transaction qualifies as Exempt/Nil-rated slab (0%). */
-export function isNilRateSlab(rate: number): boolean {
-  return rate === 0;
+/** Exports and SEZ-without-payment supplies are zero-rated. */
+export function isZeroRated(category: SupplyCategory): boolean {
+  return category === "export_wop" || category === "sez_wop";
+}
+
+export function isExportCategory(category: SupplyCategory): boolean {
+  return category.startsWith("export") || category.startsWith("sez");
 }

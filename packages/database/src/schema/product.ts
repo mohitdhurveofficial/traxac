@@ -1,7 +1,8 @@
 import {
-  pgTable, text, timestamp, uuid, numeric, integer, boolean, index, uniqueIndex,
+  pgTable, text, uuid, numeric, integer, boolean, index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
+import { createdAt, money, updatedAt } from "./_shared.js";
 
 /** Products / services with default HSN & GST rate for fast repeat billing. */
 export const products = pgTable(
@@ -11,22 +12,39 @@ export const products = pgTable(
     tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
-    hsnSac: text("hsn_sac").notNull(),
-    gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).notNull(),
-    unit: text("unit").notNull().default("NOS"),
-    unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull(),
     sku: text("sku"),
+    hsnSac: text("hsn_sac").notNull(),
+    isService: boolean("is_service").notNull().default(false),
+    gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+    cessRate: numeric("cess_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+    unit: text("unit").notNull().default("NOS"),
+    /** Default selling price in paise. */
+    unitPrice: money("unit_price"),
     isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [
     index("products_tenant_idx").on(t.tenantId),
+    index("products_tenant_hsn_idx").on(t.tenantId, t.hsnSac),
     uniqueIndex("products_tenant_name_uq").on(t.tenantId, t.name),
   ],
 );
 
-/** Units of measure (master list, seeded once per tenant or globally). */
+/** Global HSN/SAC master used for lookup & autocompletion. */
+export const hsnCodes = pgTable(
+  "hsn_codes",
+  {
+    code: text("code").primaryKey(),
+    description: text("description").notNull(),
+    /** Most common GST rate for this code; the user can always override. */
+    defaultGstRate: numeric("default_gst_rate", { precision: 5, scale: 2 }),
+    isService: boolean("is_service").notNull().default(false),
+  },
+  (t) => [index("hsn_codes_description_idx").on(t.description)],
+);
+
+/** Unit Quantity Codes (UQC) as accepted by the IRP / EWB APIs. */
 export const units = pgTable("units", {
   code: text("code").primaryKey(), // NOS, KGS, MTR, LTR, BOX...
   description: text("description").notNull(),

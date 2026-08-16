@@ -1,39 +1,37 @@
-import { and, eq, type SQL } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import { and, eq, type SQL, type SQLWrapper } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { AuthContext } from "./context.js";
-import { assertSameTenant } from "./context.js";
 
 /**
- * Tenant-safe query helpers. Every read/write on tenant-owned tables MUST go
- * through these helpers so tenant isolation is enforced structurally.
+ * Tenant-scoping helpers. Every query against a tenant-owned table is built
+ * with one of these so the `tenant_id = $ctx` predicate cannot be forgotten.
  */
-export function tenantScope(ctx: AuthContext, table: { tenantId: unknown }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const t = table as any;
-  return eq(t.tenantId, ctx.tenantId);
-}
+type TenantTable = PgTable & { tenantId: PgColumn };
+type TenantRowTable = TenantTable & { id: PgColumn };
 
-/** WHERE tenantId = ctx AND id = $1 — single-row tenant-safe fetch. */
-export function tenantWhere(
+/** `WHERE tenant_id = <ctx.tenantId>` plus any extra predicates. */
+export function scoped(
   ctx: AuthContext,
-  table: { tenantId: unknown; id: unknown },
-  id: string,
+  table: TenantTable,
+  ...extra: Array<SQLWrapper | undefined>
 ): SQL {
-  assertSameTenant(ctx, ctx.tenantId); // paranoia check ctx integrity
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const t = table as any;
-  return and(eq(t.tenantId, ctx.tenantId), eq(t.id, id)) as SQL;
+  const clauses = [eq(table.tenantId, ctx.tenantId), ...extra.filter(Boolean)] as SQLWrapper[];
+  return and(...clauses) as SQL;
 }
 
-/** Attach tenant to insert values; throws if values carry a foreign tenant. */
-export function withTenant<T extends { tenantId?: string }>(
+/** `WHERE tenant_id = <ctx.tenantId> AND id = <id>`. */
+export function scopedById(ctx: AuthContext, table: TenantRowTable, id: string): SQL {
+  return and(eq(table.tenantId, ctx.tenantId), eq(table.id, id)) as SQL;
+}
+
+/** Stamp the caller's tenant onto an insert, rejecting a foreign tenantId. */
+export function withTenant<T extends Record<string, unknown>>(
   ctx: AuthContext,
   values: T,
 ): T & { tenantId: string } {
-  if (values.tenantId && values.tenantId !== ctx.tenantId) {
+  const supplied = values["tenantId"];
+  if (typeof supplied === "string" && supplied !== ctx.tenantId) {
     throw new Error("Insert blocked: values carry a foreign tenantId");
   }
   return { ...values, tenantId: ctx.tenantId };
 }
-
-export type { Database };

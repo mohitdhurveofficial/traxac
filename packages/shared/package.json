@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./gst": "./src/gst/index.ts",
-    "./constants": "./src/constants/index.ts"
+    "./constants": "./src/constants/index.ts",
+    "./util": "./src/util/index.ts",
+    "./contracts": "./src/contracts/index.ts"
   },
   "scripts": {
     "dev": "tsc --noEmit --watch --preserveWatchOutput",
@@ -15,6 +17,10 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "@types/node": "^20"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
   }
 }

@@ -2,7 +2,7 @@
   "name": "traxac",
   "private": true,
   "version": "0.1.0",
-  "description": "Traxac — Multi-tenant Indian GST billing SaaS with e-Invoice & e-Way Bill",
+  "description": "Traxac \u2014 Multi-tenant Indian GST billing SaaS with e-Invoice & e-Way Bill",
   "packageManager": "pnpm@9.7.0",
   "engines": {
     "node": ">=20.19"
@@ -18,6 +18,13 @@
     "db:migrate": "pnpm --filter @traxac/database migrate",
     "db:studio": "pnpm --filter @traxac/database studio",
     "db:seed": "pnpm --filter @traxac/core seed",
-    "gen:env": "node scripts/generate-env.mjs"
+    "gen:env": "node scripts/generate-env.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

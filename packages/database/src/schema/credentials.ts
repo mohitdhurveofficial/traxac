@@ -1,51 +1,119 @@
 import {
-  pgTable, text, timestamp, uuid, jsonb, index, uniqueIndex,
+  pgTable, text, uuid, integer, jsonb, index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
+import { gstins } from "./party.js";
+import { users } from "./tenants.js";
+import { createdAt, tsCol, updatedAt } from "./_shared.js";
 
 /**
- * Encrypted credentials for GST/GSP APIs. Secrets are encrypted with
- * AES-256-GCM using a per-tenant data key derived from the platform master
- * key (envelope encryption). Only ciphertext is stored here.
+ * Encrypted GST/GSP API credentials. Secrets are AES-256-GCM encrypted with
+ * the platform master key before they ever reach this table; plaintext is
+ * never stored, logged or returned by the API.
  */
 export const gstCredentials = pgTable(
   "gst_credentials",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    gstinId: uuid("gstin_id").notNull().references(() => gstins.id, { onDelete: "cascade" }),
     gstin: text("gstin").notNull(),
-    /** gsp: which provider (e.g. "nic-sandbox", "generic-gsp"). */
-    provider: text("provider").notNull().default("nic-sandbox"),
-    usernameCipher: text("username_cipher").notNull(),
-    encryptedPayload: text("encrypted_payload").notNull(), // full encrypted JSON blob
-    /** auth-mode: password | OTP-session; sandbox uses username+password+cap. */
-    authMode: text("auth_mode").notNull().default("password"),
-    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    /** nic | gsp-<vendor> */
+    provider: text("provider").notNull().default("nic"),
+    /** sandbox | production */
+    environment: text("environment").notNull().default("sandbox"),
+    /** einvoice | ewb */
+    service: text("service").notNull(),
+    /** Non-secret display hint, e.g. "API_USER_***23". */
+    usernameHint: text("username_hint"),
+    /** AES-256-GCM ciphertext of the full credential JSON. */
+    encryptedPayload: text("encrypted_payload").notNull(),
+    /** Key version so credentials can be re-wrapped during key rotation. */
+    keyVersion: integer("key_version").notNull().default(1),
 
-    status: text("status").notNull().default("active"),
-    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    status: text("status").notNull().default("active"), // active | invalid | disabled
+    lastVerifiedAt: tsCol("last_verified_at"),
+    lastUsedAt: tsCol("last_used_at"),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex("gst_credentials_tenant_gstin_provider_uq").on(
-      t.tenantId, t.gstin, t.provider,
-    ),
+    uniqueIndex("gst_credentials_uq").on(t.tenantId, t.gstin, t.provider, t.environment, t.service),
     index("gst_credentials_tenant_idx").on(t.tenantId),
   ],
 );
 
-/** Sessions for API + web (httpOnly cookie token → session row). */
+/**
+ * Cached government API session tokens (also encrypted). Sharing the cache in
+ * Postgres means API and worker processes never double-authenticate, which
+ * matters because NIC rate-limits auth calls.
+ */
+export const gatewayTokens = pgTable(
+  "gateway_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => gstCredentials.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    encryptedToken: text("encrypted_token").notNull(),
+    /** Session encryption key (SEK) returned by NIC, encrypted at rest. */
+    encryptedSek: text("encrypted_sek"),
+    expiresAt: tsCol("expires_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("gateway_tokens_credential_uq").on(t.credentialId),
+    index("gateway_tokens_expires_idx").on(t.expiresAt),
+  ],
+);
+
+/** Browser/API sessions. Only a SHA-256 hash of the bearer token is stored. */
 export const sessions = pgTable(
   "sessions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull(),
-    tenantId: uuid("tenant_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+    lastSeenAt: tsCol("last_seen_at").notNull().defaultNow(),
+    expiresAt: tsCol("expires_at").notNull(),
+    revokedAt: tsCol("revoked_at"),
+    createdAt: createdAt(),
   },
-  (t) => [index("sessions_user_idx").on(t.userId)],
+  (t) => [
+    uniqueIndex("sessions_token_hash_uq").on(t.tokenHash),
+    index("sessions_user_idx").on(t.userId),
+    index("sessions_expires_idx").on(t.expiresAt),
+  ],
+);
+
+/** Machine-to-machine API keys so a mobile app or ERP can call the same API. */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Public, non-secret prefix shown in the UI (e.g. "txk_live_a1b2"). */
+    prefix: text("prefix").notNull(),
+    keyHash: text("key_hash").notNull(),
+    role: text("role").notNull().default("member"),
+    scopes: jsonb("scopes").$type<string[]>().notNull().default([]),
+    lastUsedAt: tsCol("last_used_at"),
+    expiresAt: tsCol("expires_at"),
+    revokedAt: tsCol("revoked_at"),
+    createdByUserId: uuid("created_by_user_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("api_keys_hash_uq").on(t.keyHash),
+    index("api_keys_tenant_idx").on(t.tenantId),
+  ],
 );

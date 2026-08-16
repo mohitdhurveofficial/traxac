@@ -12,9 +12,10 @@
     "dev": "tsc --noEmit --watch --preserveWatchOutput",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio"
+    "generate": "tsc -p tsconfig.json && drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "push": "tsc -p tsconfig.json && drizzle-kit push",
+    "studio": "tsc -p tsconfig.json && drizzle-kit studio"
   },
   "dependencies": {
     "drizzle-orm": "^0.38.4",
@@ -22,6 +23,8 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.6",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "tsx": "^4.19.2",
+    "@types/node": "^20"
   }
 }
