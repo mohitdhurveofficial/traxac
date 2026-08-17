@@ -152,6 +152,33 @@ export class CredentialService {
     });
   }
 
+  /**
+   * Whether a usable credential exists, without decrypting anything.
+   *
+   * Callers use this to decide whether queuing a portal call is worth doing
+   * at all: a job that can only fail leaves a permanent red mark on a
+   * business that has simply not connected yet.
+   */
+  async exists(
+    ctx: AuthContext,
+    input: { gstin: string; service: GatewayService; environment: GatewayEnvironment },
+  ): Promise<boolean> {
+    const [row] = await this.db
+      .select({ status: gstCredentials.status })
+      .from(gstCredentials)
+      .where(
+        scoped(
+          ctx,
+          gstCredentials,
+          eq(gstCredentials.gstin, input.gstin),
+          eq(gstCredentials.service, input.service),
+          eq(gstCredentials.environment, input.environment),
+        ),
+      )
+      .limit(1);
+    return Boolean(row) && row?.status !== "disabled";
+  }
+
   /** Decrypt for a gateway call. Never expose the return value to a client. */
   async resolve(
     ctx: AuthContext,

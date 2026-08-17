@@ -13,6 +13,8 @@ export interface StoreDocumentInput {
   entityId?: string | null;
   filename: string;
   contentType: string;
+  /** What the user calls it: "Purchase order", "Lorry receipt". */
+  label?: string | null;
   body: Buffer | string;
   /** Replace the existing document of this kind for the entity. */
   replace?: boolean;

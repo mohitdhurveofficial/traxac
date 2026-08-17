@@ -83,6 +83,10 @@ export function Shell({ session, children }: { session: SessionResponse; childre
               </span>
             )}
           </button>
+          <NavLink to="/activity" className={navClass}>
+            <ActivityIcon />
+            Activity
+          </NavLink>
           <NavLink to="/settings" className={navClass}>
             <SettingsIcon />
             Settings
@@ -314,6 +318,13 @@ function ReportIcon() {
   return (
     <svg className="size-4.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
       <path d="M3 16h14v2H3v-2zM5 9h2v5H5V9zm4-5h2v10H9V4zm4 3h2v7h-2V7z" />
+    </svg>
+  );
+}
+function ActivityIcon() {
+  return (
+    <svg className="size-4.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+      <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm.75 3.5v4.19l2.78 1.66-.77 1.29-3.51-2.1V5.5h1.5z" />
     </svg>
   );
 }

@@ -13,6 +13,8 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly details?: unknown,
+    /** Server-side log correlation id, shown to users only for our own faults. */
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -27,6 +29,22 @@ export class ApiError extends Error {
         .map((d) => [d.field as string, d.message as string]),
     );
   }
+}
+
+/**
+ * Called when the server says the session is gone.
+ *
+ * Registered by the app root so a 401 on any background query drops the user
+ * to the sign-in screen, instead of every panel showing its own scary banner.
+ *
+ * `/v1/auth/*` is excluded: a 401 there is the answer to a question, not a
+ * lost session. Treating "am I signed in? — no" as an expiry would clear the
+ * very query that asked, which refetches, which 401s again.
+ */
+let onSessionExpired: (() => void) | undefined;
+
+export function setSessionExpiredHandler(handler: () => void): void {
+  onSessionExpired = handler;
 }
 
 interface RequestOptions {
@@ -57,23 +75,40 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     if (!response.ok) {
-      throw new ApiError("INTERNAL", `Request failed (${response.status})`, response.status);
+      // A non-JSON error body is a proxy or infrastructure failure, never
+      // something we generated. Do not surface its contents.
+      throw expired(
+        new ApiError("INTERNAL", `Request failed (${response.status})`, response.status),
+        path,
+      );
     }
     return (await response.blob()) as T;
   }
 
   const payload = await response.json();
   if (!response.ok) {
-    const error = (payload as { error?: { code?: string; message?: string; details?: unknown } })
-      .error;
-    throw new ApiError(
-      error?.code ?? "INTERNAL",
-      error?.message ?? "Something went wrong",
-      response.status,
-      error?.details,
+    const error = (
+      payload as {
+        error?: { code?: string; message?: string; details?: unknown; requestId?: string };
+      }
+    ).error;
+    throw expired(
+      new ApiError(
+        error?.code ?? "INTERNAL",
+        error?.message ?? "Something went wrong",
+        response.status,
+        error?.details,
+        error?.requestId,
+      ),
+      path,
     );
   }
   return payload as T;
+}
+
+function expired(error: ApiError, path: string): ApiError {
+  if (error.status === 401 && !path.startsWith("/v1/auth/")) onSessionExpired?.();
+  return error;
 }
 
 export const get = <T>(path: string, query?: RequestOptions["query"]): Promise<T> =>

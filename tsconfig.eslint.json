@@ -11,6 +11,7 @@
     "apps/*/src/**/*.ts",
     "apps/*/src/**/*.tsx",
     "apps/*/test/**/*.ts",
+    "e2e/**/*.ts",
     "scripts/**/*.ts",
     "scripts/**/*.mjs",
     "*.ts",

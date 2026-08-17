@@ -42,12 +42,34 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     const entityId = fields["entityId"]?.value;
     if (!entityId) throw new AppError("VALIDATION_FAILED", "entityId is required");
 
+    /*
+     * Upload validation.
+     *
+     * The multipart plugin caps the byte size; this checks the type, because
+     * a tenant document store should not become a place to park executables.
+     */
+    const allowed = new Set([
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "text/csv",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ]);
+    if (!allowed.has(file.mimetype)) {
+      throw new AppError(
+        "VALIDATION_FAILED",
+        "Attach a PDF, image, CSV or spreadsheet. Other file types are not accepted.",
+      );
+    }
+
     const stored = await request.container.documents.store(ctx, {
       kind: "attachment",
       entityType: entityType as "invoice",
       entityId,
       filename: file.filename,
       contentType: file.mimetype,
+      label: fields["label"]?.value ?? null,
       body: await file.toBuffer(),
     });
     return reply.status(201).send(stored);
@@ -187,7 +209,104 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     return request.container.numbering.configureSeries(ctx, id, input);
   });
 
+  /** Attachments and generated files for one invoice. */
+  app.get("/invoices/:id/documents", async (request) => {
+    const ctx = requireAuth(request);
+    const { id } = idParam.parse(request.params);
+    // Ownership check: listFor is tenant-scoped, but a caller should get a
+    // clear 404 for an invoice that is not theirs rather than an empty list.
+    await request.container.invoices.get(ctx, id);
+    return { items: await request.container.documents.listFor(ctx, "invoice", id) };
+  });
+
   /* ------------------------------- Jobs -------------------------------- */
+
+  /**
+   * Background work, for the operator.
+   *
+   * Error text is the safe message already stored on the job; portal
+   * payloads and credentials never reach this endpoint.
+   */
+  app.get("/jobs", async (request) => {
+    const ctx = requireAuth(request);
+    const query = z
+      .object({
+        status: z.enum(["pending", "running", "done", "failed", "cancelled"]).optional(),
+        limit: z.coerce.number().int().min(1).max(200).default(50),
+      })
+      .parse(request.query);
+
+    const { database } = request.container;
+    const rows = await database.client<
+      Array<{
+        id: string;
+        kind: string;
+        status: string;
+        attempts: number;
+        max_attempts: number;
+        last_error: string | null;
+        run_at: Date;
+        started_at: Date | null;
+        finished_at: Date | null;
+        created_at: Date;
+      }>
+    >`
+      SELECT id, kind, status, attempts, max_attempts, last_error,
+             run_at, started_at, finished_at, created_at
+      FROM jobs
+      WHERE tenant_id = ${ctx.tenantId}
+        ${query.status ? database.client`AND status = ${query.status}` : database.client``}
+      ORDER BY created_at DESC
+      LIMIT ${query.limit}
+    `;
+
+    const counts = await database.client<Array<{ status: string; n: number }>>`
+      SELECT status, count(*)::int AS n FROM jobs
+      WHERE tenant_id = ${ctx.tenantId} GROUP BY status
+    `;
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        // "pending with attempts" is a retry, which is what an operator
+        // actually wants to distinguish from a first run.
+        status: row.status === "pending" && row.attempts > 0 ? "retrying" : row.status,
+        attempts: row.attempts,
+        maxAttempts: row.max_attempts,
+        error: row.last_error,
+        runAt: row.run_at,
+        startedAt: row.started_at,
+        finishedAt: row.finished_at,
+        createdAt: row.created_at,
+      })),
+      counts: Object.fromEntries(counts.map((c) => [c.status, Number(c.n)])),
+    };
+  });
+
+  /** Put a failed job back in the queue under the same idempotency key. */
+  app.post("/jobs/:id/retry", async (request) => {
+    const ctx = requireAuth(request);
+    const { id } = idParam.parse(request.params);
+    const { database, queue } = request.container;
+
+    const rows = await database.client<
+      Array<{ idempotency_key: string | null; tenant_id: string }>
+    >`
+      SELECT idempotency_key, tenant_id FROM jobs WHERE id = ${id} LIMIT 1
+    `;
+    const job = rows[0];
+    if (!job || job.tenant_id !== ctx.tenantId) throw new AppError("NOT_FOUND", "Job not found");
+    if (!job.idempotency_key) {
+      throw new AppError("INVALID_STATE", "This job cannot be retried automatically");
+    }
+
+    const requeued = await queue.requeue(job.idempotency_key);
+    if (!requeued) {
+      throw new AppError("INVALID_STATE", "Only a finished or failed job can be retried");
+    }
+    return { id: requeued.id, status: requeued.status };
+  });
 
   /** Poll a queued compliance job — how the UI shows "generating…". */
   app.get("/jobs/:id", async (request) => {

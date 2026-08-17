@@ -23,6 +23,9 @@ jobs:
       TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/traxac_test
       TRAXAC_MASTER_KEY: dGVzdC1rZXktMzItYnl0ZXMtZm9yLWNpLXVzZS1vbmx5MDA=
       NODE_ENV: test
+      # RLS is inert for a superuser, so the enforcement suite connects as a
+      # dedicated role. This makes its absence a failure rather than a skip.
+      REQUIRE_RLS_ROLE: "1"
     steps:
       - uses: actions/checkout@v4
       # No `version:` here on purpose — packageManager in package.json is the
@@ -38,9 +41,45 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm db:migrate
+      # Row-level security only bites for a non-superuser; the enforcement
+      # tests connect as this role to prove the policies are real.
+      - run: node scripts/create-app-role.mjs
       # Integration tests run against the service Postgres: tenant isolation
       # and number allocation are enforced by SQL, so a mock proves nothing.
       - run: pnpm test
       # The production bundle must exist for the routing test to be meaningful
       # and for the API to have something to serve.
       - run: pnpm build
+
+  browser:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: traxac_e2e
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+    env:
+      E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/traxac_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Drives the built application through a real browser: sign-in, master
+      # data, the invoice lifecycle, tenant isolation and error handling.
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

@@ -1,4 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { describeError } from "../lib/errors.js";
+import { notify } from "../lib/toast.js";
 
 /** Small, unopinionated primitives. Anything reused three times lands here. */
 
@@ -34,15 +36,65 @@ export function EmptyState({
   );
 }
 
-export function ErrorNote({ error }: { error: unknown }) {
-  if (!error) return null;
-  const message = error instanceof Error ? error.message : "Something went wrong";
+/**
+ * The one way failures are shown.
+ *
+ * Every screen renders this rather than its own `{error.message}`, so a user
+ * never sees a raw code, and every failure that we caused carries a reference
+ * they can quote to support.
+ */
+export function ErrorNote({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const described = describeError(error);
+  if (!described) return null;
   return (
     <div
       role="alert"
-      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-800"
     >
-      {message}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{described.title}</p>
+          {described.detail && <p className="mt-0.5 text-red-700">{described.detail}</p>}
+          {described.reference && (
+            <p className="mt-1 font-mono text-[11px] text-red-600/80">
+              Reference {described.reference}
+            </p>
+          )}
+        </div>
+        {onRetry && described.retryable && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="shrink-0 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-medium text-red-800 hover:bg-red-50"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Full-panel failure, for when a page has nothing else to show. */
+export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const described = describeError(error) ?? {
+    title: "Something went wrong",
+    retryable: true as const,
+  };
+  return (
+    <div className="grid place-items-center px-6 py-20 text-center">
+      <div className="max-w-sm">
+        <p className="text-base font-medium">{described.title}</p>
+        {described.detail && <p className="mt-1 text-sm text-muted">{described.detail}</p>}
+        {described.reference && (
+          <p className="mt-2 font-mono text-[11px] text-muted">Reference {described.reference}</p>
+        )}
+        {onRetry && (
+          <button type="button" onClick={onRetry} className="btn-secondary mt-4">
+            Try again
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -236,22 +288,13 @@ export function SearchInput({
   );
 }
 
-/** Transient confirmation, e.g. after copying an IRN. */
+/**
+ * Transient confirmation, e.g. after copying an IRN.
+ *
+ * Kept as a hook for the call sites that already use it, but the message now
+ * goes to the single global Toaster so confirmations and failures stack in one
+ * place instead of fighting for the same corner of the screen.
+ */
 export function useToast() {
-  const [message, setMessage] = useState<string | null>(null);
-  useEffect(() => {
-    if (!message) return undefined;
-    const timer = setTimeout(() => setMessage(null), 2600);
-    return () => clearTimeout(timer);
-  }, [message]);
-
-  const toast = message ? (
-    <div className="fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
-      <div role="status" className="rounded-lg bg-ink px-4 py-2 text-sm text-white shadow-lg">
-        {message}
-      </div>
-    </div>
-  ) : null;
-
-  return { toast, show: setMessage };
+  return { toast: null, show: notify };
 }

@@ -96,21 +96,48 @@ export async function invoiceRoutes(app: FastifyInstance): Promise<void> {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
     const options = finalizeInvoiceSchema.parse(request.body ?? {});
-    const { invoices, compliance } = request.container;
+    const { invoices, compliance, queue, credentials } = request.container;
 
     const invoice = await invoices.finalize(ctx, id);
 
+    // Every issued invoice gets a PDF, connected to the portal or not. It was
+    // previously only rendered after an IRN came back, which left a business
+    // without GST credentials unable to print anything it had billed.
+    await queue.enqueue({
+      tenantId: ctx.tenantId,
+      kind: "invoice.render_pdf",
+      idempotencyKey: `invoice.render_pdf:${id}:issued`,
+      payload: { invoiceId: id, tenantId: ctx.tenantId },
+      priority: 30,
+    });
+
+    // Portal work is only queued when there is a login to make it with.
+    // Otherwise the invoice stays "pending", which is what the compliance
+    // panel already reports as "GST portal not connected" — far better than a
+    // job that fails on every retry and leaves a red mark on the account.
+    const gstin = invoice.billFrom.gstin ?? "";
+    const environment = request.container.config.GST_ENVIRONMENT;
+    const [einvoiceReady, ewbReady] = await Promise.all([
+      credentials.exists(ctx, { gstin, service: "einvoice", environment }),
+      credentials.exists(ctx, { gstin, service: "ewb", environment }),
+    ]);
+    const connected = { einvoice: einvoiceReady, ewb: ewbReady };
+
     const queued: string[] = [];
     if (options.generateEinvoice !== false && invoice.einvoiceStatus === "pending") {
-      await compliance.queueEinvoice(ctx, id, options.generateEwb === true);
-      queued.push("einvoice");
+      if (connected.einvoice) {
+        await compliance.queueEinvoice(ctx, id, options.generateEwb === true);
+        queued.push("einvoice");
+      }
     }
     // Only queue the EWB separately when the IRP is not issuing it for us.
     if (options.generateEwb && invoice.ewbRequired && !queued.includes("einvoice")) {
-      await compliance.queueEwb(ctx, id);
-      queued.push("ewb");
+      if (connected.ewb) {
+        await compliance.queueEwb(ctx, id);
+        queued.push("ewb");
+      }
     }
-    return { invoice, queued };
+    return { invoice, queued, portalConnected: connected };
   });
 
   app.post("/:id/cancel", async (request) => {

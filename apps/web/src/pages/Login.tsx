@@ -2,7 +2,8 @@ import { useState } from "react";
 import { field } from "../lib/format.js";
 import { useNavigate } from "react-router-dom";
 import { useLogin, useRegister } from "../api/hooks.js";
-import { ErrorNote, Field, Spinner } from "../components/ui.js";
+import { SubmitButton } from "../components/forms.js";
+import { ErrorNote, Field } from "../components/ui.js";
 
 /**
  * Sign-in and sign-up share one screen. A new business is three fields away
@@ -117,10 +118,9 @@ export function LoginPage() {
 
             <ErrorNote error={error} />
 
-            <button type="submit" className="btn-primary w-full" disabled={pending}>
-              {pending && <Spinner />}
+            <SubmitButton pending={pending}>
               {mode === "login" ? "Sign in" : "Create account"}
-            </button>
+            </SubmitButton>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">

@@ -13,6 +13,8 @@ import { DashboardPage } from "./pages/Dashboard.js";
 import { CustomerDetailPage } from "./pages/CustomerDetail.js";
 import { ProductDetailPage } from "./pages/ProductDetail.js";
 import { ReceivablesPage } from "./pages/Receivables.js";
+import { ActivityPage } from "./pages/Activity.js";
+import { TransporterDetailPage, VehicleDetailPage } from "./pages/TransportDetail.js";
 import { SettingsPage } from "./pages/Settings.js";
 
 /**
@@ -60,6 +62,9 @@ export function App() {
         <Route path="/items/:id" element={<ProductDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/receivables" element={<ReceivablesPage />} />
+        <Route path="/transporters/:id" element={<TransporterDetailPage />} />
+        <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
+        <Route path="/activity" element={<ActivityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/invoices" replace />} />
       </Routes>

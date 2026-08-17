@@ -41,19 +41,26 @@ function clearCookie(secure: boolean, domain?: string): string {
  * on the client address so one attacker cannot spend another tenant's budget,
  * and counts successful requests too — a burst is suspicious either way.
  */
-const CREDENTIAL_RATE_LIMIT = {
-  config: {
-    rateLimit: {
-      max: 10,
-      timeWindow: "5 minutes",
-      keyGenerator: (request: FastifyRequest) => `auth:${request.ip}`,
-      // The 429 body is shaped by the global error handler, so every error
-      // the API returns keeps the same envelope.
+function credentialRateLimit(max: number) {
+  return {
+    config: {
+      rateLimit: {
+        max,
+        timeWindow: "5 minutes",
+        keyGenerator: (request: FastifyRequest) => `auth:${request.ip}`,
+        // The 429 body is shaped by the global error handler, so every error
+        // the API returns keeps the same envelope.
+      },
     },
-  },
-} as const;
+  } as const;
+}
 
-export async function authRoutes(app: FastifyInstance): Promise<void> {
+export async function authRoutes(
+  app: FastifyInstance,
+  options: { authRateLimitMax?: number } = {},
+): Promise<void> {
+  const CREDENTIAL_RATE_LIMIT = credentialRateLimit(options.authRateLimitMax ?? 10);
+
   app.post("/register", CREDENTIAL_RATE_LIMIT, async (request, reply) => {
     const input = registerSchema.parse(request.body);
     const { config, auth } = request.container;

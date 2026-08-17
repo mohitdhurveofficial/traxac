@@ -3,6 +3,7 @@ import { useDashboard, useReceivables } from "../api/hooks.js";
 import { Page, PageHeader } from "../components/shell.js";
 import { EmptyState, ErrorNote, Spinner } from "../components/ui.js";
 import { InvoiceStatus } from "../components/status.js";
+import { GettingStarted } from "../components/getting-started.js";
 import { formatDate, money, moneyCompact } from "../lib/format.js";
 
 /**
@@ -86,7 +87,11 @@ export function DashboardPage() {
       />
 
       <Page>
-        <ErrorNote error={dashboard.error} />
+        <ErrorNote error={dashboard.error} onRetry={() => void dashboard.refetch()} />
+
+        {/* Mounted only for an account that has never billed, so an
+            established business does not pay for the extra queries. */}
+        {data && data.totals.invoiceCount === 0 && <GettingStarted />}
 
         {alerts.length > 0 && (
           <div className="mb-5 flex flex-wrap gap-2">

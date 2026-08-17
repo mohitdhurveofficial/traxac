@@ -82,7 +82,10 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
    */
   await app.register(
     async (api) => {
-      await api.register(authRoutes, { prefix: "/v1/auth" });
+      await api.register(authRoutes, {
+        prefix: "/v1/auth",
+        authRateLimitMax: config.AUTH_RATE_LIMIT_MAX,
+      });
       await api.register(masterRoutes, { prefix: "/v1" });
       await api.register(invoiceRoutes, { prefix: "/v1/invoices" });
       await api.register(complianceRoutes, { prefix: "/v1" });

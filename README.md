@@ -88,11 +88,12 @@ pnpm format:check  # Prettier
 pnpm typecheck     # every package and app
 pnpm test          # unit + integration
 pnpm build         # web bundle + packages
+pnpm test:e2e      # browser tests against the built app
 ```
 
-All five run in CI.
+All six run in CI.
 
-70 tests. Unit coverage for the tax engine (discounts, cess, charges,
+207 unit and integration tests, plus 36 browser tests. Unit coverage for the tax engine (discounts, cess, charges,
 IGST-on-intra, zero-rated exports, exact CGST/SGST halving, round-off), the
 GSTIN checksum, e-Way Bill validity and the extend/cancel windows, IST and
 financial-year maths, and credential encryption including key rotation.
@@ -106,6 +107,22 @@ matter most are enforced by SQL rather than by application code:
   unique, gapless numbers. This test found two real bugs.
 
 Point them at another database with `TEST_DATABASE_URL`.
+
+**Row-level security** is proved by connecting as a non-superuser role, because
+Postgres bypasses every policy for a superuser regardless of `FORCE ROW LEVEL
+SECURITY`. Create it once with `node scripts/create-app-role.mjs`; CI sets
+`REQUIRE_RLS_ROLE=1` so a missing role fails the build instead of quietly
+skipping the suite.
+
+**Browser tests** (`pnpm test:e2e`) drive the built application through
+Chromium on a single origin, exactly as it is deployed: sign-in and session
+expiry, creating a GSTIN, customer and item, the full invoice lifecycle
+including tax splits and payments, attachments, PDFs, reports, GSTIN switching,
+team invitations, offline behaviour, error wording and tenant isolation. They
+run against a dedicated `traxac_e2e` database and start their own API and
+worker. They have caught bugs no unit test could: a routing mismatch that made
+the whole SPA silently fail, an authentication loop, and a PDF that was never
+rendered unless an IRN existed.
 
 ## Deployment
 

@@ -1,12 +1,27 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App.js";
-import { ApiError } from "./api/client.js";
+import { ApiError, setSessionExpiredHandler } from "./api/client.js";
+import { ErrorBoundary } from "./components/boundary.js";
+import { Toaster } from "./components/toaster.js";
+import { ConnectionBanner } from "./components/connection.js";
+import { notifyError } from "./lib/toast.js";
 import "./index.css";
 
 const queryClient = new QueryClient({
+  // Any failed action reports itself, so a button can never look like it
+  // worked when it did not. Validation failures are the exception: those are
+  // shown against the individual fields that need fixing.
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      // 422 lands on the fields; 401 is either the sign-in form's own message
+      // or the session-expiry redirect. Neither needs a toast as well.
+      if (error instanceof ApiError && (error.status === 422 || error.status === 401)) return;
+      notifyError(error);
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,
@@ -20,6 +35,17 @@ const queryClient = new QueryClient({
   },
 });
 
+// A 401 outside the auth endpoints means the cookie lapsed mid-session. Mark
+// the session as gone so the router shows sign-in once, and drop every cached
+// tenant query so the next user never sees the previous one's data. The
+// session query itself is kept — clearing it would trigger a refetch, another
+// 401, and a loop.
+setSessionExpiredHandler(() => {
+  if (queryClient.getQueryData<{ user?: unknown }>(["me"])?.user == null) return;
+  queryClient.setQueryData(["me"], { user: null });
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+});
+
 const container = document.getElementById("root");
 if (!container) throw new Error("Missing #root element");
 
@@ -27,7 +53,11 @@ createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <ErrorBoundary>
+          <ConnectionBanner />
+          <App />
+          <Toaster />
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

@@ -5,6 +5,7 @@ import { GST_STATE_CODES } from "@traxac/shared";
 import { useAddPartyAddress, useParties, useParty, useSaveParty } from "../api/hooks.js";
 import type { Party } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
+import { FormError, SubmitButton, TabBar } from "../components/forms.js";
 import {
   Drawer,
   EmptyState,
@@ -21,19 +22,27 @@ import {
  * Delivery addresses live here rather than on the invoice, because a site or
  * warehouse gets billed to repeatedly — entering it once is the point.
  */
+const PARTY_TABS = [
+  { key: "customer", label: "Customers" },
+  { key: "supplier", label: "Suppliers" },
+  { key: "", label: "Everyone" },
+] as const;
+
 export function CustomersPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
+  // Suppliers share the party table; the tab is a filter, not a second screen.
+  const partyType = params.get("type") ?? "customer";
   const [editing, setEditing] = useState<Party | "new" | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const { toast, show } = useToast();
 
-  const parties = useParties({ q, limit: 50 });
+  const parties = useParties({ q, limit: 50, partyType: partyType || undefined });
 
   return (
     <>
       <PageHeader
-        title="Customers"
+        title={partyType === "supplier" ? "Suppliers" : partyType === "" ? "Parties" : "Customers"}
         subtitle={parties.data ? `${parties.data.total} saved` : undefined}
         actions={
           <button type="button" className="btn-primary" onClick={() => setEditing("new")}>
@@ -41,11 +50,25 @@ export function CustomersPage() {
           </button>
         }
       >
-        <div className="sm:max-w-sm">
-          <SearchInput
-            value={q}
-            placeholder="Name, GSTIN, city, phone…"
-            onChange={(next) => setParams(next ? { q: next } : {}, { replace: true })}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="sm:max-w-xs sm:flex-1">
+            <SearchInput
+              value={q}
+              placeholder="Name, GSTIN, city, phone…"
+              onChange={(next) =>
+                setParams(
+                  { ...(next ? { q: next } : {}), ...(partyType ? { type: partyType } : {}) },
+                  { replace: true },
+                )
+              }
+            />
+          </div>
+          <TabBar
+            tabs={PARTY_TABS}
+            active={partyType}
+            onChange={(key: string) =>
+              setParams({ ...(q ? { q } : {}), ...(key ? { type: key } : {}) }, { replace: true })
+            }
           />
         </div>
       </PageHeader>
@@ -210,10 +233,8 @@ function PartyForm({
             <input name="email" type="email" className="field" defaultValue={party?.email ?? ""} />
           </Field>
         </div>
-        <ErrorNote error={save.error} />
-        <button type="submit" className="btn-primary w-full" disabled={save.isPending}>
-          {save.isPending && <Spinner />} Save customer
-        </button>
+        <FormError error={save.error} />
+        <SubmitButton pending={save.isPending}>Save customer</SubmitButton>
       </form>
     </Drawer>
   );

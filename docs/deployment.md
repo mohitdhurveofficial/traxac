@@ -98,8 +98,26 @@ NIC_CLIENT_SECRET=…
 ```
 
 Without the public key and credentials, invoices still work end to end —
-create, issue, number, PDF — and only the IRN and e-Way Bill steps fail, with
-`CREDENTIALS_MISSING` and a link to the settings screen. Nothing is simulated.
+create, issue, number, PDF — and the compliance panel reports "GST portal not
+connected" with a link to the settings screen. No portal job is queued at all
+in that state, so an unconnected business never accumulates failed jobs, and
+nothing is simulated.
+
+## The database role
+
+Row-level security is **bypassed entirely for a superuser**, FORCE or not. A
+deployment that connects as the database owner therefore has RLS in name only.
+Provision the application role once, then point `DATABASE_URL` at it:
+
+```bash
+TARGET_DATABASE_URL="postgres://owner@host/traxac" node scripts/create-app-role.mjs
+```
+
+It creates `traxac_app` with `SELECT/INSERT/UPDATE/DELETE` on the public schema
+and nothing else — no `CREATE`, no ownership, no `BYPASSRLS`. The enforcement
+suite (`packages/core/test/rls-enforced.test.ts`) connects as this role, and CI
+sets `REQUIRE_RLS_ROLE=1` so its absence fails the build rather than skipping
+the tests.
 
 ## The master key
 

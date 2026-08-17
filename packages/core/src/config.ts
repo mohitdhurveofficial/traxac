@@ -62,6 +62,13 @@ const configSchema = z.object({
    * their own much tighter budget regardless of this value.
    */
   RATE_LIMIT_MAX: z.coerce.number().int().min(10).max(1_000_000).optional(),
+  /**
+   * Sign-in and password-change ceiling per client address, per five minutes.
+   * Deliberately tiny by default — this is the endpoint an attacker guesses
+   * against. Raised only by the browser test suite, which signs in repeatedly
+   * from one address.
+   */
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(5).max(1_000_000).default(10),
   /** Comma-separated list of allowed browser origins. */
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
   COOKIE_DOMAIN: z.string().optional(),

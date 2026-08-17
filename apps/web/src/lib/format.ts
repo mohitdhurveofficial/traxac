@@ -114,3 +114,19 @@ export function numberField(form: FormData, name: string): number {
   const parsed = Number.parseFloat(field(form, name));
   return Number.isFinite(parsed) ? parsed : 0;
 }
+
+/**
+ * Narrows an unknown value to display text.
+ *
+ * Report rows and the settings bag are both `Record<string, unknown>`, and a
+ * bare `String(value)` on an object renders "[object Object]" in front of a
+ * customer. Anything that is not a primitive becomes an em dash instead.
+ */
+export function asText(value: unknown, fallback = ""): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return fallback;
+}

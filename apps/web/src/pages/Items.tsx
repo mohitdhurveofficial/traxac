@@ -13,6 +13,7 @@ import {
   Spinner,
   useToast,
 } from "../components/ui.js";
+import { FormError, SubmitButton } from "../components/forms.js";
 import { checked, field, money, numberField } from "../lib/format.js";
 
 /**
@@ -232,10 +233,8 @@ function ProductForm({
           />
           This is a service, not goods
         </label>
-        <ErrorNote error={save.error} />
-        <button type="submit" className="btn-primary w-full" disabled={save.isPending}>
-          {save.isPending && <Spinner />} Save item
-        </button>
+        <FormError error={save.error} />
+        <SubmitButton pending={save.isPending}>Save item</SubmitButton>
       </form>
     </Drawer>
   );

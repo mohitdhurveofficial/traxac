@@ -791,6 +791,7 @@ function LineItems({
                         step="0.001"
                         min="0"
                         className="field"
+                        data-testid="line-quantity"
                         value={line.quantity}
                         onChange={(event) => update(line.key, { quantity: event.target.value })}
                       />

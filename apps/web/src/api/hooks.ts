@@ -16,6 +16,7 @@ import type {
   PaymentTerm,
   Product,
   ProductHistory,
+  DocumentRef,
   Receivables,
   SessionResponse,
   SessionUser,
@@ -252,7 +253,9 @@ export function useInvoiceAction(id: string) {
 
 /* --------------------------------- Masters ------------------------------ */
 
-export function useParties(params: { q?: string; page?: number; limit?: number } = {}) {
+export function useParties(
+  params: { q?: string; page?: number; limit?: number; partyType?: string } = {},
+) {
   return useQuery({
     queryKey: keys.parties(params),
     queryFn: () => get<Paginated<Party>>("/v1/parties", params),
@@ -563,5 +566,238 @@ export function useImport() {
         results: Array<{ row: number; status: string; name?: string; message?: string }>;
       }>("/v1/import", input),
     onSuccess: () => void qc.invalidateQueries(),
+  });
+}
+
+/* ----------------------------- Tax settings ----------------------------- */
+
+export function useTaxSettings(gstinId: string | undefined) {
+  return useQuery({
+    queryKey: ["tax-settings", gstinId],
+    queryFn: () => get<Record<string, unknown>>(`/v1/gstins/${gstinId}/tax-settings`),
+    enabled: Boolean(gstinId),
+  });
+}
+
+export function useSaveTaxSettings(gstinId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: unknown) => put(`/v1/gstins/${gstinId}/tax-settings`, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["tax-settings"] }),
+  });
+}
+
+/* ------------------------------ HSN master ------------------------------ */
+
+export function useSaveHsn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: unknown) => post("/v1/reference/hsn", input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["hsn"] }),
+  });
+}
+
+/* --------------------------- Number series ------------------------------ */
+
+export function useNumberSeries() {
+  return useQuery({
+    queryKey: ["number-series"],
+    queryFn: () =>
+      get<{
+        items: Array<{
+          id: string;
+          docType: string;
+          series: string;
+          financialYear: string;
+          prefix: string;
+          suffix: string;
+          padding: number;
+          nextNumber: number;
+        }>;
+      }>("/v1/number-series"),
+  });
+}
+
+export function useUpdateNumberSeries(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: unknown) => patch(`/v1/number-series/${id}`, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["number-series"] }),
+  });
+}
+
+/* -------------------------------- Team ---------------------------------- */
+
+export interface TeamMember {
+  userId: string;
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+  lastLoginAt: string | null;
+  joinedAt: string;
+}
+
+export function useTeam() {
+  return useQuery({
+    queryKey: ["team"],
+    queryFn: () => get<{ items: TeamMember[] }>("/v1/auth/team"),
+  });
+}
+
+export function useInviteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; email: string; role: string }) =>
+      post<{ userId: string; temporaryPassword?: string }>("/v1/auth/team", input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useUpdateMemberRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      patch(`/v1/auth/team/${userId}`, { role }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useRemoveMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => del(`/v1/auth/team/${userId}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+/* ------------------------------ API keys -------------------------------- */
+
+export interface ApiKeySummary {
+  id: string;
+  name: string;
+  prefix: string;
+  role: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export function useApiKeys() {
+  return useQuery({
+    queryKey: ["api-keys"],
+    queryFn: () => get<{ items: ApiKeySummary[] }>("/v1/auth/api-keys"),
+  });
+}
+
+export function useCreateApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; role: string }) =>
+      post<{ id: string; key: string; prefix: string }>("/v1/auth/api-keys", input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["api-keys"] }),
+  });
+}
+
+export function useRevokeApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => del(`/v1/auth/api-keys/${id}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["api-keys"] }),
+  });
+}
+
+/* ------------------------------ Documents ------------------------------- */
+
+export function useInvoiceDocuments(invoiceId: string | undefined) {
+  return useQuery({
+    queryKey: ["documents", invoiceId],
+    queryFn: () => get<{ items: DocumentRef[] }>(`/v1/invoices/${invoiceId}/documents`),
+    enabled: Boolean(invoiceId),
+  });
+}
+
+export function useUploadDocument(invoiceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { file: File; label: string }) => {
+      const body = new FormData();
+      body.append("file", input.file);
+      body.append("entityType", "invoice");
+      body.append("entityId", invoiceId);
+      body.append("label", input.label);
+      // FormData must not carry a JSON content-type; the browser sets the
+      // multipart boundary itself.
+      const response = await fetch(`/api/v1/documents`, {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        throw new Error(payload?.error?.message ?? "The file could not be uploaded");
+      }
+      return response.json() as Promise<DocumentRef>;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["documents", invoiceId] });
+      void qc.invalidateQueries({ queryKey: keys.invoice(invoiceId) });
+    },
+  });
+}
+
+export function useDeleteDocument(invoiceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => del(`/v1/documents/${documentId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["documents", invoiceId] });
+      void qc.invalidateQueries({ queryKey: keys.invoice(invoiceId) });
+    },
+  });
+}
+
+/* --------------------------------- Jobs --------------------------------- */
+
+export function useJobs(status?: string) {
+  return useQuery({
+    queryKey: ["jobs", status ?? "all"],
+    queryFn: () =>
+      get<{
+        items: Array<{
+          id: string;
+          kind: string;
+          status: string;
+          attempts: number;
+          maxAttempts: number;
+          error: string | null;
+          runAt: string;
+          startedAt: string | null;
+          finishedAt: string | null;
+          createdAt: string;
+        }>;
+        counts: Record<string, number>;
+      }>("/v1/jobs", status ? { status } : undefined),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useRetryJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => post(`/v1/jobs/${id}/retry`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+
+/* ------------------------------- Reports -------------------------------- */
+
+export function useReport<T>(name: string, params: Record<string, string | undefined> = {}) {
+  return useQuery({
+    queryKey: ["report", name, params],
+    queryFn: () => get<T>(`/v1/reports/${name}`, params),
   });
 }

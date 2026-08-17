@@ -18,3 +18,8 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 migrations/meta/_journal.json.bak
+
+# Browser tests
+/test-results/
+/playwright-report/
+/.storage-e2e/

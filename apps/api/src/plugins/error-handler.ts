@@ -9,6 +9,32 @@ import { AppError } from "@traxac/shared";
  * A stable `code` lets clients branch without parsing prose, and the
  * `requestId` ties a user-visible failure to the server logs.
  */
+/**
+ * Safe wording for the failures Fastify raises before our code runs.
+ *
+ * Keyed by Fastify error code, falling back to the status. Anything not listed
+ * gets the generic sentence — silence is better than leaking a framework
+ * message we have not read.
+ */
+const CLIENT_ERRORS: Record<string, { code: string; message: string }> = {
+  FST_ERR_CTP_EMPTY_JSON_BODY: { code: "VALIDATION_FAILED", message: "The request was empty" },
+  FST_ERR_CTP_INVALID_JSON_BODY: {
+    code: "VALIDATION_FAILED",
+    message: "The request could not be read",
+  },
+  FST_ERR_CTP_INVALID_MEDIA_TYPE: {
+    code: "UNSUPPORTED_MEDIA_TYPE",
+    message: "That content type is not supported",
+  },
+  FST_ERR_CTP_BODY_TOO_LARGE: { code: "PAYLOAD_TOO_LARGE", message: "That upload is too large" },
+  FST_REQ_FILE_TOO_LARGE: { code: "PAYLOAD_TOO_LARGE", message: "That file is too large" },
+  FST_PARTS_LIMIT: { code: "PAYLOAD_TOO_LARGE", message: "Too many files in one upload" },
+  "404": { code: "NOT_FOUND", message: "Not found" },
+  "405": { code: "BAD_REQUEST", message: "That action is not allowed here" },
+  "413": { code: "PAYLOAD_TOO_LARGE", message: "That upload is too large" },
+  "415": { code: "UNSUPPORTED_MEDIA_TYPE", message: "That content type is not supported" },
+};
+
 export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
     const requestId = request.id;
@@ -54,11 +80,15 @@ export function registerErrorHandler(app: FastifyInstance): void {
     }
 
     if (status < 500) {
-      request.log.warn({ err: error }, "request rejected");
+      // Fastify's own text names internals ("body must be object",
+      // "FST_ERR_CTP_INVALID_MEDIA_TYPE") and, for multipart, echoes the
+      // configured limits. Log it, send our own wording.
+      request.log.warn({ err: error, code: fastifyError.code }, "request rejected");
+      const known = CLIENT_ERRORS[fastifyError.code ?? ""] ?? CLIENT_ERRORS[String(status)];
       return reply.status(status).send({
         error: {
-          code: fastifyError.code ?? "BAD_REQUEST",
-          message: fastifyError.message ?? "The request could not be processed",
+          code: known?.code ?? "BAD_REQUEST",
+          message: known?.message ?? "The request could not be processed",
           requestId,
         },
       });

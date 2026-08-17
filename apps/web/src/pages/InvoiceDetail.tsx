@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { computeValidity, GST_STATE_CODES } from "@traxac/shared";
-import { useInvoice, useInvoiceAction, useInvoiceTimeline } from "../api/hooks.js";
+import { useCredentials, useInvoice, useInvoiceAction, useInvoiceTimeline } from "../api/hooks.js";
 import type { AddressSnapshot, InvoiceDetail } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
 import {
@@ -12,7 +12,17 @@ import {
   Pill,
 } from "../components/status.js";
 import { ComplianceStatus } from "../components/compliance-status.js";
-import { ErrorNote, Field, Modal, Spinner, useToast } from "../components/ui.js";
+import { Attachments } from "../components/attachments.js";
+import { notify } from "../lib/toast.js";
+import {
+  EmptyState,
+  ErrorNote,
+  ErrorState,
+  Field,
+  Modal,
+  Spinner,
+  useToast,
+} from "../components/ui.js";
 import {
   checked,
   field,
@@ -51,6 +61,9 @@ export function InvoiceDetailPage() {
   const query = useInvoice(id);
   const timeline = useInvoiceTimeline(id);
   const actions = useInvoiceAction(id);
+  // Used only to distinguish "not sent yet" from "no portal login saved".
+  const credentials = useCredentials();
+  const portalConnected = (credentials.data?.items.length ?? 0) > 0;
 
   if (query.isLoading) {
     return (
@@ -60,15 +73,23 @@ export function InvoiceDetailPage() {
     );
   }
   if (!query.data) {
-    return (
-      <Page>
-        <ErrorNote error={query.error ?? new Error("Invoice not found")} />
-      </Page>
+    return query.error ? (
+      <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+    ) : (
+      <EmptyState
+        title="This invoice is not here"
+        description="It may have been deleted, or the link may be out of date."
+        action={
+          <button type="button" className="btn-secondary" onClick={() => navigate("/invoices")}>
+            Back to invoices
+          </button>
+        }
+      />
     );
   }
 
   const detail = query.data;
-  const { invoice, lines, charges, einvoice, ewayBill, payments, documents } = detail;
+  const { invoice, lines, charges, einvoice, ewayBill, payments } = detail;
   const isDraft = invoice.status === "draft";
   const busy =
     ["queued", "processing"].includes(invoice.einvoiceStatus) ||
@@ -110,14 +131,7 @@ export function InvoiceDetailPage() {
                 >
                   Duplicate
                 </button>
-                <a
-                  className="btn-secondary"
-                  href={`/api/v1/invoices/${id}/pdf`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  PDF
-                </a>
+                <PdfButton invoiceId={id} onRender={() => actions.renderPdf.mutateAsync()} />
               </>
             )}
           </div>
@@ -340,7 +354,12 @@ export function InvoiceDetailPage() {
 
                 {/* Plain-language summary first; portal identifiers below. */}
                 <div className="mt-3">
-                  <ComplianceStatus invoice={invoice} einvoice={einvoice} ewayBill={ewayBill} />
+                  <ComplianceStatus
+                    invoice={invoice}
+                    einvoice={einvoice}
+                    ewayBill={ewayBill}
+                    portalConnected={portalConnected}
+                  />
                 </div>
 
                 <details className="mt-4 border-t border-line pt-3">
@@ -405,6 +424,7 @@ export function InvoiceDetailPage() {
                  * fail the same way.
                  */}
                 <ComplianceActions
+                  portalConnected={portalConnected}
                   detail={detail}
                   onDialog={setDialog}
                   onRetryEinvoice={() =>
@@ -449,28 +469,7 @@ export function InvoiceDetailPage() {
               </section>
             )}
 
-            {documents.length > 0 && (
-              <section className="card p-4">
-                <h2 className="text-sm font-medium">Files</h2>
-                <ul className="mt-2 space-y-1.5 text-sm">
-                  {documents.map((document) => (
-                    <li key={document.id}>
-                      <a
-                        className="text-brand-700 hover:underline"
-                        href={`/api/v1/documents/${document.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {document.filename}
-                      </a>
-                      <span className="ml-1.5 text-xs text-muted">
-                        {(document.sizeBytes / 1024).toFixed(0)} KB
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            <Attachments invoiceId={id} canEdit={invoice.status !== "cancelled"} onToast={show} />
 
             {!isDraft && invoice.status !== "cancelled" && (
               <button
@@ -498,16 +497,66 @@ export function InvoiceDetailPage() {
 }
 
 /**
+ * Opens the invoice PDF, rendering it first if it is not there yet.
+ *
+ * Rendering happens on the worker, so a plain link to the endpoint showed a
+ * raw "not found" the first time it was clicked. This asks for the render,
+ * waits for it, and only then opens the tab.
+ */
+function PdfButton({
+  invoiceId,
+  onRender,
+}: {
+  invoiceId: string;
+  onRender: () => Promise<unknown>;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const open = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      const url = `/api/v1/invoices/${invoiceId}/pdf`;
+      if ((await fetch(url, { method: "HEAD", credentials: "include" })).ok) {
+        window.open(url, "_blank", "noopener");
+        return;
+      }
+      await onRender();
+      // Poll rather than guess: rendering is normally under a second, but a
+      // busy worker can take longer, and a silent failure is worse than a wait.
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        if ((await fetch(url, { method: "HEAD", credentials: "include" })).ok) {
+          window.open(url, "_blank", "noopener");
+          return;
+        }
+      }
+      notify("The PDF is still being prepared", "Try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button type="button" className="btn-secondary" disabled={busy} onClick={() => void open()}>
+      {busy && <Spinner />}
+      {busy ? "Preparing…" : "PDF"}
+    </button>
+  );
+}
+
+/**
  * Builds the compliance action list in priority order and renders only the
  * first one as primary.
  */
 function ComplianceActions({
   detail,
+  portalConnected,
   onDialog,
   onRetryEinvoice,
   onFixCredentials,
 }: {
   detail: InvoiceDetail;
+  portalConnected: boolean;
   onDialog: (dialog: DialogKind) => void;
   onRetryEinvoice: () => void;
   onFixCredentials: () => void;
@@ -516,22 +565,37 @@ function ComplianceActions({
   const inFlight = ["queued", "processing"];
 
   // A missing credential blocks every portal call, so it outranks everything.
+  // Either the portal rejected us, or no login has ever been saved — the fix
+  // is the same screen, so both funnel into one action.
   const credentialsMissing =
-    einvoice?.errorCode === "CREDENTIALS_MISSING" || ewayBill?.errorCode === "CREDENTIALS_MISSING";
+    !portalConnected ||
+    einvoice?.errorCode === "CREDENTIALS_MISSING" ||
+    ewayBill?.errorCode === "CREDENTIALS_MISSING";
 
   type Action = { key: string; label: string; danger?: boolean; run: () => void };
   const actions: Action[] = [];
 
   if (credentialsMissing) {
-    actions.push({ key: "creds", label: "Add GST credentials", run: onFixCredentials });
+    actions.push({
+      key: "creds",
+      label: portalConnected ? "Fix GST connection" : "Connect GST portal",
+      run: onFixCredentials,
+    });
   }
-  if (invoice.einvoiceStatus === "pending") {
+  // Every portal call below needs a saved login, so offer none until there is
+  // one — a button that can only fail is worse than no button.
+  if (invoice.einvoiceStatus === "pending" && !credentialsMissing) {
     actions.push({ key: "irn", label: "Generate e-Invoice", run: onRetryEinvoice });
   }
   if (invoice.einvoiceStatus === "failed" && !credentialsMissing) {
     actions.push({ key: "irn-retry", label: "Retry e-Invoice", run: onRetryEinvoice });
   }
-  if (invoice.ewbRequired && !ewayBill?.ewbNumber && !inFlight.includes(invoice.ewbStatus)) {
+  if (
+    invoice.ewbRequired &&
+    !ewayBill?.ewbNumber &&
+    !inFlight.includes(invoice.ewbStatus) &&
+    !credentialsMissing
+  ) {
     actions.push({
       key: "ewb",
       label: invoice.ewbStatus === "failed" ? "Retry e-Way Bill" : "Generate e-Way Bill",

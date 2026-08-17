@@ -52,7 +52,17 @@ function invoiceStep(invoice: Invoice): Step {
   };
 }
 
-function einvoiceStep(invoice: Invoice, einvoice: Einvoice | null): Step {
+/** Shown wherever a step is blocked purely because no portal login is saved. */
+const NOT_CONNECTED: Omit<Step, "label"> = {
+  tone: "waiting",
+  status: "GST portal not connected",
+  detail: "Add your portal login in Settings › GST connection to send this",
+};
+
+function einvoiceStep(invoice: Invoice, einvoice: Einvoice | null, connected: boolean): Step {
+  if (!connected && (invoice.einvoiceStatus === "pending" || invoice.einvoiceStatus === "failed")) {
+    return { label: "e-Invoice", ...NOT_CONNECTED };
+  }
   switch (invoice.einvoiceStatus) {
     case "not_required":
       return { label: "e-Invoice", tone: "skipped", status: "Not required", detail: null };
@@ -86,7 +96,10 @@ function einvoiceStep(invoice: Invoice, einvoice: Einvoice | null): Step {
   }
 }
 
-function ewbStep(invoice: Invoice, ewayBill: EwayBill | null): Step {
+function ewbStep(invoice: Invoice, ewayBill: EwayBill | null, connected: boolean): Step {
+  if (!connected && (invoice.ewbStatus === "pending" || invoice.ewbStatus === "failed")) {
+    return { label: "e-Way Bill", ...NOT_CONNECTED };
+  }
   switch (invoice.ewbStatus) {
     case "not_required":
       return {
@@ -148,12 +161,22 @@ export function ComplianceStatus({
   invoice,
   einvoice,
   ewayBill,
+  /**
+   * Whether this business has a saved GST portal login. Defaults to true so a
+   * caller that has not loaded credentials never wrongly claims otherwise.
+   */
+  portalConnected = true,
 }: {
   invoice: Invoice;
   einvoice: Einvoice | null;
   ewayBill: EwayBill | null;
+  portalConnected?: boolean;
 }) {
-  const steps = [invoiceStep(invoice), einvoiceStep(invoice, einvoice), ewbStep(invoice, ewayBill)];
+  const steps = [
+    invoiceStep(invoice),
+    einvoiceStep(invoice, einvoice, portalConnected),
+    ewbStep(invoice, ewayBill, portalConnected),
+  ];
 
   return (
     <ol className="space-y-3">
