@@ -29,6 +29,7 @@ let migrated = false;
 
 export async function testContainer(
   overrides: Partial<Record<string, unknown>> = {},
+  registry?: Parameters<typeof createContainer>[0]["registry"],
 ): Promise<Container> {
   if (!migrated) {
     await execFileAsync("npx", ["tsx", "src/migrate.ts"], {
@@ -61,14 +62,14 @@ export async function testContainer(
     S3_SECRET_ACCESS_KEY: undefined,
     S3_FORCE_PATH_STYLE: true,
     GST_ENVIRONMENT: "sandbox",
-    IRP_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
-    IRP_PRODUCTION_BASE_URL: "https://einvoice1.gst.gov.in",
-    EWB_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
-    EWB_PRODUCTION_BASE_URL: "https://ewaybillgst.gov.in",
     NIC_CLIENT_ID: undefined,
     NIC_CLIENT_SECRET: undefined,
     NIC_PUBLIC_KEY_SANDBOX: undefined,
     NIC_PUBLIC_KEY_PRODUCTION: undefined,
+    NIC_IRP_SANDBOX_BASE_URL: undefined,
+    NIC_IRP_PRODUCTION_BASE_URL: undefined,
+    NIC_EWB_SANDBOX_BASE_URL: undefined,
+    NIC_EWB_PRODUCTION_BASE_URL: undefined,
     WEB_DIST_PATH: undefined,
     RAILWAY_REPLICA_ID: undefined,
     GATEWAY_TIMEOUT_MS: 5000,
@@ -101,7 +102,11 @@ export async function testContainer(
   );
 
   const config = merged as Parameters<typeof createContainer>[0]["config"];
-  return createContainer({ processName: "traxac-test", config });
+  return createContainer(
+    registry
+      ? { processName: "traxac-test", config, registry }
+      : { processName: "traxac-test", config },
+  );
 }
 
 /** Wipe every tenant-owned table between tests. */

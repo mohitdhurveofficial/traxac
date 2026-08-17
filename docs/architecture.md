@@ -84,6 +84,10 @@ would break the consecutiveness requirement.
 
 ## Government integration
 
+See [nic-integration.md](nic-integration.md) for endpoints, the authentication
+flow, credential setup, the retry/idempotency rules and how to run the live
+sandbox tests.
+
 `packages/gst-gateway` defines provider interfaces. `packages/nic-client`
 implements them against the real NIC protocol: an RSA-wrapped auth payload, a
 portal-issued session key (SEK), and AES-256-ECB on every subsequent body. The

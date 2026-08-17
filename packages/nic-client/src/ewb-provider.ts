@@ -1,5 +1,4 @@
 import {
-  DUPLICATE_EWB_CODES,
   gatewayFail,
   gatewayOk,
   type EwbCancelPayload,
@@ -17,12 +16,22 @@ import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { EWB_ACTIONS, EWB_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
-  extractErrorDetail,
+  gstinHeader,
   MissingGatewayConfigError,
   type NicClientOptions,
   type NicSessionManager,
 } from "./session.js";
-import type { PortalErrorDetail, PortalOutcome } from "./einvoice-provider.js";
+import {
+  EWB_AUTH_CODES,
+  EWB_DUPLICATE_CODES,
+  isSuccess,
+  parseEwbError,
+  type ParsedNicError,
+} from "./errors.js";
+import { MissingBaseUrlError } from "./endpoints.js";
+import type { PortalOutcome } from "./einvoice-provider.js";
+
+type PortalErrorDetail = ParsedNicError;
 
 /**
  * e-Way Bill provider speaking the NIC EWB API directly.
@@ -56,7 +65,7 @@ export class NicEwbProvider implements EwbProvider {
       const outcome = await this.action(ctx, "generate", EWB_ACTIONS.generate, payload);
       if (!outcome.ok) {
         // 604: an EWB already exists for this document — read it back instead.
-        if (outcome.detail.errors.some((e) => DUPLICATE_EWB_CODES.has(e.code))) {
+        if (outcome.detail.details.some((d: { code: string }) => EWB_DUPLICATE_CODES.has(d.code))) {
           const existing = extractExistingEwbNumber(outcome.detail);
           if (existing) {
             const lookup = await this.getEwb(ctx, existing);
@@ -231,7 +240,11 @@ export class NicEwbProvider implements EwbProvider {
     isRetry = false,
   ): Promise<PortalOutcome> {
     const session = await this.sessions.session("ewb", ctx);
-    const baseUrl = resolveBaseUrl("ewb", ctx.environment, ctx.credentials.baseUrl);
+    const baseUrl = resolveBaseUrl(
+      "ewb",
+      ctx.environment,
+      ctx.credentials.baseUrl || this.options.baseUrls?.ewb?.[ctx.environment],
+    );
 
     const response = await nicFetch({
       url: `${baseUrl}${path}`,
@@ -241,7 +254,8 @@ export class NicEwbProvider implements EwbProvider {
         Accept: "application/json",
         client_id: ctx.credentials.clientId,
         client_secret: ctx.credentials.clientSecret,
-        gstin: ctx.gstin,
+        // One header only — duplicates merge into a comma-joined value.
+        ...gstinHeader("ewb", ctx.gstin),
         username: ctx.credentials.username,
         authtoken: session.authToken,
       },
@@ -264,8 +278,7 @@ export class NicEwbProvider implements EwbProvider {
     });
 
     const body = response.json ?? {};
-    const status = String(body["status"] ?? body["Status"] ?? "");
-    if (status === "1") {
+    if (isSuccess(body)) {
       const encrypted = body["data"] ?? body["Data"];
       const decoded =
         typeof encrypted === "string" && encrypted
@@ -274,8 +287,8 @@ export class NicEwbProvider implements EwbProvider {
       return { ok: true, data: decoded, raw: redactRaw(body) };
     }
 
-    const detail = extractErrorDetail(body);
-    if (!isRetry && (response.status === 401 || detail.code === "238" || detail.code === "108")) {
+    const detail = parseEwbError(body);
+    if (!isRetry && (response.status === 401 || EWB_AUTH_CODES.has(detail.code))) {
       await this.sessions.invalidate("ewb", ctx);
       return this.request(ctx, operation, method, path, input, true);
     }
@@ -283,7 +296,7 @@ export class NicEwbProvider implements EwbProvider {
   }
 
   private mapError(err: unknown) {
-    if (err instanceof MissingGatewayConfigError) {
+    if (err instanceof MissingGatewayConfigError || err instanceof MissingBaseUrlError) {
       return { code: "CREDENTIALS_MISSING", message: err.message, retryable: false };
     }
     if (err instanceof NicHttpError) {
@@ -296,15 +309,15 @@ export class NicEwbProvider implements EwbProvider {
 function portalError(detail: PortalErrorDetail) {
   return {
     code: detail.code,
-    message: detail.message,
-    retryable: !isPermanentPortalError(detail.code),
-    errors: detail.errors,
+    message: detail.userMessage,
+    retryable: detail.retryable && !isPermanentPortalError(detail.code),
+    errors: detail.details,
   };
 }
 
 /** The duplicate message embeds the existing number, e.g. "… EWB 123456789012". */
 function extractExistingEwbNumber(detail: PortalErrorDetail): string | null {
-  const match = /\b(\d{12})\b/.exec(detail.message);
+  const match = /\b(\d{12})\b/.exec(detail.rawMessage);
   return match?.[1] ?? null;
 }
 

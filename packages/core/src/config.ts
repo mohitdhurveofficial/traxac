@@ -75,10 +75,18 @@ const configSchema = z.object({
 
   /** Government gateway defaults; per-tenant credentials override the base URL. */
   GST_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
-  IRP_SANDBOX_BASE_URL: z.string().default("https://einv-apisandbox.nic.in"),
-  IRP_PRODUCTION_BASE_URL: z.string().default("https://einvoice1.gst.gov.in"),
-  EWB_SANDBOX_BASE_URL: z.string().default("https://einv-apisandbox.nic.in"),
-  EWB_PRODUCTION_BASE_URL: z.string().default("https://ewaybillgst.gov.in"),
+  /**
+   * Gateway base URLs.
+   *
+   * Defaults live in the NIC client and were confirmed by probing the live
+   * hosts. The e-Invoice sandbox has no public default: NIC issues that base
+   * URL when an integrator registers, so it must be supplied here or on the
+   * credential, and the client refuses to guess.
+   */
+  NIC_IRP_SANDBOX_BASE_URL: z.string().url().optional(),
+  NIC_IRP_PRODUCTION_BASE_URL: z.string().url().optional(),
+  NIC_EWB_SANDBOX_BASE_URL: z.string().url().optional(),
+  NIC_EWB_PRODUCTION_BASE_URL: z.string().url().optional(),
   /** NIC issues these per integrator; without them the gateway stays disabled. */
   NIC_CLIENT_ID: z.string().optional(),
   NIC_CLIENT_SECRET: z.string().optional(),

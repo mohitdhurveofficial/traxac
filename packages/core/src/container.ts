@@ -114,6 +114,7 @@ export function createContainer(options: ContainerOptions = {}): Container {
 
   const compliance = new ComplianceService({
     database,
+    logger,
     registry,
     credentials,
     queue,

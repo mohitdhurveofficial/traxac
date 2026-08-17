@@ -22,16 +22,22 @@ import type { GatewayRegistry, GatewayRequestContext } from "@traxac/gst-gateway
 import { actorLabel, requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";
+import type { Logger } from "../infra/logger.js";
 import { payloadFingerprint } from "../infra/crypto.js";
 import type { JobQueue } from "../infra/queue.js";
 import type { CredentialService } from "./credentials.js";
 import { buildEwbPayload, buildIrpPayload, withEwbDetails } from "./payload-builder.js";
+import { findExistingEwb, findExistingIrn, requiresReconciliation } from "./reconcile.js";
 
 /** What `CredentialService.resolve` hands back, named so it can be declared. */
 type ResolvedCredential = Awaited<ReturnType<CredentialService["resolve"]>>;
 
+/** Statuses that mean the portal has acknowledged the bill. */
+const CONFIRMED_EWB_STATUSES = new Set(["generated", "part_b_pending", "expired"]);
+
 export interface ComplianceDeps {
   database: Database;
+  logger?: Logger;
   registry: GatewayRegistry;
   credentials: CredentialService;
   queue: JobQueue;
@@ -198,7 +204,45 @@ export class ComplianceService {
       `einvoice:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`,
     );
 
-    const result = await this.deps.registry.einvoice(environment).generateIrn(gatewayCtx, payload);
+    const provider = this.deps.registry.einvoice(environment);
+
+    /*
+     * Retry safety.
+     *
+     * If an earlier attempt timed out, the portal may already hold an IRN for
+     * this document and we simply never saw the response. Ask before sending:
+     * a duplicate IRN is a filing problem, not a glitch. Only on retries —
+     * the first attempt has nothing to reconcile.
+     */
+    if (requiresReconciliation(record.attempts)) {
+      const existing = await findExistingIrn(
+        provider,
+        gatewayCtx,
+        { docType: payload.DocDtls.Typ, docNo: payload.DocDtls.No, docDate: payload.DocDtls.Dt },
+        this.deps.logger,
+      );
+      if (existing.exists && existing.irn) {
+        await this.deps.credentials.markUsed(credential.id);
+        return this.persistIrn(
+          ctx,
+          invoiceId,
+          record.id,
+          credential.id,
+          {
+            irn: existing.irn,
+            ackNumber: existing.ackNumber ?? "",
+            ackDate: existing.ackDate ?? new Date(),
+            signedInvoice: existing.signedInvoice ?? "",
+            signedQrCode: existing.signedQrCode ?? "",
+            ewbNumber: existing.ewbNumber ?? null,
+            status: existing.status ?? "ACT",
+          },
+          { source: "reconciliation" },
+        );
+      }
+    }
+
+    const result = await provider.generateIrn(gatewayCtx, payload);
     await this.deps.credentials.markUsed(credential.id);
 
     if (!result.ok) {
@@ -237,7 +281,36 @@ export class ComplianceService {
       });
     }
 
-    const data = result.data;
+    return this.persistIrn(ctx, invoiceId, record.id, credential.id, result.data, {
+      raw: result.raw,
+    });
+  }
+
+  /**
+   * Persist a successful IRN.
+   *
+   * Shared by the live response path and the reconciliation path so a
+   * recovered document is stored exactly like a freshly issued one — same
+   * columns, same audit entry, same follow-on PDF job.
+   */
+  private async persistIrn(
+    ctx: AuthContext,
+    invoiceId: string,
+    einvoiceId: string,
+    credentialId: string,
+    data: {
+      irn: string;
+      ackNumber: string;
+      ackDate: Date;
+      signedInvoice: string;
+      signedQrCode: string;
+      ewbNumber?: string | null;
+      ewbValidUntil?: Date | null;
+      status: string;
+      alert?: string | null;
+    },
+    options: { raw?: unknown; source?: string } = {},
+  ): Promise<Einvoice> {
     const [saved] = await this.db
       .update(einvoices)
       .set({
@@ -248,32 +321,34 @@ export class ComplianceService {
         signedInvoice: data.signedInvoice,
         signedQrCode: data.signedQrCode,
         ewbNumber: data.ewbNumber ?? null,
-        responsePayload: result.raw ?? null,
+        responsePayload: options.raw ?? { source: options.source ?? "portal" },
         errorCode: null,
         lastError: null,
         attempts: sql`${einvoices.attempts} + 1`,
         updatedAt: new Date(),
       })
-      .where(eq(einvoices.id, record.id))
+      .where(eq(einvoices.id, einvoiceId))
       .returning();
+
+    const [invoice] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, invoiceId))
+      .limit(1);
 
     await this.db
       .update(invoices)
-      .set({
-        einvoiceStatus: "generated",
-        status: "generated",
-        updatedAt: new Date(),
-      })
+      .set({ einvoiceStatus: "generated", status: "generated", updatedAt: new Date() })
       .where(eq(invoices.id, invoiceId));
-    await this.deps.credentials.markVerified(credential.id);
+    await this.deps.credentials.markVerified(credentialId);
 
     // The IRP may have issued the e-Way Bill alongside the IRN.
-    if (data.ewbNumber) {
+    if (data.ewbNumber && invoice) {
       await this.recordIrpIssuedEwb(
         ctx,
-        invoice.id,
-        gstin.gstin,
-        environment,
+        invoiceId,
+        invoice.billFrom.gstin ?? "",
+        (saved as Einvoice).environment,
         data.ewbNumber,
         data.ewbValidUntil ?? null,
       );
@@ -284,7 +359,12 @@ export class ComplianceService {
       entityType: "invoice",
       entityId: invoiceId,
       summary: `IRN ${data.irn.slice(0, 12)}… (Ack ${data.ackNumber})`,
-      metadata: { irn: data.irn, ackNumber: data.ackNumber, ewbNumber: data.ewbNumber ?? null },
+      metadata: {
+        irn: data.irn,
+        ackNumber: data.ackNumber,
+        ewbNumber: data.ewbNumber ?? null,
+        ...(options.source ? { source: options.source } : {}),
+      },
     });
 
     await this.deps.queue.enqueue({
@@ -392,8 +472,19 @@ export class ComplianceService {
     const bundle = await this.loadBundle(ctx, invoiceId);
     const { invoice } = bundle;
 
+    /*
+     * A bill the portal has confirmed is done — whatever its Part-B state.
+     * Keying this on status === "generated" alone missed a Part-A-only bill
+     * ("part_b_pending"), and a retry produced a second e-Way Bill for the
+     * same consignment.
+     *
+     * A number recorded without confirmation (status still processing or
+     * failed, e.g. captured from a duplicate rejection) is deliberately NOT
+     * short-circuited: it falls through to reconciliation below, which asks
+     * the portal for the real status and validity.
+     */
     const existing = await this.readEwb(ctx, invoiceId);
-    if (existing?.status === "generated" && existing.ewbNumber) return existing;
+    if (existing?.ewbNumber && CONFIRMED_EWB_STATUSES.has(existing.status)) return existing;
 
     const distanceKm = options.distanceKm ?? invoice.distanceKm ?? 0;
     const [gstin] = await this.db
@@ -494,7 +585,47 @@ export class ComplianceService {
       `ewb:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`,
     );
 
-    const result = await this.deps.registry.ewb(environment).generate(gatewayCtx, payload);
+    const ewbProvider = this.deps.registry.ewb(environment);
+
+    // Same rule as the IRN: on a retry, confirm with the portal before
+    // sending anything that could produce a second e-Way Bill.
+    if (requiresReconciliation(record.attempts) && record.ewbNumber) {
+      const existing = await findExistingEwb(
+        ewbProvider,
+        gatewayCtx,
+        record.ewbNumber,
+        this.deps.logger,
+      );
+      if (existing.exists && existing.ewbNumber) {
+        const [recovered] = await this.db
+          .update(ewayBills)
+          .set({
+            ewbNumber: existing.ewbNumber,
+            status: existing.status === "CNL" ? "cancelled" : "generated",
+            generatedAt: existing.generatedAt ?? new Date(),
+            validUntil: existing.validUntil ?? null,
+            errorCode: null,
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(ewayBills.id, record.id))
+          .returning();
+        await this.db
+          .update(invoices)
+          .set({ ewbStatus: "generated", updatedAt: new Date() })
+          .where(eq(invoices.id, invoiceId));
+        await this.recordEwbEvent(
+          ctx,
+          record.id,
+          "generated",
+          { source: "reconciliation" },
+          existing,
+        );
+        return recovered as EwayBill;
+      }
+    }
+
+    const result = await ewbProvider.generate(gatewayCtx, payload);
     await this.deps.credentials.markUsed(credential.id);
 
     if (!result.ok) {

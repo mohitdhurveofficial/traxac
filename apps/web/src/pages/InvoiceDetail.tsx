@@ -11,6 +11,7 @@ import {
   PaymentStatus,
   Pill,
 } from "../components/status.js";
+import { ComplianceStatus } from "../components/compliance-status.js";
 import { ErrorNote, Field, Modal, Spinner, useToast } from "../components/ui.js";
 import {
   checked,
@@ -337,51 +338,64 @@ export function InvoiceDetailPage() {
               <section className="card p-4">
                 <h2 className="text-sm font-medium">Compliance</h2>
 
-                <div className="mt-3 space-y-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted">e-Invoice (IRN)</p>
-                    {einvoice?.irn ? (
-                      <>
-                        <p className="mt-0.5 font-mono text-[11px] break-all">{einvoice.irn}</p>
-                        <p className="mt-1 text-xs text-muted">
-                          Ack {einvoice.ackNumber} · {formatDate(einvoice.ackDate)}
-                          {einvoice.environment === "sandbox" && (
-                            <Pill tone="warn">
-                              <span className="text-[10px]">sandbox</span>
-                            </Pill>
-                          )}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-0.5 text-muted">Not generated</p>
-                    )}
-                  </div>
-
-                  <div className="border-t border-line pt-3">
-                    <p className="text-xs text-muted">e-Way Bill</p>
-                    {ewayBill?.ewbNumber ? (
-                      <>
-                        <p className="mt-0.5 font-mono text-sm">{ewayBill.ewbNumber}</p>
-                        {ewayBill.validUntil && (
-                          <p className="mt-1 text-xs text-muted">
-                            Valid until {formatDateTime(ewayBill.validUntil)} (
-                            {relativeTime(ewayBill.validUntil)})
-                          </p>
-                        )}
-                        {ewayBill.vehicleNo && (
-                          <p className="text-xs text-muted">Vehicle {ewayBill.vehicleNo}</p>
-                        )}
-                        {ewayBill.extensionCount > 0 && (
-                          <p className="text-xs text-muted">Extended {ewayBill.extensionCount}×</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="mt-0.5 text-muted">
-                        {invoice.ewbRequired ? "Required, not generated" : "Not required"}
-                      </p>
-                    )}
-                  </div>
+                {/* Plain-language summary first; portal identifiers below. */}
+                <div className="mt-3">
+                  <ComplianceStatus invoice={invoice} einvoice={einvoice} ewayBill={ewayBill} />
                 </div>
+
+                <details className="mt-4 border-t border-line pt-3">
+                  <summary className="cursor-pointer text-xs text-muted hover:text-ink">
+                    Portal reference
+                  </summary>
+
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted">e-Invoice (IRN)</p>
+                      {einvoice?.irn ? (
+                        <>
+                          <p className="mt-0.5 font-mono text-[11px] break-all">{einvoice.irn}</p>
+                          <p className="mt-1 text-xs text-muted">
+                            Ack {einvoice.ackNumber} · {formatDate(einvoice.ackDate)}
+                            {einvoice.environment === "sandbox" && (
+                              <Pill tone="warn">
+                                <span className="text-[10px]">sandbox</span>
+                              </Pill>
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-0.5 text-muted">Not generated</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-line pt-3">
+                      <p className="text-xs text-muted">e-Way Bill</p>
+                      {ewayBill?.ewbNumber ? (
+                        <>
+                          <p className="mt-0.5 font-mono text-sm">{ewayBill.ewbNumber}</p>
+                          {ewayBill.validUntil && (
+                            <p className="mt-1 text-xs text-muted">
+                              Valid until {formatDateTime(ewayBill.validUntil)} (
+                              {relativeTime(ewayBill.validUntil)})
+                            </p>
+                          )}
+                          {ewayBill.vehicleNo && (
+                            <p className="text-xs text-muted">Vehicle {ewayBill.vehicleNo}</p>
+                          )}
+                          {ewayBill.extensionCount > 0 && (
+                            <p className="text-xs text-muted">
+                              Extended {ewayBill.extensionCount}×
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-0.5 text-muted">
+                          {invoice.ewbRequired ? "Required, not generated" : "Not required"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </details>
 
                 {/*
                  * Exactly one primary button. The list is built in priority

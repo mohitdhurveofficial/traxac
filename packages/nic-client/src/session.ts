@@ -7,6 +7,7 @@ import {
   toPublicKeyPem,
 } from "./crypto.js";
 import { NicHttpError, nicFetch } from "./http.js";
+import { isSuccess, parseEwbError, parseIrpError } from "./errors.js";
 import { EWB_PATHS, IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 
 /**
@@ -46,9 +47,19 @@ export class MemorySessionStore implements SessionStore {
   }
 }
 
+export interface GatewayBaseUrls {
+  sandbox?: string | undefined;
+  production?: string | undefined;
+}
+
 export interface NicClientOptions {
   /** NIC's RSA public key for the environment, PEM or bare base64. */
   publicKeys: { sandbox?: string | undefined; production?: string | undefined };
+  /**
+   * Deployment-level base URLs. A per-credential base URL still takes
+   * precedence, so a tenant routed through a GSP overrides the default.
+   */
+  baseUrls?: { irp?: GatewayBaseUrls; ewb?: GatewayBaseUrls } | undefined;
   timeoutMs: number;
   attempts?: number;
   store: SessionStore;
@@ -123,7 +134,11 @@ export class NicSessionManager {
   ): Promise<NicSession> {
     const appKey = generateAppKey();
     const publicKeyPem = this.publicKey(ctx.environment);
-    const baseUrl = resolveBaseUrl(gateway, ctx.environment, ctx.credentials.baseUrl);
+    const baseUrl = resolveBaseUrl(
+      gateway,
+      ctx.environment,
+      ctx.credentials.baseUrl || this.options.baseUrls?.[gateway]?.[ctx.environment],
+    );
     const path = gateway === "irp" ? IRP_PATHS.auth : EWB_PATHS.auth;
 
     const authPayload = {
@@ -141,8 +156,15 @@ export class NicSessionManager {
         Accept: "application/json",
         client_id: ctx.credentials.clientId,
         client_secret: ctx.credentials.clientSecret,
-        gstin: ctx.gstin,
-        Gstin: ctx.gstin,
+        /*
+         * Exactly one GSTIN header, in the casing each portal expects.
+         *
+         * Sending `gstin` and `Gstin` together looks harmless because HTTP
+         * header names are case-insensitive — but fetch merges duplicates
+         * into a single comma-joined value, and the EWB portal rejects
+         * "GSTIN, GSTIN" with error 393. Confirmed against the live sandbox.
+         */
+        ...gstinHeader(gateway, ctx.gstin),
       },
       body: { Data: rsaEncrypt(publicKeyPem, JSON.stringify(authPayload)) },
       timeoutMs: this.options.timeoutMs,
@@ -161,16 +183,16 @@ export class NicSessionManager {
     });
 
     const body = response.json ?? {};
-    const status = String(body["Status"] ?? body["status"] ?? "");
-    if (status !== "1") {
-      const detail = extractErrorDetail(body);
+    if (!isSuccess(body)) {
+      // The two portals report errors in different shapes; pick the right one.
+      const detail = gateway === "irp" ? parseIrpError(body) : parseEwbError(body);
       throw new NicHttpError(
         response.status,
         detail.code,
-        `NIC authentication failed: ${detail.message}`,
+        detail.userMessage,
         // Wrong credentials must not be retried — repeated failures lock the account.
         false,
-        body,
+        { ...body, parsed: detail.rawMessage },
       );
     }
 
@@ -206,6 +228,14 @@ export class NicSessionManager {
       expiresAt: parsePortalExpiry(decoded.TokenExpiry) ?? new Date(Date.now() + 6 * 3_600_000),
     };
   }
+}
+
+/**
+ * The GSTIN header, named the way each portal expects it.
+ * IRP reads `Gstin`; the e-Way Bill API reads lowercase `gstin`.
+ */
+export function gstinHeader(gateway: "irp" | "ewb", gstin: string): Record<string, string> {
+  return gateway === "irp" ? { Gstin: gstin } : { gstin };
 }
 
 /** NIC returns "yyyy-MM-dd HH:mm:ss" in IST. */

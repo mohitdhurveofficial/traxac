@@ -1,5 +1,4 @@
 import {
-  DUPLICATE_IRN_CODES,
   gatewayFail,
   gatewayOk,
   type EinvoiceProvider,
@@ -13,12 +12,20 @@ import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
-  extractErrorDetail,
+  gstinHeader,
   MissingGatewayConfigError,
   parsePortalExpiry,
   type NicClientOptions,
   type NicSessionManager,
 } from "./session.js";
+import {
+  IRP_AUTH_CODES,
+  IRP_DUPLICATE_CODES,
+  isSuccess,
+  parseIrpError,
+  type ParsedNicError,
+} from "./errors.js";
+import { MissingBaseUrlError } from "./endpoints.js";
 
 /**
  * e-Invoice provider speaking the NIC IRP protocol directly.
@@ -54,7 +61,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       const body = await this.call(ctx, "generateIrn", "POST", IRP_PATHS.generateIrn, payload);
       if (!body.ok) {
         // The portal already holds this document: recover rather than fail.
-        if (body.detail.errors.some((e) => DUPLICATE_IRN_CODES.has(e.code))) {
+        if (body.detail.details.some((d: { code: string }) => IRP_DUPLICATE_CODES.has(d.code))) {
           const recovered = await this.recoverDuplicate(ctx, payload, body.raw);
           if (recovered) return recovered;
         }
@@ -167,7 +174,11 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     isRetry = false,
   ): Promise<PortalOutcome> {
     const session = await this.sessions.session("irp", ctx);
-    const baseUrl = resolveBaseUrl("irp", ctx.environment, ctx.credentials.baseUrl);
+    const baseUrl = resolveBaseUrl(
+      "irp",
+      ctx.environment,
+      ctx.credentials.baseUrl || this.options.baseUrls?.irp?.[ctx.environment],
+    );
 
     const response = await nicFetch({
       url: `${baseUrl}${path}`,
@@ -177,8 +188,8 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
         Accept: "application/json",
         client_id: ctx.credentials.clientId,
         client_secret: ctx.credentials.clientSecret,
-        Gstin: ctx.gstin,
-        gstin: ctx.gstin,
+        // One header only — duplicates merge into a comma-joined value.
+        ...gstinHeader("irp", ctx.gstin),
         user_name: ctx.credentials.username,
         AuthToken: session.authToken,
       },
@@ -203,8 +214,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     });
 
     const body = response.json ?? {};
-    const status = String(body["Status"] ?? "");
-    if (status === "1") {
+    if (isSuccess(body)) {
       const encrypted = body["Data"];
       const decoded =
         typeof encrypted === "string" && encrypted
@@ -213,7 +223,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       return { ok: true, data: decoded, raw: redactRaw(body) };
     }
 
-    const detail = extractErrorDetail(body);
+    const detail = parseIrpError(body);
     if (!isRetry && isAuthRejection(detail.code, response.status)) {
       await this.sessions.invalidate("irp", ctx);
       return this.call(ctx, operation, method, path, payload, true);
@@ -222,7 +232,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
   }
 
   private mapError(err: unknown) {
-    if (err instanceof MissingGatewayConfigError) {
+    if (err instanceof MissingGatewayConfigError || err instanceof MissingBaseUrlError) {
       return { code: "CREDENTIALS_MISSING", message: err.message, retryable: false };
     }
     if (err instanceof NicHttpError) {
@@ -235,22 +245,27 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
 /** Result of one encrypted exchange, before it becomes a GatewayResult. */
 export type PortalOutcome =
   | { ok: true; data: Record<string, unknown>; raw: unknown }
-  | { ok: false; detail: PortalErrorDetail; raw: unknown };
+  | { ok: false; detail: ParsedNicError; raw: unknown };
 
-export type PortalErrorDetail = ReturnType<typeof extractErrorDetail>;
+export type PortalErrorDetail = ParsedNicError;
 
+/**
+ * Convert a parsed portal rejection into the gateway error the application
+ * shows. `message` is the human sentence; the verbatim portal text stays in
+ * `errors` and in the gateway call log for diagnosis.
+ */
 function portalError(detail: PortalErrorDetail) {
   return {
     code: detail.code,
-    message: detail.message,
-    retryable: !isPermanentPortalError(detail.code),
-    errors: detail.errors,
+    message: detail.userMessage,
+    retryable: detail.retryable && !isPermanentPortalError(detail.code),
+    errors: detail.details,
   };
 }
 
-/** 1005/1006 and HTTP 401 mean the auth token was rejected. */
+/** An expired or rejected auth token: drop the session and try once more. */
 function isAuthRejection(code: string, httpStatus: number): boolean {
-  return httpStatus === 401 || code === "1005" || code === "1006" || code === "1007";
+  return httpStatus === 401 || IRP_AUTH_CODES.has(code);
 }
 
 function mapIrnResponse(data: Record<string, unknown>): IrnResult {
