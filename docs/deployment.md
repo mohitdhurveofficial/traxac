@@ -103,6 +103,32 @@ connected" with a link to the settings screen. No portal job is queued at all
 in that state, so an unconnected business never accumulates failed jobs, and
 nothing is simulated.
 
+## Before the first deploy: object storage
+
+The most common first-deploy failure. `STORAGE_DRIVER` defaults to `local`,
+and in production the API refuses to start on it:
+
+```
+[api] failed to start: Error: STORAGE_DRIVER=local is not allowed in production; configure S3
+```
+
+Railway surfaces that as a container that restarts five times and a deployment
+marked failed, because `/health/ready` never answers. Set all five before
+deploying:
+
+```
+STORAGE_DRIVER=s3
+S3_BUCKET=...
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com   # omit for AWS S3
+```
+
+Setting the driver without a bucket fails the same way, with
+`S3_BUCKET is required when STORAGE_DRIVER=s3`. Both checks are deliberate:
+local disk on Railway is ephemeral, so an invoice PDF written there is lost on
+the next deploy.
+
 ## The database role
 
 Row-level security is **bypassed entirely for a superuser**, FORCE or not. A

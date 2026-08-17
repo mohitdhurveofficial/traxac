@@ -112,6 +112,10 @@ export function createContainer(options: ContainerOptions = {}): Container {
         sandbox: config.NIC_PUBLIC_KEY_SANDBOX,
         production: config.NIC_PUBLIC_KEY_PRODUCTION,
       },
+      signingCerts: {
+        sandbox: config.NIC_SIGNING_CERT_SANDBOX,
+        production: config.NIC_SIGNING_CERT_PRODUCTION,
+      },
       timeoutMs: config.GATEWAY_TIMEOUT_MS,
       attempts: 3,
       store: sessionStore,

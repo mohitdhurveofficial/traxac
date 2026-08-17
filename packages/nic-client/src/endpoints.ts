@@ -36,11 +36,22 @@ export const NIC_HOSTS: Record<GatewayEnvironment, { irp: string | null; ewb: st
   },
 };
 
-/** e-Invoice (IRP) paths — `eivital` for auth, `eicore` for documents. */
+/**
+ * e-Invoice (IRP) paths — `eivital` for auth, `eicore` for documents.
+ *
+ * The specification writes these against an `<URL>` placeholder that NIC
+ * issues on registration: `<URL>/api/Invoice`, `<URL>/api/Cancel`,
+ * `<URL>/api/Invoice/irn/<irn_no>`. Mapping `<URL>/api` onto `/eicore/v1.03`
+ * reproduces the generate and get paths exactly, so cancel follows the same
+ * mapping and is `/eicore/v1.03/Cancel` — note it is a sibling of `Invoice`,
+ * not a child of it.
+ *
+ * @see https://einv-apisandbox.nic.in/version1.03/cancel-irn.html
+ */
 export const IRP_PATHS = {
   auth: "/eivital/v1.04/auth",
   generateIrn: "/eicore/v1.03/Invoice",
-  cancelIrn: "/eicore/v1.03/Invoice/Cancel",
+  cancelIrn: "/eicore/v1.03/Cancel",
   getIrn: (irn: string) => `/eicore/v1.03/Invoice/irn/${encodeURIComponent(irn)}`,
   getIrnByDoc: "/eicore/v1.03/Invoice/irnbydocdetails",
   /** e-Way Bill generated from an existing IRN. */

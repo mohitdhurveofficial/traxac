@@ -122,10 +122,66 @@ function messageFor(gateway: "irp" | "ewb", code: string): string | undefined {
   return gateway === "irp" ? IRP_MESSAGES[code] : EWB_MESSAGES[code];
 }
 
-/** IRP shape: `ErrorDetails: [{ ErrorCode, ErrorMessage }]`. */
+/**
+ * Coerce whatever `ErrorDetails` carried into a list of error objects.
+ *
+ * Accepts the array form, a JSON string, and a base64-encoded JSON string.
+ * Anything unrecognisable yields an empty list so the caller falls back to a
+ * generic message rather than inventing a code.
+ */
+function toErrorList(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") return [raw];
+  if (typeof raw !== "string") return [];
+
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  // Plain JSON first — cheaper, and base64 decoding it would produce noise.
+  const direct = tryParseJson(trimmed);
+  if (direct) return direct;
+
+  // Base64 is only attempted when the string actually looks like base64,
+  // so a human-readable message is never mangled into bytes.
+  if (!/^[A-Za-z0-9+/=\r\n]+$/.test(trimmed)) return [{ ErrorMessage: trimmed }];
+  try {
+    const decoded = Buffer.from(trimmed, "base64").toString("utf8");
+    return tryParseJson(decoded) ?? (decoded.trim() ? [{ ErrorMessage: decoded.trim() }] : []);
+  } catch {
+    return [{ ErrorMessage: trimmed }];
+  }
+}
+
+function tryParseJson(value: string): unknown[] | null {
+  if (!/^\s*[[{]/.test(value)) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === "object") return [parsed];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * IRP shape, which is not one shape but three.
+ *
+ * The auth API documents `ErrorDetails` as an errors JSON, while every
+ * document API documents it as "Base 64 encoded string. On decoding
+ * ErrorDetails the following attributes from JSON array are obtained". Both
+ * occur in the wild, and a plain JSON string also turns up.
+ *
+ * Parsing only the array form was silently losing every code: a duplicate
+ * (2150) then read as UNKNOWN, so the existing IRN was never recovered, and an
+ * expired token (1005) never triggered re-authentication. All three forms are
+ * therefore normalised here.
+ *
+ * @see https://einv-apisandbox.nic.in/version1.03/generate-irn.html
+ */
 export function parseIrpError(body: Record<string, unknown>): ParsedNicError {
   const raw = body["ErrorDetails"] ?? body["errorDetails"];
-  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  const list = toErrorList(raw);
 
   const details: NicErrorDetail[] = list.map((item) => {
     const entry = item as Record<string, unknown>;

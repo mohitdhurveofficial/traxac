@@ -110,6 +110,14 @@ const configSchema = z.object({
    */
   NIC_PUBLIC_KEY_SANDBOX: z.string().optional(),
   NIC_PUBLIC_KEY_PRODUCTION: z.string().optional(),
+  /**
+   * NIC's *signing* certificate per environment, used to verify the JWS on
+   * SignedInvoice and SignedQRCode. Distinct from the public keys above,
+   * which only wrap the auth payload. Without it, signatures are reported as
+   * unverified — never assumed valid.
+   */
+  NIC_SIGNING_CERT_SANDBOX: z.string().optional(),
+  NIC_SIGNING_CERT_PRODUCTION: z.string().optional(),
   GATEWAY_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(4),

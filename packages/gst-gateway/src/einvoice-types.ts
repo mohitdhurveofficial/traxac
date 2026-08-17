@@ -137,6 +137,38 @@ export interface IrpInvoicePayload {
   } | null;
   ExpDtls?: IrpExportDetails | null;
   EwbDtls?: IrpEwbDetails | null;
+  /**
+   * Optional groups in the NIC schema that the invoice model does not collect
+   * today. Declared so the payload shape is complete and a caller that does
+   * have the data can pass it without a type change; omitted otherwise rather
+   * than sent empty.
+   *
+   * @see https://einv-apisandbox.nic.in/version1.03/generate-irn.html
+   */
+  PayDtls?: IrpPaymentDetails | null;
+  AddlDocDtls?: IrpAdditionalDocument[] | null;
+}
+
+/** Payment terms and banking details — optional per the NIC schema. */
+export interface IrpPaymentDetails {
+  Nm?: string | null;
+  AccDet?: string | null;
+  Mode?: string | null;
+  FinInsBr?: string | null;
+  PayTerm?: string | null;
+  PayInstr?: string | null;
+  CrTrn?: string | null;
+  DirDr?: string | null;
+  CrDay?: number | null;
+  PaidAmt?: number | null;
+  PaymtDue?: number | null;
+}
+
+/** Supporting documents attached to the e-Invoice — optional per the schema. */
+export interface IrpAdditionalDocument {
+  Url?: string | null;
+  Docs?: string | null;
+  Info?: string | null;
 }
 
 /** Successful IRN generation, normalised from the portal response. */
@@ -151,9 +183,17 @@ export interface IrnResult {
   signedQrCode: string;
   /** Present when the IRP generated the e-Way Bill in the same call. */
   ewbNumber?: string | null;
+  ewbDate?: Date | null;
   ewbValidUntil?: Date | null;
   status: string;
   alert?: string | null;
+  /**
+   * Whether the portal's JWS signatures were checked, and the outcome.
+   * "unverified" means no signing certificate is configured — it is never a
+   * claim that the signature was validated.
+   */
+  signedInvoiceSignature?: string;
+  signedQrSignature?: string;
 }
 
 export interface IrnDetails {
@@ -164,5 +204,10 @@ export interface IrnDetails {
   signedInvoice?: string;
   signedQrCode?: string;
   ewbNumber?: string | null;
+  ewbDate?: Date | null;
+  ewbValidUntil?: Date | null;
   cancelDate?: Date | null;
+  remarks?: string | null;
+  signedInvoiceSignature?: string;
+  signedQrSignature?: string;
 }

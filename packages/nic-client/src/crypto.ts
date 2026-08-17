@@ -68,6 +68,53 @@ export function rsaEncrypt(publicKeyPem: string, plaintext: string): string {
   ).toString("base64");
 }
 
+/**
+ * Wrap the authentication credentials the way the portal expects.
+ *
+ * The auth payload is **base64-encoded first, and the RSA cipher then runs
+ * over those base64 characters** — not over the raw JSON. NIC's own samples
+ * are unambiguous and agree with each other:
+ *
+ *   Java  payload = Base64.getEncoder().encodeToString(payload.getBytes());
+ *         cipher.doFinal(clearText.getBytes());
+ *   C#    Encrypt(Convert.ToBase64String(authBytes), key)
+ *         byte[] plaintext = Encoding.UTF8.GetBytes(data);
+ *
+ * Skipping the base64 step yields a payload the portal cannot parse after
+ * decryption, so every authentication attempt fails. Note this is the
+ * opposite order from the document APIs, where the JSON is AES-encrypted and
+ * the *ciphertext* is what gets base64-encoded.
+ *
+ * @see https://einv-apisandbox.nic.in/version1.04/authentication.html
+ * @see https://einv-apisandbox.nic.in/sample-code-in-java.html
+ */
+export function rsaEncryptAuthPayload(publicKeyPem: string, payload: unknown): string {
+  const base64Json = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
+  assertRsaCapacity(base64Json);
+  return rsaEncrypt(publicKeyPem, base64Json);
+}
+
+/**
+ * PKCS#1 v1.5 with a 2048-bit key carries at most 245 bytes.
+ *
+ * The base64 step inflates the payload by four thirds, so the effective
+ * budget for the credentials JSON is about 183 bytes — of which the AppKey
+ * alone takes 44 and the field names take 73. Long portal credentials can
+ * genuinely overflow it, and OpenSSL's own error ("data too large for key
+ * size") gives an operator no idea what to shorten.
+ */
+const RSA_2048_PKCS1_MAX_BYTES = 245;
+
+function assertRsaCapacity(base64Json: string): void {
+  const size = Buffer.byteLength(base64Json, "utf8");
+  if (size <= RSA_2048_PKCS1_MAX_BYTES) return;
+  throw new Error(
+    `The GST API credentials are too long to encrypt: ${size} bytes after base64 encoding, ` +
+      `against a ${RSA_2048_PKCS1_MAX_BYTES}-byte limit for the portal's 2048-bit key. ` +
+      "Shorten the API username and password — together they must be roughly 66 characters or fewer.",
+  );
+}
+
 /** Fresh 32-byte session AppKey, base64. */
 export function generateAppKey(): string {
   return randomBytes(32).toString("base64");

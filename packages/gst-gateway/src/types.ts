@@ -21,6 +21,16 @@ export interface GatewayCredentials {
   clientSecret: string;
   /** Override for GSP-hosted endpoints. */
   baseUrl?: string | undefined;
+  /**
+   * How the integrator headers are spelled.
+   *
+   * NIC's own documentation disagrees with itself: the specification tables
+   * list `client_id` / `client_secret` / `Gstin`, while both published sample
+   * programs send `client-id` / `client-secret` / `gstin`. Which one a given
+   * deployment accepts is only knowable once credentials are issued, and a
+   * GSP may differ again, so it is configuration rather than a guess.
+   */
+  headerStyle?: "underscore" | "hyphen" | undefined;
 }
 
 export interface GatewayRequestContext {
@@ -32,6 +42,11 @@ export interface GatewayRequestContext {
   idempotencyKey: string;
   /** Correlates gateway calls with the API request that triggered them. */
   requestId?: string | undefined;
+  /**
+   * Supplier GSTIN, sent as `sup_gstin` only when an e-commerce operator acts
+   * on another supplier's document. Omitted for ordinary self-billing.
+   */
+  supplierGstin?: string | undefined;
 }
 
 export interface GatewayError {

@@ -3,7 +3,7 @@ import {
   aesDecrypt,
   aesDecryptToBase64,
   generateAppKey,
-  rsaEncrypt,
+  rsaEncryptAuthPayload,
   toPublicKeyPem,
 } from "./crypto.js";
 import { NicHttpError, nicFetch } from "./http.js";
@@ -56,6 +56,13 @@ export interface NicClientOptions {
   /** NIC's RSA public key for the environment, PEM or bare base64. */
   publicKeys: { sandbox?: string | undefined; production?: string | undefined };
   /**
+   * NIC's *signing* certificate per environment, used to verify the JWS on
+   * SignedInvoice and SignedQRCode. Distinct from `publicKeys`, which only
+   * wraps the auth payload. Absent means signatures are reported unverified
+   * rather than assumed good.
+   */
+  signingCerts?: { sandbox?: string | undefined; production?: string | undefined } | undefined;
+  /**
    * Deployment-level base URLs. A per-credential base URL still takes
    * precedence, so a tenant routed through a GSP overrides the default.
    */
@@ -75,8 +82,15 @@ export class MissingGatewayConfigError extends Error {
   }
 }
 
-/** Refresh a little before expiry so a long call cannot straddle the boundary. */
-const EXPIRY_MARGIN_MS = 5 * 60_000;
+/**
+ * Re-authenticate this long before the stated expiry.
+ *
+ * NIC returns the *same* token until it actually expires and only honours a
+ * forced refresh inside the final ten minutes, so the margin matches that
+ * window: any earlier and we simply get the same token back, any later and a
+ * slow call can straddle the boundary.
+ */
+const EXPIRY_MARGIN_MS = 10 * 60_000;
 
 export class NicSessionManager {
   constructor(private readonly options: NicClientOptions) {}
@@ -154,19 +168,10 @@ export class NicSessionManager {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        client_id: ctx.credentials.clientId,
-        client_secret: ctx.credentials.clientSecret,
-        /*
-         * Exactly one GSTIN header, in the casing each portal expects.
-         *
-         * Sending `gstin` and `Gstin` together looks harmless because HTTP
-         * header names are case-insensitive — but fetch merges duplicates
-         * into a single comma-joined value, and the EWB portal rejects
-         * "GSTIN, GSTIN" with error 393. Confirmed against the live sandbox.
-         */
-        ...gstinHeader(gateway, ctx.gstin),
+        ...integratorHeaders(gateway, ctx),
       },
-      body: { Data: rsaEncrypt(publicKeyPem, JSON.stringify(authPayload)) },
+      // base64(JSON) first, then RSA — see rsaEncryptAuthPayload.
+      body: { Data: rsaEncryptAuthPayload(publicKeyPem, authPayload) },
       timeoutMs: this.options.timeoutMs,
       attempts: this.options.attempts ?? 3,
       telemetry: this.options.telemetry
@@ -233,9 +238,40 @@ export class NicSessionManager {
 /**
  * The GSTIN header, named the way each portal expects it.
  * IRP reads `Gstin`; the e-Way Bill API reads lowercase `gstin`.
+ *
+ * Exactly one is ever sent. Supplying both casings looks harmless because
+ * HTTP header names are case-insensitive, but `fetch` merges duplicates into
+ * one comma-joined value and the EWB portal rejects "GSTIN, GSTIN" with error
+ * 393 — confirmed against the live sandbox.
  */
-export function gstinHeader(gateway: "irp" | "ewb", gstin: string): Record<string, string> {
-  return gateway === "irp" ? { Gstin: gstin } : { gstin };
+export function gstinHeader(
+  gateway: "irp" | "ewb",
+  gstin: string,
+  style: "underscore" | "hyphen" = "underscore",
+): Record<string, string> {
+  if (gateway === "ewb") return { gstin };
+  return style === "hyphen" ? { gstin } : { Gstin: gstin };
+}
+
+/**
+ * Integrator headers, spelled to match the deployment.
+ *
+ * NIC's specification tables and its sample code disagree on the separator
+ * (`client_id` vs `client-id`), so the style travels on the credential and
+ * defaults to the normative tables.
+ */
+export function integratorHeaders(
+  gateway: "irp" | "ewb",
+  ctx: GatewayRequestContext,
+): Record<string, string> {
+  const style = ctx.credentials.headerStyle ?? "underscore";
+  const idKey = style === "hyphen" ? "client-id" : "client_id";
+  const secretKey = style === "hyphen" ? "client-secret" : "client_secret";
+  return {
+    [idKey]: ctx.credentials.clientId,
+    [secretKey]: ctx.credentials.clientSecret,
+    ...gstinHeader(gateway, ctx.gstin, style),
+  };
 }
 
 /** NIC returns "yyyy-MM-dd HH:mm:ss" in IST. */

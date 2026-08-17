@@ -12,7 +12,7 @@ import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
-  gstinHeader,
+  integratorHeaders,
   MissingGatewayConfigError,
   parsePortalExpiry,
   type NicClientOptions,
@@ -26,6 +26,7 @@ import {
   type ParsedNicError,
 } from "./errors.js";
 import { MissingBaseUrlError } from "./endpoints.js";
+import { verifyJws } from "./signed.js";
 
 /**
  * e-Invoice provider speaking the NIC IRP protocol directly.
@@ -67,7 +68,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
         }
         return gatewayFail(portalError(body.detail), body.raw);
       }
-      return gatewayOk(mapIrnResponse(body.data), body.raw);
+      return gatewayOk(mapIrnResponse(body.data, this.signingCert(ctx)), body.raw);
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -132,7 +133,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     try {
       const body = await this.call(ctx, "getIrn", "GET", IRP_PATHS.getIrn(irn));
       if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
-      return gatewayOk(mapIrnDetails(body.data, irn), body.raw);
+      return gatewayOk(mapIrnDetails(body.data, irn, this.signingCert(ctx)), body.raw);
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -155,10 +156,18 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
         `${IRP_PATHS.getIrnByDoc}?${query.toString()}`,
       );
       if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
-      return gatewayOk(mapIrnDetails(body.data, String(body.data["Irn"] ?? "")), body.raw);
+      return gatewayOk(
+        mapIrnDetails(body.data, String(body.data["Irn"] ?? ""), this.signingCert(ctx)),
+        body.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
+  }
+
+  /** NIC's signing certificate for this environment, if one is configured. */
+  private signingCert(ctx: GatewayRequestContext): string | undefined {
+    return this.options.signingCerts?.[ctx.environment];
   }
 
   /**
@@ -186,12 +195,11 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        client_id: ctx.credentials.clientId,
-        client_secret: ctx.credentials.clientSecret,
-        // One header only — duplicates merge into a comma-joined value.
-        ...gstinHeader("irp", ctx.gstin),
+        ...integratorHeaders("irp", ctx),
         user_name: ctx.credentials.username,
         AuthToken: session.authToken,
+        // Only when an e-commerce operator acts for another supplier.
+        ...(ctx.supplierGstin ? { sup_gstin: ctx.supplierGstin } : {}),
       },
       body:
         payload === undefined
@@ -268,30 +276,46 @@ function isAuthRejection(code: string, httpStatus: number): boolean {
   return httpStatus === 401 || IRP_AUTH_CODES.has(code);
 }
 
-function mapIrnResponse(data: Record<string, unknown>): IrnResult {
+function mapIrnResponse(data: Record<string, unknown>, signingCert?: string): IrnResult {
+  const signedInvoice = String(data["SignedInvoice"] ?? "");
+  const signedQrCode = String(data["SignedQRCode"] ?? "");
   return {
     irn: String(data["Irn"] ?? ""),
     ackNumber: String(data["AckNo"] ?? ""),
     ackDate: parsePortalExpiry(String(data["AckDt"] ?? "")) ?? new Date(),
-    signedInvoice: String(data["SignedInvoice"] ?? ""),
-    signedQrCode: String(data["SignedQRCode"] ?? ""),
+    signedInvoice,
+    signedQrCode,
     ewbNumber: data["EwbNo"] ? String(data["EwbNo"]) : null,
+    ewbDate: data["EwbDt"] ? parsePortalExpiry(String(data["EwbDt"])) : null,
     ewbValidUntil: data["EwbValidTill"] ? parsePortalExpiry(String(data["EwbValidTill"])) : null,
     status: String(data["Status"] ?? "ACT"),
     alert: data["Remarks"] ? String(data["Remarks"]) : null,
+    signedInvoiceSignature: verifyJws(signedInvoice, signingCert).status,
+    signedQrSignature: verifyJws(signedQrCode, signingCert).status,
   };
 }
 
-function mapIrnDetails(data: Record<string, unknown>, fallbackIrn: string): IrnDetails {
+function mapIrnDetails(
+  data: Record<string, unknown>,
+  fallbackIrn: string,
+  signingCert?: string,
+): IrnDetails {
+  const signedInvoice = data["SignedInvoice"] ? String(data["SignedInvoice"]) : undefined;
+  const signedQrCode = data["SignedQRCode"] ? String(data["SignedQRCode"]) : undefined;
   return {
     irn: String(data["Irn"] ?? fallbackIrn),
     ackNumber: data["AckNo"] ? String(data["AckNo"]) : undefined,
     ackDate: parsePortalExpiry(String(data["AckDt"] ?? "")) ?? undefined,
     status: String(data["Status"] ?? data["IrnStatus"] ?? "UNKNOWN"),
-    signedInvoice: data["SignedInvoice"] ? String(data["SignedInvoice"]) : undefined,
-    signedQrCode: data["SignedQRCode"] ? String(data["SignedQRCode"]) : undefined,
+    signedInvoice,
+    signedQrCode,
     ewbNumber: data["EwbNo"] ? String(data["EwbNo"]) : null,
+    ewbDate: data["EwbDt"] ? parsePortalExpiry(String(data["EwbDt"])) : null,
+    ewbValidUntil: data["EwbValidTill"] ? parsePortalExpiry(String(data["EwbValidTill"])) : null,
     cancelDate: data["CancelDate"] ? parsePortalExpiry(String(data["CancelDate"])) : null,
+    remarks: data["Remarks"] ? String(data["Remarks"]) : null,
+    signedInvoiceSignature: verifyJws(signedInvoice, signingCert).status,
+    signedQrSignature: verifyJws(signedQrCode, signingCert).status,
   };
 }
 
