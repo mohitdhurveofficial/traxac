@@ -103,8 +103,13 @@ describe("row-level security enforced through the application", () => {
 
   it("INSERT for another tenant is refused", async () => {
     if (!available) return;
-    await expect(
-      scoped.withTenant(beta.tenantId, (db) =>
+    // Drizzle >= 0.45 wraps driver errors ("Failed query: ...") and keeps the
+    // original Postgres error on `.cause`, so the whole cause chain must be
+    // searched for the RLS violation — the refusal still has to come from
+    // row-level security, not from any other failure.
+    const messages: string[] = [];
+    await scoped
+      .withTenant(beta.tenantId, (db) =>
         db.insert(parties).values({
           tenantId: alpha.tenantId,
           name: "Injected by beta",
@@ -112,8 +117,18 @@ describe("row-level security enforced through the application", () => {
           registrationType: "unregistered",
           country: "IN",
         }),
-      ),
-    ).rejects.toThrow(/row-level security/i);
+      )
+      .then(
+        () => messages.push("resolved"),
+        (error: unknown) => {
+          let current: unknown = error;
+          for (let depth = 0; current && depth < 5; depth++) {
+            messages.push(String((current as Error).message ?? current));
+            current = (current as { cause?: unknown }).cause;
+          }
+        },
+      );
+    expect(messages.join("\n")).toMatch(/row-level security/i);
   });
 
   it("UPDATE against another tenant affects nothing", async () => {

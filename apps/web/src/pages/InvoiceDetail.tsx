@@ -124,8 +124,8 @@ export function InvoiceDetailPage() {
                   type="button"
                   className="btn-secondary"
                   onClick={() =>
-                    actions.duplicate.mutate(undefined, {
-                      onSuccess: (created) => navigate(`/invoices/${created.invoice.id}/edit`),
+                    void actions.duplicate.mutate(undefined, {
+                      onSuccess: (created) => void navigate(`/invoices/${created.invoice.id}/edit`),
                     })
                   }
                 >

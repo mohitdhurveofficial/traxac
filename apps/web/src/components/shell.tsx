@@ -105,7 +105,9 @@ export function Shell({ session, children }: { session: SessionResponse; childre
             type="button"
             title="Sign out"
             aria-label="Sign out"
-            onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/login") })}
+            onClick={() =>
+              void logout.mutate(undefined, { onSuccess: () => void navigate("/login") })
+            }
             className="btn-ghost px-1.5"
           >
             <LogoutIcon />
@@ -171,7 +173,7 @@ export function Shell({ session, children }: { session: SessionResponse; childre
             <button
               type="button"
               className="btn-secondary w-full"
-              onClick={() => markRead.mutate()}
+              onClick={() => void markRead.mutate()}
             >
               Mark all as read
             </button>
@@ -204,7 +206,7 @@ export function Shell({ session, children }: { session: SessionResponse; childre
                       className="mt-1.5 text-xs font-medium text-brand-700 hover:underline"
                       onClick={() => {
                         setAlertsOpen(false);
-                        navigate(`/invoices/${item.entityId}`);
+                        void navigate(`/invoices/${item.entityId}`);
                       }}
                     >
                       Open invoice →

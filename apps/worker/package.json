@@ -15,7 +15,7 @@
     "@traxac/database": "workspace:*",
     "@traxac/gst-gateway": "workspace:*",
     "@traxac/shared": "workspace:*",
-    "drizzle-orm": "^0.38.4",
+    "drizzle-orm": "^0.45.2",
     "pdfkit": "^0.15.1",
     "qrcode": "^1.5.4",
     "tsx": "^4.19.2"

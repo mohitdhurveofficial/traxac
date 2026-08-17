@@ -143,7 +143,7 @@ async function registerWebApp(app: FastifyInstance, config: Container["config"])
       // immutable. index.html must always be revalidated or a deploy would
       // keep serving the previous bundle's asset references.
       const immutable = path.includes(`${sep}assets${sep}`) && !path.endsWith("index.html");
-      response.setHeader(
+      response.header(
         "cache-control",
         immutable ? "public, max-age=31536000, immutable" : "no-cache",
       );

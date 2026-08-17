@@ -277,11 +277,11 @@ export function InvoiceEditorPage() {
   });
 
   const submit = (then: "stay" | "open"): void => {
-    save.mutate(buildPayload(), {
+    void save.mutate(buildPayload(), {
       onSuccess: (detail) => {
         show("Draft saved");
-        if (then === "open") navigate(`/invoices/${detail.invoice.id}`);
-        else if (!id) navigate(`/invoices/${detail.invoice.id}/edit`, { replace: true });
+        if (then === "open") void navigate(`/invoices/${detail.invoice.id}`);
+        else if (!id) void navigate(`/invoices/${detail.invoice.id}/edit`, { replace: true });
       },
     });
   };
