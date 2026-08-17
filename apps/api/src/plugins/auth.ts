@@ -3,13 +3,21 @@ import type { Container } from "@traxac/core";
 
 const SESSION_COOKIE = "traxac_session";
 
-/** Routes reachable without a session. Everything else needs one. */
+/** API routes reachable without a session. Every other /v1 route needs one. */
 const PUBLIC_PATHS = new Set([
-  "/health",
-  "/health/ready",
   "/v1/auth/login",
   "/v1/auth/register",
 ]);
+
+/**
+ * Only the API surface is guarded. Health checks stay open for the platform
+ * probe, and the static web assets must be reachable so an unauthenticated
+ * visitor can load the app and see the sign-in screen.
+ */
+function requiresAuth(pathname: string): boolean {
+  if (!pathname.startsWith("/v1")) return false;
+  return !PUBLIC_PATHS.has(pathname);
+}
 
 /**
  * Resolves the caller on every request.
@@ -24,7 +32,7 @@ export function registerAuth(app: FastifyInstance, container: Container): void {
   });
 
   app.addHook("preHandler", async (request, reply) => {
-    if (PUBLIC_PATHS.has(request.url.split("?")[0] ?? "")) return;
+    if (!requiresAuth(request.url.split("?")[0] ?? "")) return;
 
     const token = extractToken(request);
     if (!token) {

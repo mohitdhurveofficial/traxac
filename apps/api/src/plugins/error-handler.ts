@@ -61,13 +61,6 @@ export function registerErrorHandler(app: FastifyInstance): void {
     });
   });
 
-  app.setNotFoundHandler((request, reply) => {
-    reply.status(404).send({
-      error: {
-        code: "NOT_FOUND",
-        message: `No route for ${request.method} ${request.url}`,
-        requestId: request.id,
-      },
-    });
-  });
+  // The not-found handler is registered in app.ts: when a web build is
+  // present it must fall through to the SPA shell for client-side routes.
 }

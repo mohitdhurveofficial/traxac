@@ -4,7 +4,11 @@ import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
+import fastifyStatic from "@fastify/static";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Container } from "@traxac/core";
 import { registerAuth } from "./plugins/auth.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
@@ -73,5 +77,65 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
     routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
   }));
 
+  await registerWebApp(app);
   return app;
+}
+
+/**
+ * Serve the built web app from the API when it is present.
+ *
+ * Running both on one origin is deliberate: the session cookie stays
+ * first-party, there is no CORS to configure, and a deploy cannot leave the
+ * UI and the API on mismatched versions. In development Vite serves the UI
+ * instead and proxies /api here, so the two setups behave identically.
+ */
+async function registerWebApp(app: FastifyInstance): Promise<void> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const webDist = process.env["WEB_DIST_PATH"]
+    ? resolve(process.env["WEB_DIST_PATH"])
+    : resolve(here, "../../web/dist");
+
+  if (!existsSync(resolve(webDist, "index.html"))) {
+    app.log.info({ webDist }, "no web build found; serving the API only");
+    app.setNotFoundHandler((request, reply) => {
+      reply.status(404).send({
+        error: {
+          code: "NOT_FOUND",
+          message: `No route for ${request.method} ${request.url}`,
+          requestId: request.id,
+        },
+      });
+    });
+    return;
+  }
+
+  await app.register(fastifyStatic, {
+    root: webDist,
+    prefix: "/",
+    // Hashed asset filenames can be cached hard; index.html must not be.
+    setHeaders: (response, path) => {
+      if (path.endsWith("index.html")) {
+        response.setHeader("cache-control", "no-cache");
+      } else if (path.includes("/assets/")) {
+        response.setHeader("cache-control", "public, max-age=31536000, immutable");
+      }
+    },
+  });
+
+  // Client-side routing: anything that is not an API route falls back to the
+  // SPA shell, while unknown API paths keep returning a JSON 404.
+  app.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith("/v1") || request.url.startsWith("/health")) {
+      return reply.status(404).send({
+        error: {
+          code: "NOT_FOUND",
+          message: `No route for ${request.method} ${request.url}`,
+          requestId: request.id,
+        },
+      });
+    }
+    return reply.type("text/html").sendFile("index.html");
+  });
+
+  app.log.info({ webDist }, "serving the web application");
 }

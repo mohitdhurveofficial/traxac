@@ -1,0 +1,133 @@
+# Deploying Traxac on Railway
+
+Two services and one database.
+
+| Service | Root | Start command | Notes |
+| --- | --- | --- | --- |
+| `traxac-app` | repo root | `pnpm start` | Fastify API **and** the built web app on one origin |
+| `traxac-worker` | repo root | `pnpm start:worker` | Compliance jobs, PDFs, e-Way Bill expiry sweep |
+| Postgres | Railway plugin | — | `DATABASE_URL` is injected automatically |
+
+## Why the API also serves the web app
+
+Running the UI and the API on one origin keeps the session cookie first-party.
+No CORS to configure, no `SameSite=None`, and a deploy cannot leave the UI on a
+different version from the API it is calling. In development Vite serves the UI
+and proxies `/api` to the same endpoints, so both setups behave identically.
+
+If you later want to scale them separately, set `CORS_ORIGINS` to the web
+origin and deploy `apps/web` as its own static service — nothing in the code
+assumes co-location.
+
+## First deploy
+
+1. **Create the project** and add the Postgres plugin.
+2. **Create the app service** from this repository.
+   - Build: `pnpm install --frozen-lockfile && pnpm build`
+   - Start: `pnpm start`
+   - Health check: `/health/ready`
+3. **Create the worker service** from the same repository.
+   - Build: `pnpm install --frozen-lockfile`
+   - Start: `pnpm start:worker`
+4. **Set the variables** (below) on both services.
+5. **Run migrations.** Set the release command to `pnpm db:migrate`, or run it
+   once from the Railway shell. Migrations are forward-only and idempotent.
+6. **Seed reference data**: `pnpm --filter @traxac/core exec tsx -e "…"` or let
+   the first `pnpm db:seed` populate UQC units and common HSN codes.
+
+## Environment variables
+
+Required on **both** services:
+
+```
+NODE_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+TRAXAC_MASTER_KEY=<openssl rand -base64 32>
+```
+
+Required on the **app** service:
+
+```
+PORT=${{PORT}}
+APP_URL=https://<your-domain>
+API_URL=https://<your-domain>
+COOKIE_SECURE=true
+CORS_ORIGINS=https://<your-domain>
+```
+
+Object storage (production refuses to start on the local driver):
+
+```
+STORAGE_DRIVER=s3
+S3_BUCKET=traxac-documents
+S3_REGION=auto
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+S3_ACCESS_KEY_ID=…
+S3_SECRET_ACCESS_KEY=…
+```
+
+Government gateway — keep on `sandbox` until you have tested against it:
+
+```
+GST_ENVIRONMENT=sandbox
+NIC_PUBLIC_KEY_SANDBOX=<base64 public key issued by NIC>
+NIC_PUBLIC_KEY_PRODUCTION=<base64 public key issued by NIC>
+NIC_CLIENT_ID=…          # optional platform default; tenants can supply their own
+NIC_CLIENT_SECRET=…
+```
+
+Without the public key and credentials, invoices still work end to end —
+create, issue, number, PDF — and only the IRN and e-Way Bill steps fail, with
+`CREDENTIALS_MISSING` and a link to the settings screen. Nothing is simulated.
+
+## The master key
+
+`TRAXAC_MASTER_KEY` wraps every stored GST credential and cached portal token.
+
+- **Losing it means losing every stored credential.** Back it up somewhere
+  other than Railway.
+- **Rotating it** is online: set `TRAXAC_MASTER_KEY` to the new key,
+  `TRAXAC_MASTER_KEY_PREVIOUS` to the old one, and bump
+  `TRAXAC_MASTER_KEY_VERSION`. Existing ciphertext keeps decrypting with the
+  previous key and is re-wrapped with the new one the next time it is read.
+  Remove `TRAXAC_MASTER_KEY_PREVIOUS` once `SELECT count(*) FROM
+  gst_credentials WHERE key_version < <new version>` reaches zero.
+
+## Scaling
+
+The worker claims jobs with `SELECT … FOR UPDATE SKIP LOCKED`, so adding
+replicas is the only thing needed to add throughput — there is no leader
+election and no lock to lose. A replica that dies mid-job has its work
+reclaimed after five minutes by whichever worker notices first.
+
+The API is stateless apart from the Postgres connection pool. Keep
+`DATABASE_POOL_MAX × replicas` below the Postgres connection limit.
+
+## Backups
+
+Railway's Postgres plugin takes automated snapshots; verify the retention on
+your plan. Two things are **not** in the database and must be backed up
+separately:
+
+- `TRAXAC_MASTER_KEY` — without it the credential rows are unreadable.
+- The object storage bucket — invoice PDFs and signed e-Invoice JSON. Enable
+  versioning and a lifecycle policy on the bucket rather than relying on the
+  application never deleting.
+
+The signed e-Invoice JSON is the legally meaningful artefact; the PDF is only a
+rendering of it and can always be regenerated from the database.
+
+## Monitoring
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/health` | Liveness. Answers while the process is up. |
+| `/health/ready` | Readiness. Also checks the database. Use this for the platform health check. |
+| `/health/queue` | Job counts by status. Alert if `failed` grows or `pending` stops draining. |
+
+Every outbound government API call is recorded in `gateway_calls` with the
+endpoint, attempt number, duration, response status and redacted payloads.
+That table is the record when a portal disputes what was filed.
+
+Logs are structured JSON with credentials, tokens and password hashes redacted
+at the logger, not at the call site.

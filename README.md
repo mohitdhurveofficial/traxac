@@ -61,14 +61,38 @@ pnpm install
 createdb traxac_dev
 cp .env.example .env && pnpm gen:env   # generates the master encryption key
 pnpm db:migrate
-pnpm dev
+pnpm db:seed                           # reference data + a worked example
+pnpm dev                               # API :3000, worker, web :5173
 ```
+
+Sign in with `owner@demo.traxac.in` / `TraxacDemo2026!`.
+
+The seed creates the transaction that exercises the hard parts of the model:
+billed to Bengaluru, shipped to a site in Hosur, dispatched from a plant in
+Chakan (e-Way Bill transaction type 4), three HSN codes, freight at 5% and
+packing at 18%.
 
 ## Tests
 
 ```bash
-pnpm test
+pnpm test        # unit tests
+pnpm typecheck   # every package and app
 ```
 
-The tax engine, GSTIN checksum, e-Way Bill validity rules and credential
-encryption are covered by unit tests.
+Covered: the tax engine (discounts, cess, charges, IGST-on-intra, zero-rated
+exports, exact CGST/SGST halving, round-off), the GSTIN checksum, e-Way Bill
+validity and the extend/cancel windows, IST and financial-year date maths, and
+credential encryption including key rotation.
+
+## Deployment
+
+Two Railway services and a Postgres plugin — see
+[docs/deployment.md](docs/deployment.md). The API serves the built web app on
+the same origin so the session cookie stays first-party and there is no CORS to
+configure.
+
+## Design notes
+
+[docs/architecture.md](docs/architecture.md) covers tenant isolation, the money
+representation, document numbering under concurrency, the NIC protocol and why
+the job queue lives in Postgres.

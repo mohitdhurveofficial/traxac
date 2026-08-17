@@ -1,0 +1,14 @@
+# Railway build configuration shared by all three services.
+# The service being built is selected with RAILWAY_SERVICE_NAME via each
+# service's railway.json, so one repository deploys three processes.
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "pnpm-9_x"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[variables]
+NODE_ENV = "production"
+# pnpm's symlinked store confuses some bundlers; hoisting keeps resolution flat.
+NPM_CONFIG_NODE_LINKER = "hoisted"
