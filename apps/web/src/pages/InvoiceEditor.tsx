@@ -9,9 +9,9 @@ import {
 } from "../api/hooks.js";
 import type { Party, Product } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
-import { Picker, Section, type PickerOption } from "../components/pickers.js";
+import { Picker, Section } from "../components/pickers.js";
 import { Drawer, ErrorNote, Field, Spinner, useToast } from "../components/ui.js";
-import { dateInputValue, money, toPaise } from "../lib/format.js";
+import { checked, dateInputValue, field, money, numberField, toPaise } from "../lib/format.js";
 
 /**
  * Invoice editor.
@@ -157,7 +157,7 @@ export function InvoiceEditorPage() {
         partyType: "customer",
         registrationType: "regular",
         isActive: true,
-      } as Party);
+      });
     }
   }, [existing.data, id]);
 
@@ -790,17 +790,17 @@ function NewCustomerDrawer({
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           save.mutate({
-            name: String(data.get("name")),
-            gstin: String(data.get("gstin") || ""),
+            name: field(data, "name"),
+            gstin: field(data, "gstin"),
             registrationType: data.get("gstin") ? "regular" : "unregistered",
-            phone: String(data.get("phone") || ""),
-            addressLine1: String(data.get("addressLine1") || ""),
-            city: String(data.get("city") || ""),
-            stateCode: String(data.get("stateCode") || ""),
-            pincode: String(data.get("pincode") || ""),
+            phone: field(data, "phone"),
+            addressLine1: field(data, "addressLine1"),
+            city: field(data, "city"),
+            stateCode: field(data, "stateCode"),
+            pincode: field(data, "pincode"),
             country: "IN",
             partyType: "customer",
-          }, { onSuccess: (party) => onCreated(party as Party) });
+          }, { onSuccess: (party) => onCreated(party) });
         }}
       >
         <Field label="Business name" required>
@@ -850,14 +850,14 @@ function NewProductDrawer({
           if (!request) return;
           const data = new FormData(event.currentTarget);
           save.mutate({
-            name: String(data.get("name")),
-            hsnSac: String(data.get("hsnSac")),
-            unit: String(data.get("unit")),
-            unitPrice: Number(data.get("unitPrice") || 0),
-            gstRate: Number(data.get("gstRate") || 0),
-            isService: data.get("isService") === "on",
-            description: String(data.get("description") || ""),
-          }, { onSuccess: (product) => onCreated(product as Product, request.key) });
+            name: field(data, "name"),
+            hsnSac: field(data, "hsnSac"),
+            unit: field(data, "unit"),
+            unitPrice: numberField(data, "unitPrice"),
+            gstRate: numberField(data, "gstRate"),
+            isService: checked(data, "isService"),
+            description: field(data, "description"),
+          }, { onSuccess: (product) => onCreated(product, request.key) });
         }}
       >
         <Field label="Item name" required>

@@ -164,7 +164,7 @@ export class ComplianceService {
         });
       }
       await this.db.update(einvoices)
-        .set({ requestPayload: payload as never, updatedAt: new Date() })
+        .set({ requestPayload: payload, updatedAt: new Date() })
         .where(eq(einvoices.id, record.id));
     } catch (err) {
       await this.markEinvoiceFailed(ctx, invoiceId, record.id, err);
@@ -181,12 +181,12 @@ export class ComplianceService {
       await this.deps.credentials.markFailed(
         credential.id, result.error.message, result.error.code === "CREDENTIALS_MISSING",
       );
-      const [failed] = await this.db.update(einvoices).set({
+      await this.db.update(einvoices).set({
         status: "failed",
         errorCode: result.error.code,
         lastError: result.error.message,
         attempts: sql`${einvoices.attempts} + 1`,
-        responsePayload: (result.raw ?? null) as never,
+        responsePayload: (result.raw ?? null),
         updatedAt: new Date(),
       }).where(eq(einvoices.id, record.id)).returning();
 
@@ -215,7 +215,7 @@ export class ComplianceService {
       signedInvoice: data.signedInvoice,
       signedQrCode: data.signedQrCode,
       ewbNumber: data.ewbNumber ?? null,
-      responsePayload: (result.raw ?? null) as never,
+      responsePayload: (result.raw ?? null),
       errorCode: null,
       lastError: null,
       attempts: sql`${einvoices.attempts} + 1`,
@@ -296,7 +296,7 @@ export class ComplianceService {
       cancelledAt: result.data.cancelDate,
       cancelReasonCode: input.reasonCode,
       cancelRemark: input.remark,
-      cancelResponse: (result.raw ?? null) as never,
+      cancelResponse: (result.raw ?? null),
       updatedAt: new Date(),
     }).where(eq(einvoices.id, record.id)).returning();
 
@@ -410,7 +410,7 @@ export class ComplianceService {
         errorCode: result.error.code,
         lastError: result.error.message,
         attempts: sql`${ewayBills.attempts} + 1`,
-        responsePayload: (result.raw ?? null) as never,
+        responsePayload: (result.raw ?? null),
         updatedAt: new Date(),
       }).where(eq(ewayBills.id, record.id));
       await this.db.update(invoices)
@@ -430,7 +430,7 @@ export class ComplianceService {
       generatedAt: data.generatedAt,
       validFrom: data.generatedAt,
       validUntil: data.validUntil,
-      responsePayload: (result.raw ?? null) as never,
+      responsePayload: (result.raw ?? null),
       errorCode: null,
       lastError: null,
       attempts: sql`${ewayBills.attempts} + 1`,
@@ -856,7 +856,7 @@ export class ComplianceService {
     gstin: string;
     environment: string;
     status: string;
-    requestPayload: unknown | null;
+    requestPayload: unknown;
   }): Promise<Einvoice> {
     const [row] = await this.db.insert(einvoices).values({
       tenantId: ctx.tenantId,
@@ -864,12 +864,12 @@ export class ComplianceService {
       gstin: values.gstin,
       environment: values.environment,
       status: values.status,
-      requestPayload: values.requestPayload as never,
+      requestPayload: values.requestPayload,
     }).onConflictDoUpdate({
       target: einvoices.invoiceId,
       set: {
         status: values.status,
-        requestPayload: values.requestPayload as never,
+        requestPayload: values.requestPayload,
         gstin: values.gstin,
         environment: values.environment,
         updatedAt: new Date(),
@@ -892,7 +892,7 @@ export class ComplianceService {
       const [row] = await this.db.update(ewayBills).set({
         status: values.status,
         distanceKm: values.distanceKm,
-        requestPayload: values.requestPayload as never,
+        requestPayload: values.requestPayload,
         transporterId: values.transporterId,
         transporterName: values.transporterName,
         updatedAt: new Date(),
@@ -906,7 +906,7 @@ export class ComplianceService {
       environment: values.environment,
       status: values.status,
       distanceKm: values.distanceKm,
-      requestPayload: values.requestPayload as never,
+      requestPayload: values.requestPayload,
       transporterId: values.transporterId,
       transporterName: values.transporterName,
     }).returning();
@@ -950,8 +950,8 @@ export class ComplianceService {
       tenantId: ctx.tenantId,
       ewayBillId,
       eventType,
-      requestPayload: (requestPayload ?? null) as never,
-      responsePayload: (responsePayload ?? null) as never,
+      requestPayload: (requestPayload ?? null),
+      responsePayload: (responsePayload ?? null),
       note: note ?? null,
       actorUserId: ctx.actor === "system" ? null : ctx.userId,
       actorLabel: actorLabel(ctx),

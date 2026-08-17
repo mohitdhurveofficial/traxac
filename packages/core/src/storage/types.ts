@@ -22,12 +22,22 @@ export interface StoredObject {
 
 export interface ObjectStorage {
   readonly provider: "s3" | "local";
+  /**
+   * Whether the driver can mint a time-limited URL that bypasses the API.
+   * The filesystem driver cannot, so callers must fall back to an
+   * authenticated API route rather than inventing a public path.
+   */
+  readonly supportsSignedUrls: boolean;
   put(input: PutObjectInput): Promise<StoredObject>;
   get(key: string): Promise<Buffer>;
   getStream(key: string): Promise<Readable>;
   exists(key: string): Promise<boolean>;
   delete(key: string): Promise<void>;
-  /** Time-limited download URL. Local driver returns an API-proxied path. */
+  /**
+   * Time-limited download URL. Only valid when `supportsSignedUrls` is true;
+   * otherwise it throws, because returning a guessable path would put tenant
+   * documents outside the authorization boundary.
+   */
   signedUrl(key: string, expiresInSeconds?: number): Promise<string>;
 }
 

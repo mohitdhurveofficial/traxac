@@ -7,10 +7,9 @@ import sensible from "@fastify/sensible";
 import fastifyStatic from "@fastify/static";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve, sep } from "node:path";
 import type { Container } from "@traxac/core";
-import { registerAuth } from "./plugins/auth.js";
+import { API_PREFIX, isApiPath, registerAuth } from "./plugins/auth.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { authRoutes } from "./routes/auth.js";
 import { complianceRoutes } from "./routes/compliance.js";
@@ -52,9 +51,11 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
   });
   await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
   await app.register(rateLimit, {
+    // Global ceiling. Credential endpoints declare a much tighter per-route
+    // budget of their own — see CREDENTIAL_RATE_LIMIT in routes/auth.ts.
     max: config.isProduction ? 300 : 2000,
     timeWindow: "1 minute",
-    // Rate limit per tenant when authenticated, per IP otherwise.
+    // Per tenant when authenticated, per IP otherwise.
     keyGenerator: (request) => request.auth?.tenantId ?? request.ip,
     allowList: (request) => request.url.startsWith("/health"),
   });
@@ -62,22 +63,35 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
   registerErrorHandler(app);
   registerAuth(app, container);
 
+  // Health lives outside the API prefix: the platform probe hits it directly
+  // and it must never require a session or a version negotiation.
   await app.register(healthRoutes);
-  await app.register(authRoutes, { prefix: "/v1/auth" });
-  await app.register(masterRoutes, { prefix: "/v1" });
-  await app.register(invoiceRoutes, { prefix: "/v1/invoices" });
-  await app.register(complianceRoutes, { prefix: "/v1" });
-  await app.register(reportRoutes, { prefix: "/v1/reports" });
-  await app.register(miscRoutes, { prefix: "/v1" });
 
-  /** Machine-readable route list — a stand-in until OpenAPI is generated. */
-  app.get("/v1", async () => ({
-    name: "Traxac API",
-    version: "1",
-    routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
-  }));
+  /*
+   * Every API route is mounted under `/api`, which is the same path the web
+   * client requests in development and in production. Previously the client
+   * called `/api/v1/...` while the server served `/v1/...`; the SPA fallback
+   * then answered those calls with `200 text/html`, and the client silently
+   * treated the HTML as a response body. One prefix, asserted by a test, is
+   * what stops that from recurring.
+   */
+  await app.register(async (api) => {
+    await api.register(authRoutes, { prefix: "/v1/auth" });
+    await api.register(masterRoutes, { prefix: "/v1" });
+    await api.register(invoiceRoutes, { prefix: "/v1/invoices" });
+    await api.register(complianceRoutes, { prefix: "/v1" });
+    await api.register(reportRoutes, { prefix: "/v1/reports" });
+    await api.register(miscRoutes, { prefix: "/v1" });
 
-  await registerWebApp(app);
+    /** Machine-readable route list — a stand-in until OpenAPI is generated. */
+    api.get("/v1", async () => ({
+      name: "Traxac API",
+      version: "1",
+      routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
+    }));
+  }, { prefix: API_PREFIX });
+
+  await registerWebApp(app, config);
   return app;
 }
 
@@ -89,11 +103,8 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
  * UI and the API on mismatched versions. In development Vite serves the UI
  * instead and proxies /api here, so the two setups behave identically.
  */
-async function registerWebApp(app: FastifyInstance): Promise<void> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const webDist = process.env["WEB_DIST_PATH"]
-    ? resolve(process.env["WEB_DIST_PATH"])
-    : resolve(here, "../../web/dist");
+async function registerWebApp(app: FastifyInstance, config: Container["config"]): Promise<void> {
+  const webDist = config.webDistPath;
 
   if (!existsSync(resolve(webDist, "index.html"))) {
     app.log.info({ webDist }, "no web build found; serving the API only");
@@ -112,20 +123,27 @@ async function registerWebApp(app: FastifyInstance): Promise<void> {
   await app.register(fastifyStatic, {
     root: webDist,
     prefix: "/",
-    // Hashed asset filenames can be cached hard; index.html must not be.
+    // Own the header entirely: the plugin's default `public, max-age=0` is
+    // applied after setHeaders and would otherwise win.
+    cacheControl: false,
     setHeaders: (response, path) => {
-      if (path.endsWith("index.html")) {
-        response.setHeader("cache-control", "no-cache");
-      } else if (path.includes("/assets/")) {
-        response.setHeader("cache-control", "public, max-age=31536000, immutable");
-      }
+      // Vite emits content-hashed filenames under /assets, so those are
+      // immutable. index.html must always be revalidated or a deploy would
+      // keep serving the previous bundle's asset references.
+      const immutable = path.includes(`${sep}assets${sep}`) && !path.endsWith("index.html");
+      response.setHeader(
+        "cache-control",
+        immutable ? "public, max-age=31536000, immutable" : "no-cache",
+      );
     },
   });
 
   // Client-side routing: anything that is not an API route falls back to the
-  // SPA shell, while unknown API paths keep returning a JSON 404.
+  // SPA shell, while unknown API paths keep returning a JSON 404. An API path
+  // must never be answered with HTML — that failure mode is invisible to the
+  // client, which is exactly why it went unnoticed before.
   app.setNotFoundHandler((request, reply) => {
-    if (request.url.startsWith("/v1") || request.url.startsWith("/health")) {
+    if (isApiPath(request.url)) {
       return reply.status(404).send({
         error: {
           code: "NOT_FOUND",

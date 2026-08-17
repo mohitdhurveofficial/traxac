@@ -27,13 +27,18 @@ export interface AllocatedNumber {
   sequenceValue: number;
 }
 
-const DEFAULT_SERIES: Record<DocType, string> = {
+export const DEFAULT_SERIES: Record<DocType, string> = {
   invoice: "INV",
   credit_note: "CRN",
   debit_note: "DBN",
   delivery_challan: "DCH",
   bill_of_supply: "BOS",
 };
+
+/** The series a document type uses when the caller does not name one. */
+export function defaultSeriesFor(docType: DocType, requested?: string | null): string {
+  return requested?.trim() || DEFAULT_SERIES[docType];
+}
 
 export class NumberingService {
   constructor(private readonly database: Database) {}

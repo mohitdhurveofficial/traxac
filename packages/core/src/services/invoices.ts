@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@traxac/database";
 import {
   branches, einvoices, ewayBills, gstins, invoiceCharges, invoiceLines,
-  invoicePayments, invoices, parties, partyAddresses, products, tenantSettings,
+  invoicePayments, invoices, parties, partyAddresses, tenantSettings,
   transporters,
 } from "@traxac/database";
 import {
   AppError, calculateInvoiceTax, DEFAULT_EWB_THRESHOLD_PAISE, deriveTransactionType,
-  determineSupplyType, evaluateEwbRequirement, financialYear, isZeroRated,
-  normaliseVehicleNo, summariseByHsn, toPaise,
-  type ChargeInput, type DocType, type SupplyCategory, type TaxLineInput, type TaxTotals,
+  evaluateEwbRequirement, financialYear, isZeroRated, normaliseVehicleNo,
+  summariseByHsn, toPaise,
+  type ChargeInput, type DocType, type TaxLineInput, type TaxTotals,
 } from "@traxac/shared";
 import type {
   CreateInvoiceInput, InvoiceListQuery, PreviewInvoiceInput, RecordPaymentInput,
@@ -19,7 +19,8 @@ import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";
 import { diffRecords } from "../infra/audit.js";
-import { countExpr, orderBy, paginate, searchAcross } from "./query.js";
+import { countExpr, orderBy, paginate } from "./query.js";
+import { defaultSeriesFor } from "./numbering.js";
 import type { NumberingService } from "./numbering.js";
 import {
   isSamePlace, snapshotFromBranch, snapshotFromGstin, snapshotFromInput,
@@ -387,7 +388,7 @@ export class InvoiceService {
       throw new AppError("INVALID_STATE", "Finalize the invoice before recording a payment");
     }
 
-    const amount = toPaise(input.amount as number | string);
+    const amount = toPaise(input.amount);
     if (amount <= 0) throw new AppError("VALIDATION_FAILED", "Payment must be greater than zero");
 
     const updated = await this.db.transaction(async (tx) => {
@@ -481,8 +482,9 @@ export class InvoiceService {
       : null;
 
     const addresses = await this.resolveAddresses(ctx, input, gstin, branch);
+    const reference = await this.resolveReference(ctx, input);
 
-    const supplyCategory = input.supplyCategory as SupplyCategory;
+    const supplyCategory = input.supplyCategory;
     const totals = calculateInvoiceTax({
       supplierStateCode: gstin.stateCode,
       placeOfSupplyStateCode: input.placeOfSupply,
@@ -521,7 +523,7 @@ export class InvoiceService {
         gstinId: gstin.id,
         branchId: branch?.id ?? null,
         docType: input.docType,
-        series: input.series,
+        series: defaultSeriesFor(input.docType, input.series),
         financialYear: financialYear(input.invoiceDate),
         supplyCategory,
         invoiceDate: input.invoiceDate,
@@ -566,7 +568,12 @@ export class InvoiceService {
         transportDocDate: transport?.transportDocDate ?? null,
         subSupplyType: transport?.subSupplyType ?? "1",
         ewbTransactionType: transactionType,
-        referenceInvoiceId: input.referenceInvoiceId ?? null,
+        referenceInvoiceId: reference?.id ?? null,
+        // Snapshotted like the addresses: the IRP needs the original document
+        // number and date in PrecDocDtls, and it must not change if the
+        // original is later edited.
+        referenceInvoiceNumber: reference?.invoiceNumber ?? null,
+        referenceInvoiceDate: reference?.invoiceDate ?? null,
         reason: input.reason || null,
         poNumber: input.poNumber || null,
         poDate: input.poDate ?? null,
@@ -602,7 +609,7 @@ export class InvoiceService {
           expiryDate: line.expiryDate ?? null,
           quantity: String(line.quantity),
           unit: line.unit,
-          unitPrice: toPaise(line.unitPrice as number | string),
+          unitPrice: toPaise(line.unitPrice),
           discountPercent: String(line.discountPercent),
           discountAmount: computed.discountAmount,
           grossValue: computed.grossValue,
@@ -639,6 +646,55 @@ export class InvoiceService {
         };
       }));
     }
+  }
+
+  /**
+   * Load the document a credit or debit note is issued against.
+   *
+   * The note carries the original's number and date because that is what the
+   * IRP requires in `PrecDocDtls`; without them the portal rejects the note.
+   * The original must be a real, issued invoice belonging to this tenant.
+   */
+  private async resolveReference(
+    ctx: AuthContext,
+    input: CreateInvoiceInput,
+  ): Promise<{ id: string; invoiceNumber: string; invoiceDate: Date } | null> {
+    const isNote = input.docType === "credit_note" || input.docType === "debit_note";
+    if (!input.referenceInvoiceId) {
+      if (isNote) {
+        throw new AppError("VALIDATION_FAILED",
+          "A credit or debit note must reference the original invoice");
+      }
+      return null;
+    }
+
+    const [original] = await this.db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        invoiceDate: invoices.invoiceDate,
+        status: invoices.status,
+        docType: invoices.docType,
+      })
+      .from(invoices)
+      .where(scopedById(ctx, invoices, input.referenceInvoiceId))
+      .limit(1);
+
+    if (!original) throw new AppError("NOT_FOUND", "The referenced invoice was not found");
+    if (original.status === "draft") {
+      throw new AppError("VALIDATION_FAILED",
+        "The referenced invoice is still a draft — issue it before raising a note against it");
+    }
+    if (original.docType !== "invoice") {
+      throw new AppError("VALIDATION_FAILED",
+        "A note can only reference a tax invoice, not another note");
+    }
+
+    return {
+      id: original.id,
+      invoiceNumber: original.invoiceNumber,
+      invoiceDate: original.invoiceDate,
+    };
   }
 
   private async resolveAddresses(
@@ -699,20 +755,20 @@ export class InvoiceService {
 function toTaxLine(line: CreateInvoiceInput["lines"][number]): TaxLineInput {
   return {
     quantity: Number(line.quantity),
-    unitPrice: toPaise(line.unitPrice as number | string),
+    unitPrice: toPaise(line.unitPrice),
     discountPercent: line.discountPercent,
-    discountAmount: toPaise(line.discountAmount as number | string),
+    discountAmount: toPaise(line.discountAmount),
     gstRate: line.gstRate,
     cessRate: line.cessRate,
-    cessNonAdvol: toPaise(line.cessNonAdvol as number | string),
-    stateCess: toPaise(line.stateCess as number | string),
+    cessNonAdvol: toPaise(line.cessNonAdvol),
+    stateCess: toPaise(line.stateCess),
   };
 }
 
 function toTaxCharge(charge: CreateInvoiceInput["charges"][number]): ChargeInput {
   return {
     label: charge.label,
-    amount: toPaise(charge.amount as number | string),
+    amount: toPaise(charge.amount),
     gstRate: charge.gstRate,
   };
 }
@@ -731,5 +787,3 @@ function stripIdentity<T extends Record<string, unknown>>(row: T): Omit<T, "id" 
   const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row as Record<string, unknown>;
   return rest as Omit<T, "id" | "createdAt" | "updatedAt">;
 }
-
-export { determineSupplyType, inArray };

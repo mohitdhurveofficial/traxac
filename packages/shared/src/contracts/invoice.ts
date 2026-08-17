@@ -57,7 +57,11 @@ export const createInvoiceSchema = z
     gstinId: z.string().uuid(),
     branchId: z.string().uuid().optional().nullable(),
     docType: z.enum(DOC_TYPES).default("invoice"),
-    series: z.string().trim().max(20).default("INV"),
+    /**
+     * Omit to use the default series for the document type — INV, CRN, DBN.
+     * Defaulting this to "INV" put credit notes in the invoice series.
+     */
+    series: z.string().trim().max(20).optional(),
     /** Omit to auto-assign from the tenant's number series. */
     invoiceNumber: optionalText(40),
     invoiceDate: z.coerce.date(),

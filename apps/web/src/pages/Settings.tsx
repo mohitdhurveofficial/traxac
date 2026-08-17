@@ -9,7 +9,7 @@ import {
 import { Page, PageHeader } from "../components/shell.js";
 import { Pill } from "../components/status.js";
 import { Drawer, ErrorNote, Field, Spinner, useToast } from "../components/ui.js";
-import { formatDateTime } from "../lib/format.js";
+import { checked, field, formatDateTime, numberField } from "../lib/format.js";
 
 /**
  * Settings.
@@ -58,6 +58,11 @@ export function SettingsPage() {
 
 type Show = (message: string) => void;
 
+/** Settings values arrive as `unknown` from a jsonb column; render only text. */
+function asText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 function BusinessTab({ show }: { show: Show }) {
   const settings = useSettings();
   const update = useUpdateSettings();
@@ -72,11 +77,11 @@ function BusinessTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             update.mutate({
-              businessName: String(form.get("businessName")),
-              ewbThresholdRupees: Number(form.get("ewbThresholdRupees")),
-              autoGenerateEinvoice: form.get("autoGenerateEinvoice") === "on",
-              autoGenerateEwb: form.get("autoGenerateEwb") === "on",
-              defaultTerms: String(form.get("defaultTerms") || ""),
+              businessName: field(form, "businessName"),
+              ewbThresholdRupees: numberField(form, "ewbThresholdRupees"),
+              autoGenerateEinvoice: checked(form, "autoGenerateEinvoice"),
+              autoGenerateEwb: checked(form, "autoGenerateEwb"),
+              defaultTerms: field(form, "defaultTerms"),
             }, { onSuccess: () => show("Settings saved") });
           }}>
           <Field label="Business name">
@@ -102,7 +107,7 @@ function BusinessTab({ show }: { show: Show }) {
           </label>
           <Field label="Default terms" hint="Printed at the bottom of every invoice">
             <textarea name="defaultTerms" className="field min-h-20"
-              defaultValue={String(data?.settings?.["defaultTerms"] ?? "")} />
+              defaultValue={asText(data?.settings?.["defaultTerms"])} />
           </Field>
           <ErrorNote error={update.error} />
           <button type="submit" className="btn-primary" disabled={update.isPending}>
@@ -185,19 +190,19 @@ function GstinTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             saveGstin.mutate({
-              gstin: String(form.get("gstin")).toUpperCase(),
-              legalName: String(form.get("legalName")),
-              tradeName: String(form.get("tradeName")),
+              gstin: field(form, "gstin").toUpperCase(),
+              legalName: field(form, "legalName"),
+              tradeName: field(form, "tradeName"),
               registrationType: "regular",
-              addressLine1: String(form.get("addressLine1")),
-              city: String(form.get("city")),
-              stateCode: String(form.get("stateCode")),
-              pincode: String(form.get("pincode")),
-              phone: String(form.get("phone") || ""),
-              email: String(form.get("email") || ""),
+              addressLine1: field(form, "addressLine1"),
+              city: field(form, "city"),
+              stateCode: field(form, "stateCode"),
+              pincode: field(form, "pincode"),
+              phone: field(form, "phone"),
+              email: field(form, "email"),
               einvoiceEnabled: true,
               ewbEnabled: true,
-              isPrimary: form.get("isPrimary") === "on",
+              isPrimary: checked(form, "isPrimary"),
             }, { onSuccess: () => { setAdding(null); show("GSTIN added"); } });
           }}>
           <Field label="GSTIN" required hint="The state code must match the address state.">
@@ -243,13 +248,13 @@ function GstinTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             saveBranch.mutate({
-              gstinId: String(form.get("gstinId")),
-              name: String(form.get("name")),
-              kind: String(form.get("kind")),
-              addressLine1: String(form.get("addressLine1")),
-              city: String(form.get("city")),
-              stateCode: String(form.get("stateCode")),
-              pincode: String(form.get("pincode")),
+              gstinId: field(form, "gstinId"),
+              name: field(form, "name"),
+              kind: field(form, "kind"),
+              addressLine1: field(form, "addressLine1"),
+              city: field(form, "city"),
+              stateCode: field(form, "stateCode"),
+              pincode: field(form, "pincode"),
               isDefault: false,
             }, { onSuccess: () => { setAdding(null); show("Place added"); } });
           }}>
@@ -388,15 +393,15 @@ function CredentialsTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             save.mutate({
-              gstinId: String(form.get("gstinId")),
+              gstinId: field(form, "gstinId"),
               provider: "nic",
-              environment: String(form.get("environment")),
-              service: String(form.get("service")),
-              username: String(form.get("username")),
-              password: String(form.get("password")),
-              clientId: String(form.get("clientId") || ""),
-              clientSecret: String(form.get("clientSecret") || ""),
-              baseUrl: String(form.get("baseUrl") || ""),
+              environment: field(form, "environment"),
+              service: field(form, "service"),
+              username: field(form, "username"),
+              password: field(form, "password"),
+              clientId: field(form, "clientId"),
+              clientSecret: field(form, "clientSecret"),
+              baseUrl: field(form, "baseUrl"),
             }, { onSuccess: () => { setAdding(false); show("Credentials saved"); } });
           }}>
           <Field label="For which GSTIN" required>
@@ -506,9 +511,9 @@ function LogisticsTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             saveTransporter.mutate({
-              name: String(form.get("name")),
-              transporterId: String(form.get("transporterId") || ""),
-              phone: String(form.get("phone") || ""),
+              name: field(form, "name"),
+              transporterId: field(form, "transporterId"),
+              phone: field(form, "phone"),
             }, { onSuccess: () => { setAdding(null); show("Transporter added"); } });
           }}>
           <Field label="Name" required><input name="name" className="field" required /></Field>
@@ -529,10 +534,10 @@ function LogisticsTab({ show }: { show: Show }) {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             saveVehicle.mutate({
-              vehicleNo: String(form.get("vehicleNo")).toUpperCase(),
-              vehicleType: String(form.get("vehicleType")),
-              driverName: String(form.get("driverName") || ""),
-              driverPhone: String(form.get("driverPhone") || ""),
+              vehicleNo: field(form, "vehicleNo").toUpperCase(),
+              vehicleType: field(form, "vehicleType"),
+              driverName: field(form, "driverName"),
+              driverPhone: field(form, "driverPhone"),
             }, { onSuccess: () => { setAdding(null); show("Vehicle added"); } });
           }}>
           <Field label="Vehicle number" required hint="For example MH12AB1234">

@@ -39,6 +39,20 @@ export function registerErrorHandler(app: FastifyInstance): void {
     // Fastify's own errors (bad JSON, payload too large, rate limit).
     const fastifyError = error as { statusCode?: number; code?: string; message?: string };
     const status = fastifyError.statusCode ?? 500;
+
+    // Rate limiting is surfaced with our own code so a client can back off on
+    // `code` rather than parsing a plugin-specific message.
+    if (status === 429) {
+      request.log.warn({ ip: request.ip, url: request.url }, "rate limited");
+      return reply.status(429).send({
+        error: {
+          code: "RATE_LIMITED",
+          message: "Too many attempts. Please wait a moment and try again.",
+          requestId,
+        },
+      });
+    }
+
     if (status < 500) {
       request.log.warn({ err: error }, "request rejected");
       return reply.status(status).send({

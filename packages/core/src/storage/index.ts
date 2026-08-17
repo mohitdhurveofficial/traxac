@@ -9,7 +9,8 @@ export { S3ObjectStorage } from "./s3.js";
 
 export function createStorage(config: AppConfig): ObjectStorage {
   if (config.STORAGE_DRIVER === "local") {
-    return new LocalObjectStorage(config.STORAGE_LOCAL_DIR, config.API_URL);
+    // Absolute, repo-root anchored: API and worker must share one root.
+    return new LocalObjectStorage(config.storageLocalDir);
   }
   if (!config.S3_BUCKET) throw new Error("S3_BUCKET is required when STORAGE_DRIVER=s3");
   return new S3ObjectStorage({

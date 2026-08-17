@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { field } from "../lib/format.js";
 import { useNavigate } from "react-router-dom";
 import { useLogin, useRegister } from "../api/hooks.js";
 import { ErrorNote, Field, Spinner } from "../components/ui.js";
@@ -22,15 +23,15 @@ export function LoginPage() {
 
     if (mode === "login") {
       login.mutate({
-        email: String(data.get("email")),
-        password: String(data.get("password")),
+        email: field(data, "email"),
+        password: field(data, "password"),
       }, done);
     } else {
       register.mutate({
-        name: String(data.get("name")),
-        email: String(data.get("email")),
-        password: String(data.get("password")),
-        businessName: String(data.get("businessName")),
+        name: field(data, "name"),
+        email: field(data, "email"),
+        password: field(data, "password"),
+        businessName: field(data, "businessName"),
       }, done);
     }
   };

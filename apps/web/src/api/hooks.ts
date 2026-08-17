@@ -108,7 +108,7 @@ export function useInvoice(id: string | undefined) {
     enabled: Boolean(id),
     // Compliance work happens in the background; poll while it is in flight.
     refetchInterval: (query) => {
-      const data = query.state.data as InvoiceDetail | undefined;
+      const data = query.state.data;
       if (!data) return false;
       const pending = ["queued", "processing", "pending"];
       return pending.includes(data.invoice.einvoiceStatus)

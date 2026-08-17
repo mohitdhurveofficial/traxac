@@ -3,10 +3,27 @@ import type { Container } from "@traxac/core";
 
 const SESSION_COOKIE = "traxac_session";
 
-/** API routes reachable without a session. Every other /v1 route needs one. */
+/**
+ * Every API route hangs off this prefix, and the web client requests the same
+ * path in development and production. Keeping it in one exported constant
+ * means the auth guard, the SPA fallback and the route registration cannot
+ * disagree about what counts as an API path.
+ */
+export const API_PREFIX = "/api";
+
+/** True for anything the API owns — used to keep HTML out of API responses. */
+export function isApiPath(url: string): boolean {
+  const pathname = url.split("?")[0] ?? "";
+  return pathname === API_PREFIX
+    || pathname.startsWith(`${API_PREFIX}/`)
+    || pathname === "/health"
+    || pathname.startsWith("/health/");
+}
+
+/** API routes reachable without a session. Every other one needs a session. */
 const PUBLIC_PATHS = new Set([
-  "/v1/auth/login",
-  "/v1/auth/register",
+  `${API_PREFIX}/v1/auth/login`,
+  `${API_PREFIX}/v1/auth/register`,
 ]);
 
 /**
@@ -15,7 +32,7 @@ const PUBLIC_PATHS = new Set([
  * visitor can load the app and see the sign-in screen.
  */
 function requiresAuth(pathname: string): boolean {
-  if (!pathname.startsWith("/v1")) return false;
+  if (!pathname.startsWith(`${API_PREFIX}/`)) return false;
   return !PUBLIC_PATHS.has(pathname);
 }
 

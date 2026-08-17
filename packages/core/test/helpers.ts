@@ -2,7 +2,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createContainer, resetConfigCache, type AuthContext, type Container } from "../src/index.js";
+import {
+  createContainer, resetConfigCache, resolveFromRepoRoot,
+  type AuthContext, type Container,
+} from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -21,7 +24,9 @@ const TEST_KEY = Buffer.alloc(32, 7).toString("base64");
 
 let migrated = false;
 
-export async function testContainer(): Promise<Container> {
+export async function testContainer(
+  overrides: Partial<Record<string, unknown>> = {},
+): Promise<Container> {
   if (!migrated) {
     await execFileAsync("npx", ["tsx", "src/migrate.ts"], {
       cwd: resolve(here, "../../database"),
@@ -31,47 +36,65 @@ export async function testContainer(): Promise<Container> {
   }
 
   resetConfigCache();
-  return createContainer({
-    processName: "traxac-test",
-    config: {
-      NODE_ENV: "test",
-      PORT: 0,
-      LOG_LEVEL: "error",
-      DATABASE_URL: TEST_DATABASE_URL,
-      DATABASE_POOL_MAX: 5,
-      TRAXAC_MASTER_KEY: TEST_KEY,
-      TRAXAC_MASTER_KEY_VERSION: 1,
-      TRAXAC_MASTER_KEY_PREVIOUS: undefined,
-      SESSION_TTL_DAYS: 7,
-      CORS_ORIGINS: "",
-      COOKIE_DOMAIN: undefined,
-      COOKIE_SECURE: false,
-      STORAGE_DRIVER: "local",
-      STORAGE_LOCAL_DIR: "./.storage-test",
-      S3_BUCKET: undefined,
-      S3_REGION: "auto",
-      S3_ENDPOINT: undefined,
-      S3_ACCESS_KEY_ID: undefined,
-      S3_SECRET_ACCESS_KEY: undefined,
-      S3_FORCE_PATH_STYLE: true,
-      GST_ENVIRONMENT: "sandbox",
-      IRP_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
-      IRP_PRODUCTION_BASE_URL: "https://einvoice1.gst.gov.in",
-      EWB_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
-      EWB_PRODUCTION_BASE_URL: "https://ewaybillgst.gov.in",
-      NIC_CLIENT_ID: undefined,
-      NIC_CLIENT_SECRET: undefined,
-      GATEWAY_TIMEOUT_MS: 5000,
-      WORKER_CONCURRENCY: 1,
-      WORKER_POLL_INTERVAL_MS: 1000,
-      APP_URL: "http://localhost:5173",
-      API_URL: "http://localhost:3000",
-      isProduction: false,
-      isDevelopment: false,
-      isTest: true,
-      corsOrigins: [],
-    },
-  });
+  const base = {
+    NODE_ENV: "test",
+    PORT: 0,
+    LOG_LEVEL: "error",
+    DATABASE_URL: TEST_DATABASE_URL,
+    DATABASE_POOL_MAX: 5,
+    TRAXAC_MASTER_KEY: TEST_KEY,
+    TRAXAC_MASTER_KEY_VERSION: 1,
+    TRAXAC_MASTER_KEY_PREVIOUS: undefined,
+    SESSION_TTL_DAYS: 7,
+    CORS_ORIGINS: "",
+    COOKIE_DOMAIN: undefined,
+    COOKIE_SECURE: false,
+    STORAGE_DRIVER: "local",
+    STORAGE_LOCAL_DIR: "./.storage-test",
+    S3_BUCKET: undefined,
+    S3_REGION: "auto",
+    S3_ENDPOINT: undefined,
+    S3_ACCESS_KEY_ID: undefined,
+    S3_SECRET_ACCESS_KEY: undefined,
+    S3_FORCE_PATH_STYLE: true,
+    GST_ENVIRONMENT: "sandbox",
+    IRP_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
+    IRP_PRODUCTION_BASE_URL: "https://einvoice1.gst.gov.in",
+    EWB_SANDBOX_BASE_URL: "https://einv-apisandbox.nic.in",
+    EWB_PRODUCTION_BASE_URL: "https://ewaybillgst.gov.in",
+    NIC_CLIENT_ID: undefined,
+    NIC_CLIENT_SECRET: undefined,
+    NIC_PUBLIC_KEY_SANDBOX: undefined,
+    NIC_PUBLIC_KEY_PRODUCTION: undefined,
+    WEB_DIST_PATH: undefined,
+    RAILWAY_REPLICA_ID: undefined,
+    GATEWAY_TIMEOUT_MS: 5000,
+    WORKER_CONCURRENCY: 1,
+    WORKER_POLL_INTERVAL_MS: 1000,
+    APP_URL: "http://localhost:5173",
+    API_URL: "http://localhost:3000",
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    corsOrigins: [],
+    cookieSecure: false,
+    storageLocalDir: resolveFromRepoRoot(".storage-test"),
+    webDistPath: resolveFromRepoRoot("apps/web/dist"),
+  };
+
+  const merged = { ...base, ...overrides } as Record<string, unknown>;
+
+  // Derived fields must follow their source. `loadConfig` normally computes
+  // these; a test that overrides WEB_DIST_PATH or STORAGE_LOCAL_DIR expects
+  // the derived path to change with it.
+  merged["cookieSecure"] = merged["NODE_ENV"] === "production" || merged["COOKIE_SECURE"] === true;
+  merged["storageLocalDir"] = resolveFromRepoRoot(String(merged["STORAGE_LOCAL_DIR"]));
+  merged["webDistPath"] = merged["WEB_DIST_PATH"]
+    ? resolveFromRepoRoot(String(merged["WEB_DIST_PATH"]))
+    : resolveFromRepoRoot("apps/web/dist");
+
+  const config = merged as Parameters<typeof createContainer>[0]["config"];
+  return createContainer({ processName: "traxac-test", config });
 }
 
 /** Wipe every tenant-owned table between tests. */
@@ -167,7 +190,8 @@ export function invoiceInput(business: TestBusiness, overrides: Record<string, u
     gstinId: business.gstinId,
     branchId: null,
     docType: "invoice" as const,
-    series: "INV",
+    // Series is deliberately omitted: the document type picks its own default
+    // (INV / CRN / DBN), which is the behaviour worth exercising.
     invoiceNumber: "",
     invoiceDate: new Date("2026-08-17T06:00:00Z"),
     dueDate: null,

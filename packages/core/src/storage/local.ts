@@ -12,9 +12,11 @@ import type { ObjectStorage, PutObjectInput, StoredObject } from "./types.js";
  */
 export class LocalObjectStorage implements ObjectStorage {
   readonly provider = "local" as const;
+  /** No signing: there is no CDN in front of the filesystem to honour it. */
+  readonly supportsSignedUrls = false;
   private readonly root: string;
 
-  constructor(rootDir: string, private readonly publicBaseUrl = "") {
+  constructor(rootDir: string) {
     this.root = resolve(rootDir);
   }
 
@@ -32,7 +34,7 @@ export class LocalObjectStorage implements ObjectStorage {
     await mkdir(dirname(path), { recursive: true });
     const body = Buffer.isBuffer(input.body)
       ? input.body
-      : Buffer.from(input.body as string | Uint8Array);
+      : Buffer.from(input.body);
     await writeFile(path, body);
     return {
       key: input.key,
@@ -68,8 +70,13 @@ export class LocalObjectStorage implements ObjectStorage {
     await rm(this.pathFor(key), { force: true });
   }
 
-  async signedUrl(key: string): Promise<string> {
-    // No signing locally; downloads are proxied through the authenticated API.
-    return `${this.publicBaseUrl}/v1/documents/raw/${encodeURIComponent(key)}`;
+  async signedUrl(): Promise<string> {
+    // Downloads are proxied through the authenticated API instead. Returning
+    // a bare path here would have handed out an unauthenticated URL to a
+    // tenant's document — and the route it pointed at never existed.
+    throw new AppError(
+      "INVALID_STATE",
+      "The local storage driver cannot sign URLs; download through the API instead",
+    );
   }
 }

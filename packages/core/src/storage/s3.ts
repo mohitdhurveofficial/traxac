@@ -19,6 +19,7 @@ export interface S3StorageConfig {
 /** S3-compatible storage: AWS S3, Cloudflare R2, Backblaze B2, MinIO. */
 export class S3ObjectStorage implements ObjectStorage {
   readonly provider = "s3" as const;
+  readonly supportsSignedUrls = true;
   private readonly client: S3Client;
 
   constructor(private readonly config: S3StorageConfig) {
@@ -35,7 +36,7 @@ export class S3ObjectStorage implements ObjectStorage {
   async put(input: PutObjectInput): Promise<StoredObject> {
     const body = Buffer.isBuffer(input.body)
       ? input.body
-      : Buffer.from(input.body as string | Uint8Array);
+      : Buffer.from(input.body);
     await this.client.send(new PutObjectCommand({
       Bucket: this.config.bucket,
       Key: input.key,

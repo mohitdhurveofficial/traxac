@@ -99,7 +99,7 @@ export class JobQueue {
    */
   async claim(workerId: string, limit = 1, kinds?: JobKind[]): Promise<Job[]> {
     const kindFilter = kinds?.length
-      ? this.database.client`AND kind = ANY(${this.database.client.array(kinds as string[])})`
+      ? this.database.client`AND kind = ANY(${this.database.client.array(kinds)})`
       : this.database.client``;
 
     const rows = await this.database.client<Job[]>`
@@ -129,7 +129,7 @@ export class JobQueue {
   async complete(jobId: string, result?: unknown): Promise<void> {
     await this.db.update(jobs).set({
       status: "done",
-      result: (result ?? null) as never,
+      result: (result ?? null),
       finishedAt: new Date(),
       lockedBy: null,
       lockedAt: null,

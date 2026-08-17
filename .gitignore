@@ -8,6 +8,11 @@ build/
 .DS_Store
 coverage/
 .vite/
+# Local object storage: tenant documents must never enter version control.
+.storage/
+.storage-test/
+# TypeScript incremental build metadata.
+*.tsbuildinfo
 .turbo/
 .idea/
 .vscode/*

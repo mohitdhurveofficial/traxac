@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { tenantSettings, tenants } from "@traxac/database";
 import { AppError, DEFAULT_EWB_THRESHOLD_PAISE, toPaise, toRupees } from "@traxac/shared";
 import { requireAuth } from "../context.js";
+import { API_PREFIX } from "../plugins/auth.js";
 
 const idParam = z.object({ id: z.string().uuid() });
 
@@ -22,10 +23,14 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
       .send(body);
   });
 
+  /**
+   * Where to fetch a document from. Returns a presigned storage URL when the
+   * driver supports one, otherwise the authenticated API route above.
+   */
   app.get("/documents/:id/link", async (request) => {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
-    return { url: await request.container.documents.signedUrl(ctx, id) };
+    return request.container.documents.accessUrl(ctx, id, { apiPrefix: API_PREFIX });
   });
 
   app.post("/documents", async (request, reply) => {

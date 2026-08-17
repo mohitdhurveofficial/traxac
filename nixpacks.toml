@@ -1,6 +1,12 @@
-# Railway build configuration shared by all three services.
-# The service being built is selected with RAILWAY_SERVICE_NAME via each
-# service's railway.json, so one repository deploys three processes.
+# Railway build configuration, shared by both services.
+#
+# One repository, two services:
+#   app     — railway.json         : builds the web app + packages, runs the API
+#             which serves the SPA and /api on a single origin
+#   worker  — railway.worker.json  : builds packages only, runs the job runner
+#
+# The worker service points at railway.worker.json via its
+# "Config as code" path setting in the Railway dashboard.
 
 [phases.setup]
 nixPkgs = ["nodejs_22", "pnpm-9_x"]
@@ -10,5 +16,5 @@ cmds = ["pnpm install --frozen-lockfile"]
 
 [variables]
 NODE_ENV = "production"
-# pnpm's symlinked store confuses some bundlers; hoisting keeps resolution flat.
+# pnpm's symlinked store confuses some resolvers; hoisting keeps it flat.
 NPM_CONFIG_NODE_LINKER = "hoisted"

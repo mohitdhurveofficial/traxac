@@ -47,7 +47,7 @@ export const EWB_ACTIONS = {
 export function resolveBaseUrl(
   gateway: "irp" | "ewb",
   environment: GatewayEnvironment,
-  override?: string | undefined,
+  override?: string  ,
 ): string {
   const base = override?.trim() || NIC_HOSTS[environment][gateway];
   return base.replace(/\/+$/, "");

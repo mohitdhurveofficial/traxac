@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   changePasswordSchema, inviteUserSchema, loginSchema, registerSchema, switchTenantSchema,
 } from "@traxac/shared/contracts";
@@ -27,8 +27,28 @@ function clearCookie(secure: boolean, domain?: string): string {
   return parts.join("; ");
 }
 
+/**
+ * Credential endpoints get their own budget, far below the global one.
+ *
+ * The global limit is per tenant once authenticated and per IP before that,
+ * which left sign-in open to hundreds of guesses a minute. This keys strictly
+ * on the client address so one attacker cannot spend another tenant's budget,
+ * and counts successful requests too — a burst is suspicious either way.
+ */
+const CREDENTIAL_RATE_LIMIT = {
+  config: {
+    rateLimit: {
+      max: 10,
+      timeWindow: "5 minutes",
+      keyGenerator: (request: FastifyRequest) => `auth:${request.ip}`,
+      // The 429 body is shaped by the global error handler, so every error
+      // the API returns keeps the same envelope.
+    },
+  },
+} as const;
+
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post("/register", async (request, reply) => {
+  app.post("/register", CREDENTIAL_RATE_LIMIT, async (request, reply) => {
     const input = registerSchema.parse(request.body);
     const { config, auth } = request.container;
     const result = await auth.register(input, {
@@ -36,7 +56,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       userAgent: request.headers["user-agent"],
     });
     reply.header("set-cookie", sessionCookie(
-      result.token, result.expiresAt, config.COOKIE_SECURE, config.COOKIE_DOMAIN,
+      result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN,
     ));
     return reply.status(201).send({
       token: result.token,
@@ -46,7 +66,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.post("/login", async (request, reply) => {
+  app.post("/login", CREDENTIAL_RATE_LIMIT, async (request, reply) => {
     const input = loginSchema.parse(request.body);
     const { config, auth } = request.container;
     const result = await auth.login(input.email, input.password, {
@@ -54,7 +74,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       userAgent: request.headers["user-agent"],
     });
     reply.header("set-cookie", sessionCookie(
-      result.token, result.expiresAt, config.COOKIE_SECURE, config.COOKIE_DOMAIN,
+      result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN,
     ));
     return {
       token: result.token,
@@ -69,7 +89,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
     if (token) await request.container.auth.logout(token);
     const { config } = request.container;
-    reply.header("set-cookie", clearCookie(config.COOKIE_SECURE, config.COOKIE_DOMAIN));
+    reply.header("set-cookie", clearCookie(config.cookieSecure, config.COOKIE_DOMAIN));
     return { ok: true };
   });
 
@@ -94,7 +114,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { user: await request.container.auth.switchTenant(ctx, tenantId) };
   });
 
-  app.post("/change-password", async (request) => {
+  app.post("/change-password", CREDENTIAL_RATE_LIMIT, async (request) => {
     const ctx = requireAuth(request);
     const input = changePasswordSchema.parse(request.body);
     await request.container.auth.changePassword(ctx, input.currentPassword, input.newPassword);

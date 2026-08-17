@@ -28,7 +28,7 @@ export function moneyCompact(paise: number | string | null | undefined): string 
 
 export function toPaise(rupeeValue: number | string | null | undefined): number {
   const n = typeof rupeeValue === "string" ? Number.parseFloat(rupeeValue) : rupeeValue ?? 0;
-  return Number.isFinite(n) ? Math.round((n as number) * 100) : 0;
+  return Number.isFinite(n) ? Math.round((n) * 100) : 0;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-IN", {
@@ -76,4 +76,27 @@ export function relativeTime(value: string | Date | null | undefined): string {
 
 export function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+}
+
+/**
+ * Read a text field from a form.
+ *
+ * `FormData.get` returns `string | File | null`, so coercing it with `String()`
+ * would render "[object Object]" if a file ever reached a text field. This
+ * narrows properly and gives a predictable empty string for absent fields.
+ */
+export function field(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** Read a checkbox: browsers submit "on" when checked and omit it otherwise. */
+export function checked(form: FormData, name: string): boolean {
+  return form.get(name) === "on";
+}
+
+/** Read a numeric field, falling back to 0 for blank or unparseable input. */
+export function numberField(form: FormData, name: string): number {
+  const parsed = Number.parseFloat(field(form, name));
+  return Number.isFinite(parsed) ? parsed : 0;
 }

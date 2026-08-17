@@ -140,5 +140,6 @@ function sendCsv(reply: FastifyReply, filename: string, csv: string): FastifyRep
     .header("content-type", "text/csv; charset=utf-8")
     .header("content-disposition", `attachment; filename="${filename}"`)
     // Byte-order mark so Excel reads the file as UTF-8.
+    // eslint-disable-next-line no-irregular-whitespace -- U+FEFF is the BOM
     .send(`﻿${csv}`);
 }

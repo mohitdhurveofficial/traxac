@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { field } from "../lib/format.js";
 import { useSearchParams } from "react-router-dom";
 import { GST_STATE_CODES } from "@traxac/shared";
 import { useAddPartyAddress, useParties, useParty, useSaveParty } from "../api/hooks.js";
@@ -101,18 +102,18 @@ function PartyForm({
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          const gstin = String(data.get("gstin") || "").trim();
+          const gstin = field(data, "gstin").trim();
           save.mutate({
-            name: String(data.get("name")),
-            legalName: String(data.get("legalName") || ""),
+            name: field(data, "name"),
+            legalName: field(data, "legalName"),
             gstin,
             registrationType: gstin ? "regular" : "unregistered",
-            email: String(data.get("email") || ""),
-            phone: String(data.get("phone") || ""),
-            addressLine1: String(data.get("addressLine1") || ""),
-            city: String(data.get("city") || ""),
-            stateCode: String(data.get("stateCode") || ""),
-            pincode: String(data.get("pincode") || ""),
+            email: field(data, "email"),
+            phone: field(data, "phone"),
+            addressLine1: field(data, "addressLine1"),
+            city: field(data, "city"),
+            stateCode: field(data, "stateCode"),
+            pincode: field(data, "pincode"),
             country: "IN",
             partyType: "customer",
           }, { onSuccess: onSaved });
@@ -207,14 +208,14 @@ function PartyDetailDrawer({
                   event.preventDefault();
                   const data = new FormData(event.currentTarget);
                   addAddress.mutate({
-                    label: String(data.get("label")),
+                    label: field(data, "label"),
                     kind: "shipping",
-                    name: String(data.get("name")),
-                    gstin: String(data.get("gstin") || ""),
-                    addressLine1: String(data.get("addressLine1")),
-                    city: String(data.get("city")),
-                    stateCode: String(data.get("stateCode")),
-                    pincode: String(data.get("pincode")),
+                    name: field(data, "name"),
+                    gstin: field(data, "gstin"),
+                    addressLine1: field(data, "addressLine1"),
+                    city: field(data, "city"),
+                    stateCode: field(data, "stateCode"),
+                    pincode: field(data, "pincode"),
                     isDefault: false,
                   }, { onSuccess: () => { setAdding(false); onSaved(); } });
                 }}>

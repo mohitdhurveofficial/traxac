@@ -3,7 +3,13 @@ import { ROLES } from "../constants/roles.js";
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(8).max(200),
+  /**
+   * Deliberately only bounded, not policy-checked. Enforcing the signup
+   * policy here made a short wrong password fail validation with 422 and a
+   * message describing the rule, instead of the 401 every failed sign-in
+   * should return.
+   */
+  password: z.string().min(1).max(200),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 

@@ -187,7 +187,7 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       const encrypted = body["Data"];
       const decoded = typeof encrypted === "string" && encrypted
         ? JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>
-        : (body as Record<string, unknown>);
+        : (body);
       return { ok: true, data: decoded, raw: redactRaw(body) };
     }
 

@@ -29,7 +29,7 @@ export function EmptyState({
 
 export function ErrorNote({ error }: { error: unknown }) {
   if (!error) return null;
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : "Something went wrong";
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
       {message}

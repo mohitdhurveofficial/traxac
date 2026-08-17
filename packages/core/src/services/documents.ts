@@ -130,10 +130,33 @@ export class DocumentService {
     return { document, body: await this.storage.get(document.storageKey) };
   }
 
-  /** Short-lived link, used when the browser downloads straight from storage. */
-  async signedUrl(ctx: AuthContext, id: string, expiresInSeconds = 900): Promise<string> {
+  /**
+   * A URL the browser can follow to fetch this document.
+   *
+   * With object storage that supports it, this is a short-lived presigned URL
+   * so the bytes never pass through the API. Otherwise it is the authenticated
+   * API route — never a raw storage path, which would place a tenant's
+   * document outside the authorization boundary.
+   */
+  async accessUrl(
+    ctx: AuthContext,
+    id: string,
+    options: { expiresInSeconds?: number; apiPrefix?: string } = {},
+  ): Promise<{ url: string; expiresInSeconds: number | null; direct: boolean }> {
     const document = await this.get(ctx, id);
-    return this.storage.signedUrl(document.storageKey, expiresInSeconds);
+    if (!this.storage.supportsSignedUrls) {
+      return {
+        url: `${options.apiPrefix ?? "/api"}/v1/documents/${document.id}`,
+        expiresInSeconds: null,
+        direct: false,
+      };
+    }
+    const expiresInSeconds = options.expiresInSeconds ?? 900;
+    return {
+      url: await this.storage.signedUrl(document.storageKey, expiresInSeconds),
+      expiresInSeconds,
+      direct: true,
+    };
   }
 
   async remove(ctx: AuthContext, id: string): Promise<void> {

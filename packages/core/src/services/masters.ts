@@ -13,7 +13,7 @@ import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";
 import { diffRecords } from "../infra/audit.js";
-import { compact, countExpr, orderBy, paginate, searchAcross } from "./query.js";
+import { compact, countExpr, paginate, searchAcross } from "./query.js";
 
 export interface ListOptions {
   q?: string | undefined;
@@ -333,7 +333,7 @@ export class MastersService {
       gstRate: String(input.gstRate),
       cessRate: String(input.cessRate),
       unit: input.unit,
-      unitPrice: toPaise(input.unitPrice as number | string),
+      unitPrice: toPaise(input.unitPrice),
     }).returning();
     if (!row) throw new AppError("INTERNAL", "Could not save the product");
     await this.audit.record(ctx, {
@@ -349,8 +349,10 @@ export class MastersService {
     if (values["unitPrice"] !== undefined) {
       values["unitPrice"] = toPaise(values["unitPrice"] as number | string);
     }
+    // numeric columns are stored as strings by the driver; only coerce scalars
     for (const key of ["gstRate", "cessRate"]) {
-      if (values[key] !== undefined) values[key] = String(values[key]);
+      const rate = values[key];
+      if (typeof rate === "number" || typeof rate === "string") values[key] = String(rate);
     }
     const [row] = await this.db.update(products)
       .set({ ...values, updatedAt: new Date() })

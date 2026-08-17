@@ -34,9 +34,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm db:migrate
       # Integration tests run against the service Postgres: tenant isolation
       # and number allocation are enforced by SQL, so a mock proves nothing.
       - run: pnpm test
-      - run: pnpm --filter @traxac/web build
+      # The production bundle must exist for the routing test to be meaningful
+      # and for the API to have something to serve.
+      - run: pnpm build

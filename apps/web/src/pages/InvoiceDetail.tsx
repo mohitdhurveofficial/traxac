@@ -6,7 +6,7 @@ import type { AddressSnapshot, InvoiceDetail } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
 import { EinvoiceStatus, EwbStatus, InvoiceStatus, PaymentStatus, Pill } from "../components/status.js";
 import { ErrorNote, Field, Modal, Spinner, useToast } from "../components/ui.js";
-import { formatDate, formatDateTime, money, relativeTime } from "../lib/format.js";
+import { checked, field, formatDate, formatDateTime, money, numberField, relativeTime } from "../lib/format.js";
 
 /**
  * Invoice detail.
@@ -519,8 +519,8 @@ function Dialogs({
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             actions.finalize.mutate({
-              generateEinvoice: data.get("einvoice") === "on",
-              generateEwb: data.get("ewb") === "on",
+              generateEinvoice: checked(data, "einvoice"),
+              generateEwb: checked(data, "ewb"),
             }, done("Invoice issued"));
           }}>
           <label className="flex items-start gap-2 text-sm">
@@ -585,9 +585,9 @@ function Dialogs({
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             actions.recordPayment.mutate({
-              amount: Number(data.get("amount")),
-              method: String(data.get("method")),
-              reference: String(data.get("reference") || ""),
+              amount: numberField(data, "amount"),
+              method: field(data, "method"),
+              reference: field(data, "reference"),
             }, done("Payment recorded"));
           }}>
           <Field label="Amount received (₹)" required>
@@ -616,9 +616,9 @@ function Dialogs({
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            const vehicleNo = String(data.get("vehicleNo") || "").trim();
+            const vehicleNo = field(data, "vehicleNo").trim();
             actions.generateEwb.mutate({
-              distanceKm: Number(data.get("distanceKm") || 0),
+              distanceKm: numberField(data, "distanceKm"),
               partB: vehicleNo
                 ? { transportMode: Number(data.get("transportMode") || 1), vehicleNo, vehicleType: "R" }
                 : undefined,
@@ -656,12 +656,12 @@ function Dialogs({
             const data = new FormData(event.currentTarget);
             actions.updatePartB.mutate({
               transportMode: Number(data.get("transportMode") || 1),
-              vehicleNo: String(data.get("vehicleNo") || ""),
+              vehicleNo: field(data, "vehicleNo"),
               vehicleType: "R",
-              fromPlace: String(data.get("fromPlace")),
-              fromStateCode: String(data.get("fromStateCode")),
-              reasonCode: String(data.get("reasonCode")),
-              reasonRemark: String(data.get("reasonRemark")),
+              fromPlace: field(data, "fromPlace"),
+              fromStateCode: field(data, "fromStateCode"),
+              reasonCode: field(data, "reasonCode"),
+              reasonRemark: field(data, "reasonRemark"),
             }, done("Vehicle updated"));
           }}>
           <Field label="Vehicle number" required>
@@ -714,13 +714,13 @@ function Dialogs({
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             actions.extendEwb.mutate({
-              remainingDistanceKm: Number(data.get("remainingDistanceKm")),
-              reasonCode: String(data.get("reasonCode")),
-              reasonRemark: String(data.get("reasonRemark")),
-              currentPlace: String(data.get("currentPlace")),
-              currentStateCode: String(data.get("currentStateCode")),
-              currentPincode: String(data.get("currentPincode")),
-              transitType: String(data.get("transitType")),
+              remainingDistanceKm: numberField(data, "remainingDistanceKm"),
+              reasonCode: field(data, "reasonCode"),
+              reasonRemark: field(data, "reasonRemark"),
+              currentPlace: field(data, "currentPlace"),
+              currentStateCode: field(data, "currentStateCode"),
+              currentPincode: field(data, "currentPincode"),
+              transitType: field(data, "transitType"),
             }, done("Validity extended"));
           }}>
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -804,7 +804,7 @@ function ReasonDialog({
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          onSubmit(String(data.get("reasonCode")), String(data.get("remark")));
+          onSubmit(field(data, "reasonCode"), field(data, "remark"));
         }}>
         <Field label="Reason" required>
           <select name="reasonCode" className="field" defaultValue={Object.keys(reasons)[0]}>

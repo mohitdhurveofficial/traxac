@@ -28,7 +28,7 @@ const daysAgo = (days: number): Date => new Date(Date.now() - days * 86_400_000)
 
 async function main(): Promise<void> {
   const container = createContainer({ processName: "traxac-seed" });
-  const { database, logger, auth, masters, invoices: invoiceService } = container;
+  const { database, logger, masters, invoices: invoiceService } = container;
 
   try {
     await seedReferenceData(database);
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
     /* ------------------------------- invoices ---------------------------- */
     const already = await invoiceService.list(ctx, {
       limit: 1, page: 1, sort: "createdAt", order: "desc",
-    } as never);
+    });
     if (already.total > 0) {
       logger.info({ count: already.total }, "invoices already present; leaving them alone");
       logger.info({ email: DEMO_EMAIL }, "seed complete");
@@ -277,7 +277,7 @@ async function main(): Promise<void> {
       poNumber: "MIP/PO/2026/0871",
       poDate: daysAgo(8),
       notes: "Material to be unloaded at the site store between 9am and 5pm.",
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, complex.invoice.id);
     await markCompliant(container, ctx, complex.invoice.id, { withEwb: true, distanceKm: 840, expiresInHours: 9, vehicleNo: "MH12QR4455" });
 
@@ -288,12 +288,12 @@ async function main(): Promise<void> {
       placeOfSupply: "27",
       lines: [line("MS Angle 50x50x6", 6), line("MS Plate 10mm", 3.2)],
       poNumber: "KF/2026/112",
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, paid.invoice.id);
     await markCompliant(container, ctx, paid.invoice.id, {});
     await invoiceService.recordPayment(ctx, paid.invoice.id, {
       amount: paid.invoice.grandTotal / 100, method: "rtgs", reference: "RTGS/2026/88120",
-    } as never);
+    });
 
     // 3. Inter-state, part paid, overdue.
     const partPaid = await invoiceService.createDraft(ctx, base({
@@ -307,12 +307,12 @@ async function main(): Promise<void> {
         vehicleNo: "MH14AB7788", vehicleType: "R",
         transportDocNo: "DRL/2026/43880", transportDocDate: daysAgo(45), subSupplyType: "1",
       },
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, partPaid.invoice.id);
     await markCompliant(container, ctx, partPaid.invoice.id, { withEwb: true, distanceKm: 620, expiresInHours: -72, vehicleNo: "MH14AB7788" });
     await invoiceService.recordPayment(ctx, partPaid.invoice.id, {
       amount: 250000, method: "neft", reference: "NEFT/2026/5510",
-    } as never);
+    });
 
     // 4. Small unregistered walk-in — no e-Invoice, no e-Way Bill.
     const walkIn = await invoiceService.createDraft(ctx, base({
@@ -321,11 +321,11 @@ async function main(): Promise<void> {
       placeOfSupply: "27",
       lines: [line("HT Bolt M20 x 80 (Grade 8.8)", 200), line("Red Oxide Primer 20L", 2)],
       terms: "Cash on delivery.",
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, walkIn.invoice.id);
     await invoiceService.recordPayment(ctx, walkIn.invoice.id, {
       amount: walkIn.invoice.grandTotal / 100, method: "cash",
-    } as never);
+    });
 
     // 5. A services invoice — no movement of goods.
     const services = await invoiceService.createDraft(ctx, base({
@@ -333,7 +333,7 @@ async function main(): Promise<void> {
       buyerPartyId: konkan!.id,
       placeOfSupply: "27",
       lines: [line("Fabrication and erection charges", 4)],
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, services.invoice.id);
     await markCompliant(container, ctx, services.invoice.id, {});
 
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
       buyerPartyId: deccan!.id,
       placeOfSupply: "24",
       lines: [line("MS Plate 10mm", 1)],
-    }) as never);
+    }));
     await invoiceService.finalize(ctx, cancelled.invoice.id);
     await invoiceService.cancel(ctx, cancelled.invoice.id, "2: Order cancelled by the customer");
 
@@ -353,11 +353,11 @@ async function main(): Promise<void> {
       buyerPartyId: meridian!.id,
       placeOfSupply: "29",
       lines: [line("MS Structural Beam ISMB 200", 4)],
-    }) as never);
+    }));
 
     const summary = await invoiceService.list(ctx, {
       limit: 50, page: 1, sort: "invoiceDate", order: "desc",
-    } as never);
+    });
     logger.info({ invoices: summary.total, customers: customers.length, products: products.size },
       "sample data created");
     logger.info({ email: DEMO_EMAIL, password: DEMO_PASSWORD },

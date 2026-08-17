@@ -27,7 +27,7 @@ export interface RunnerOptions {
 }
 
 export class Runner {
-  private readonly workerId = `${process.env["RAILWAY_REPLICA_ID"] ?? "local"}-${randomUUID().slice(0, 8)}`;
+  private readonly workerId: string;
   private running = false;
   private inFlight = 0;
   private readonly timers: NodeJS.Timeout[] = [];
@@ -35,7 +35,10 @@ export class Runner {
   constructor(
     private readonly container: Container,
     private readonly options: RunnerOptions,
-  ) {}
+  ) {
+    const replica = container.config.RAILWAY_REPLICA_ID ?? "local";
+    this.workerId = `${replica}-${randomUUID().slice(0, 8)}`;
+  }
 
   async start(): Promise<void> {
     this.running = true;

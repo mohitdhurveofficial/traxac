@@ -1,4 +1,33 @@
+import { existsSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+/**
+ * Locate the workspace root by walking up for the pnpm workspace marker.
+ *
+ * Relative paths in configuration must not be resolved against `process.cwd()`:
+ * pnpm runs each service from its own package directory, so `./.storage` meant
+ * `apps/api/.storage` in the API and `apps/worker/.storage` in the worker, and
+ * the two processes silently stopped sharing files.
+ */
+function findRepoRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 8; depth++) {
+    if (existsSync(resolve(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+export const REPO_ROOT = findRepoRoot();
+
+/** Resolve a configured path against the workspace root, not the cwd. */
+export function resolveFromRepoRoot(path: string): string {
+  return isAbsolute(path) ? path : resolve(REPO_ROOT, path);
+}
 
 /**
  * Single source of truth for environment configuration. Parsed once at
@@ -39,6 +68,9 @@ const configSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_FORCE_PATH_STYLE: boolish.default(true),
 
+  /** Absolute path to the built web app. Defaults to apps/web/dist. */
+  WEB_DIST_PATH: z.string().optional(),
+
   /** Government gateway defaults; per-tenant credentials override the base URL. */
   GST_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   IRP_SANDBOX_BASE_URL: z.string().default("https://einv-apisandbox.nic.in"),
@@ -48,10 +80,18 @@ const configSchema = z.object({
   /** NIC issues these per integrator; without them the gateway stays disabled. */
   NIC_CLIENT_ID: z.string().optional(),
   NIC_CLIENT_SECRET: z.string().optional(),
+  /**
+   * NIC's RSA public key per environment, PEM or bare base64. Without it the
+   * gateway refuses to authenticate rather than sending an unwrapped payload.
+   */
+  NIC_PUBLIC_KEY_SANDBOX: z.string().optional(),
+  NIC_PUBLIC_KEY_PRODUCTION: z.string().optional(),
   GATEWAY_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(4),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(200).max(60_000).default(2000),
+  /** Injected by Railway; used only to label a worker in logs and job locks. */
+  RAILWAY_REPLICA_ID: z.string().optional(),
 
   APP_URL: z.string().default("http://localhost:5173"),
   API_URL: z.string().default("http://localhost:3000"),
@@ -64,6 +104,16 @@ export interface AppConfig extends RawConfig {
   isDevelopment: boolean;
   isTest: boolean;
   corsOrigins: string[];
+  /**
+   * Whether to mark the session cookie `Secure`. Always true in production,
+   * regardless of the environment variable — a forgotten flag must not be
+   * able to put session cookies on the wire in clear text.
+   */
+  cookieSecure: boolean;
+  /** STORAGE_LOCAL_DIR resolved to an absolute path against the repo root. */
+  storageLocalDir: string;
+  /** WEB_DIST_PATH resolved, defaulting to apps/web/dist. */
+  webDistPath: string;
 }
 
 let cached: AppConfig | null = null;
@@ -78,12 +128,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   const value = parsed.data;
+  const isProduction = value.NODE_ENV === "production";
   cached = {
     ...value,
-    isProduction: value.NODE_ENV === "production",
+    isProduction,
     isDevelopment: value.NODE_ENV === "development",
     isTest: value.NODE_ENV === "test",
     corsOrigins: value.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean),
+    cookieSecure: isProduction || value.COOKIE_SECURE,
+    storageLocalDir: resolveFromRepoRoot(value.STORAGE_LOCAL_DIR),
+    webDistPath: value.WEB_DIST_PATH
+      ? resolveFromRepoRoot(value.WEB_DIST_PATH)
+      : resolve(REPO_ROOT, "apps/web/dist"),
   };
   if (cached.isProduction && cached.STORAGE_DRIVER === "local") {
     throw new Error("STORAGE_DRIVER=local is not allowed in production; configure S3");

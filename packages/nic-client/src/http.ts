@@ -106,7 +106,9 @@ export async function nicFetch(request: NicRequest): Promise<NicResponse> {
     if (attempt < request.attempts) await sleep(backoffMs(attempt));
   }
 
-  throw lastError ?? new NicHttpError(500, "UNKNOWN", "The portal call failed", true);
+  throw lastError instanceof Error
+    ? lastError
+    : new NicHttpError(500, "UNKNOWN", "The portal call failed", true, lastError);
 }
 
 async function recordTelemetry(

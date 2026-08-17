@@ -91,8 +91,8 @@ export function createContainer(options: ContainerOptions = {}): Container {
 
   const registry = options.registry ?? createNicRegistry({
     publicKeys: {
-      sandbox: process.env["NIC_PUBLIC_KEY_SANDBOX"],
-      production: process.env["NIC_PUBLIC_KEY_PRODUCTION"],
+      sandbox: config.NIC_PUBLIC_KEY_SANDBOX,
+      production: config.NIC_PUBLIC_KEY_PRODUCTION,
     },
     timeoutMs: config.GATEWAY_TIMEOUT_MS,
     attempts: 3,

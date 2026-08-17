@@ -83,7 +83,7 @@ export function renderInvoicePdf(
       draw(doc, detail, qrDataUrl);
       doc.end();
     } catch (err) {
-      reject(err);
+      reject(err instanceof Error ? err : new Error(String(err)));
     }
   });
 }

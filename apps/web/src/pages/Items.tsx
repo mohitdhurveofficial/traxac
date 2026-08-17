@@ -5,7 +5,7 @@ import { useArchiveProduct, useProducts, useSaveProduct } from "../api/hooks.js"
 import type { Product } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
 import { Drawer, EmptyState, ErrorNote, Field, SearchInput, Spinner, useToast } from "../components/ui.js";
-import { money } from "../lib/format.js";
+import { checked, field, money, numberField } from "../lib/format.js";
 
 /**
  * Items — products and services with their HSN and GST rate remembered, so a
@@ -114,15 +114,15 @@ function ProductForm({
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           save.mutate({
-            name: String(data.get("name")),
-            description: String(data.get("description") || ""),
-            sku: String(data.get("sku") || ""),
-            hsnSac: String(data.get("hsnSac")),
-            unit: String(data.get("unit")),
-            unitPrice: Number(data.get("unitPrice") || 0),
-            gstRate: Number(data.get("gstRate") || 0),
-            cessRate: Number(data.get("cessRate") || 0),
-            isService: data.get("isService") === "on",
+            name: field(data, "name"),
+            description: field(data, "description"),
+            sku: field(data, "sku"),
+            hsnSac: field(data, "hsnSac"),
+            unit: field(data, "unit"),
+            unitPrice: numberField(data, "unitPrice"),
+            gstRate: numberField(data, "gstRate"),
+            cessRate: numberField(data, "cessRate"),
+            isService: checked(data, "isService"),
           }, { onSuccess: onSaved });
         }}>
         <Field label="Item name" required>
