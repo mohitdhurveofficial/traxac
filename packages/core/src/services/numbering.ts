@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Database, DbExecutor } from "@traxac/database";
 import { invoiceSequences } from "@traxac/database";
 import { AppError, financialYear, type DocType } from "@traxac/shared";
@@ -39,8 +39,20 @@ export class NumberingService {
   constructor(private readonly database: Database) {}
 
   /**
-   * Reserve the next number. Must run inside a transaction — pass the
-   * transaction handle so the lock is released with the invoice insert.
+   * Reserve the next number.
+   *
+   * A single `INSERT … ON CONFLICT DO UPDATE … RETURNING` does the whole
+   * allocation atomically. Under READ COMMITTED, PostgreSQL guarantees that
+   * concurrent executions of this statement serialise on the conflicting row:
+   * exactly one wins the insert and the rest take the update branch, each
+   * seeing the value the previous one left behind.
+   *
+   * The earlier read-then-write version needed `SELECT … FOR UPDATE` to hold
+   * between two statements, which is one more thing to get right for no gain.
+   * A concurrency test that finalizes twelve invoices at once covers this.
+   *
+   * Must still run inside the invoice transaction, so a rollback returns the
+   * number to the series instead of burning it.
    */
   async allocate(
     tx: DbExecutor,
@@ -50,38 +62,41 @@ export class NumberingService {
     const series = input.series?.trim() || DEFAULT_SERIES[input.docType];
     const fy = financialYear(input.invoiceDate);
 
-    // Create the series lazily the first time it is used.
-    await tx.insert(invoiceSequences).values({
-      tenantId: ctx.tenantId,
-      gstinId: input.gstinId,
-      docType: input.docType,
-      series,
-      financialYear: fy,
-      nextNumber: 1,
-    }).onConflictDoNothing();
+    const [row] = await tx
+      .insert(invoiceSequences)
+      .values({
+        tenantId: ctx.tenantId,
+        gstinId: input.gstinId,
+        docType: input.docType,
+        series,
+        financialYear: fy,
+        // The first invoice consumes 1, so the row is created already pointing
+        // at 2 and the RETURNING expression below yields 1 either way.
+        nextNumber: 2,
+      })
+      .onConflictDoUpdate({
+        target: [
+          invoiceSequences.tenantId, invoiceSequences.gstinId,
+          invoiceSequences.docType, invoiceSequences.series,
+          invoiceSequences.financialYear,
+        ],
+        set: {
+          nextNumber: sql`${invoiceSequences.nextNumber} + 1`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({
+        allocated: sql<number>`${invoiceSequences.nextNumber} - 1`,
+        prefix: invoiceSequences.prefix,
+        suffix: invoiceSequences.suffix,
+        padding: invoiceSequences.padding,
+      });
 
-    // `FOR UPDATE` serialises concurrent allocations on this exact series.
-    const [locked] = await tx
-      .select()
-      .from(invoiceSequences)
-      .where(and(
-        eq(invoiceSequences.tenantId, ctx.tenantId),
-        eq(invoiceSequences.gstinId, input.gstinId),
-        eq(invoiceSequences.docType, input.docType),
-        eq(invoiceSequences.series, series),
-        eq(invoiceSequences.financialYear, fy),
-      ))
-      .for("update")
-      .limit(1);
-    if (!locked) throw new AppError("INTERNAL", "Could not reserve a document number");
+    if (!row) throw new AppError("INTERNAL", "Could not reserve a document number");
 
-    const value = locked.nextNumber;
-    await tx.update(invoiceSequences)
-      .set({ nextNumber: value + 1, updatedAt: new Date() })
-      .where(eq(invoiceSequences.id, locked.id));
-
-    const body = String(value).padStart(locked.padding, "0");
-    const invoiceNumber = `${locked.prefix}${series}/${fy}/${body}${locked.suffix}`;
+    const value = Number(row.allocated);
+    const body = String(value).padStart(row.padding, "0");
+    const invoiceNumber = `${row.prefix}${series}/${fy}/${body}${row.suffix}`;
 
     return { invoiceNumber, series, financialYear: fy, sequenceValue: value };
   }

@@ -79,10 +79,20 @@ pnpm test        # unit tests
 pnpm typecheck   # every package and app
 ```
 
-Covered: the tax engine (discounts, cess, charges, IGST-on-intra, zero-rated
-exports, exact CGST/SGST halving, round-off), the GSTIN checksum, e-Way Bill
-validity and the extend/cancel windows, IST and financial-year date maths, and
-credential encryption including key rotation.
+70 tests. Unit coverage for the tax engine (discounts, cess, charges,
+IGST-on-intra, zero-rated exports, exact CGST/SGST halving, round-off), the
+GSTIN checksum, e-Way Bill validity and the extend/cancel windows, IST and
+financial-year maths, and credential encryption including key rotation.
+
+Integration tests run against a real Postgres, because the two properties that
+matter most are enforced by SQL rather than by application code:
+
+- **Tenant isolation** — two businesses in one database, with twelve attempts
+  to read, edit, finalize, cancel or reference across the boundary.
+- **Document numbering** — twelve invoices finalized concurrently must produce
+  unique, gapless numbers. This test found two real bugs.
+
+Point them at another database with `TEST_DATABASE_URL`.
 
 ## Deployment
 

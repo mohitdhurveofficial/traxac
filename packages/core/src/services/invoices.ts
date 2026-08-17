@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@traxac/database";
 import {
@@ -217,11 +218,17 @@ export class InvoiceService {
     requirePermission(ctx, "invoices:write");
     const prepared = await this.prepare(ctx, input);
 
+    // The id is generated up front so the draft placeholder can be derived
+    // from it. A timestamp-based placeholder collides when two drafts are
+    // created in the same millisecond, which the unique number index rejects.
+    const invoiceId = randomUUID();
+
     const created = await this.db.transaction(async (tx) => {
       const [invoice] = await tx.insert(invoices).values({
         ...prepared.header,
+        id: invoiceId,
         tenantId: ctx.tenantId,
-        invoiceNumber: input.invoiceNumber?.trim() || `DRAFT-${Date.now().toString(36).toUpperCase()}`,
+        invoiceNumber: input.invoiceNumber?.trim() || draftNumber(invoiceId),
         status: "draft",
         einvoiceStatus: "not_required",
         ewbStatus: "not_required",
@@ -416,11 +423,13 @@ export class InvoiceService {
   async duplicate(ctx: AuthContext, id: string): Promise<InvoiceDetail> {
     requirePermission(ctx, "invoices:write");
     const source = await this.get(ctx, id);
+    const invoiceId = randomUUID();
     const created = await this.db.transaction(async (tx) => {
       const [invoice] = await tx.insert(invoices).values({
         ...stripIdentity(source.invoice),
+        id: invoiceId,
         tenantId: ctx.tenantId,
-        invoiceNumber: `DRAFT-${Date.now().toString(36).toUpperCase()}`,
+        invoiceNumber: draftNumber(invoiceId),
         invoiceDate: new Date(),
         financialYear: financialYear(new Date()),
         status: "draft",
@@ -706,6 +715,15 @@ function toTaxCharge(charge: CreateInvoiceInput["charges"][number]): ChargeInput
     amount: toPaise(charge.amount as number | string),
     gstRate: charge.gstRate,
   };
+}
+
+/**
+ * Placeholder shown while an invoice is a draft. Derived from the row's own
+ * primary key so it is unique by construction — no document number is
+ * consumed until the invoice is finalized.
+ */
+function draftNumber(invoiceId: string): string {
+  return `DRAFT-${invoiceId.replace(/-/g, "").slice(0, 10).toUpperCase()}`;
 }
 
 /** Strip primary keys and timestamps so a row can be re-inserted as a copy. */
