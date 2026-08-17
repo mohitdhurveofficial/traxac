@@ -2,9 +2,7 @@ import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import type { Job, AddressSnapshot } from "@traxac/database";
 import { systemContext, type Container, type InvoiceDetail } from "@traxac/core";
-import {
-  amountInWords, formatINR, GST_STATE_CODES, toIsoDate, toRupees,
-} from "@traxac/shared";
+import { amountInWords, formatINR, GST_STATE_CODES, toIsoDate, toRupees } from "@traxac/shared";
 
 /**
  * Invoice PDF.
@@ -30,7 +28,11 @@ export async function handleRenderInvoicePdf(job: Job, container: Container): Pr
   const einvoice = detail.einvoice;
 
   const qrDataUrl = einvoice?.signedQrCode
-    ? await QRCode.toDataURL(einvoice.signedQrCode, { errorCorrectionLevel: "M", margin: 0, width: 320 })
+    ? await QRCode.toDataURL(einvoice.signedQrCode, {
+        errorCorrectionLevel: "M",
+        margin: 0,
+        width: 320,
+      })
     : null;
 
   const pdf = await renderInvoicePdf(detail, qrDataUrl);
@@ -54,13 +56,17 @@ export async function handleRenderInvoicePdf(job: Job, container: Container): Pr
       entityId: detail.invoice.id,
       filename: `${detail.invoice.invoiceNumber.replace(/[^\w.-]+/g, "-")}-signed.json`,
       contentType: "application/json",
-      body: JSON.stringify({
-        irn: einvoice.irn,
-        ackNumber: einvoice.ackNumber,
-        ackDate: einvoice.ackDate,
-        signedInvoice: einvoice.signedInvoice,
-        signedQrCode: einvoice.signedQrCode,
-      }, null, 2),
+      body: JSON.stringify(
+        {
+          irn: einvoice.irn,
+          ackNumber: einvoice.ackNumber,
+          ackDate: einvoice.ackDate,
+          signedInvoice: einvoice.signedInvoice,
+          signedQrCode: einvoice.signedQrCode,
+        },
+        null,
+        2,
+      ),
       replace: true,
     });
   }
@@ -68,10 +74,7 @@ export async function handleRenderInvoicePdf(job: Job, container: Container): Pr
   return { documentId: stored.id, sizeBytes: stored.sizeBytes };
 }
 
-export function renderInvoicePdf(
-  detail: InvoiceDetail,
-  qrDataUrl: string | null,
-): Promise<Buffer> {
+export function renderInvoicePdf(detail: InvoiceDetail, qrDataUrl: string | null): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
@@ -97,9 +100,15 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
 
   /* ------------------------------- Header ------------------------------ */
 
-  doc.fillColor(INK).fontSize(16).font("Helvetica-Bold")
+  doc
+    .fillColor(INK)
+    .fontSize(16)
+    .font("Helvetica-Bold")
     .text(invoice.billFrom.name, PAGE_MARGIN, PAGE_MARGIN, { width: pageWidth * 0.62 });
-  doc.fontSize(8.5).font("Helvetica").fillColor(MUTED)
+  doc
+    .fontSize(8.5)
+    .font("Helvetica")
+    .fillColor(MUTED)
     .text(addressLines(invoice.billFrom).join("\n"), { width: pageWidth * 0.62 })
     .text(`GSTIN: ${invoice.billFrom.gstin ?? "—"}`, { width: pageWidth * 0.62 });
 
@@ -110,15 +119,25 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
     delivery_challan: "DELIVERY CHALLAN",
     bill_of_supply: "BILL OF SUPPLY",
   };
-  doc.font("Helvetica-Bold").fontSize(13).fillColor(ACCENT)
-    .text(titleFor[invoice.docType] ?? "TAX INVOICE",
-      PAGE_MARGIN + pageWidth * 0.62, PAGE_MARGIN, { width: pageWidth * 0.38, align: "right" });
-  doc.font("Helvetica").fontSize(9).fillColor(INK)
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(13)
+    .fillColor(ACCENT)
+    .text(titleFor[invoice.docType] ?? "TAX INVOICE", PAGE_MARGIN + pageWidth * 0.62, PAGE_MARGIN, {
+      width: pageWidth * 0.38,
+      align: "right",
+    });
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor(INK)
     .text(invoice.invoiceNumber, { width: pageWidth * 0.38, align: "right" })
     .fillColor(MUTED)
     .text(toIsoDate(invoice.invoiceDate), { width: pageWidth * 0.38, align: "right" });
   if (invoice.status === "cancelled") {
-    doc.fillColor("#b91c1c").font("Helvetica-Bold")
+    doc
+      .fillColor("#b91c1c")
+      .font("Helvetica-Bold")
       .text("CANCELLED", { width: pageWidth * 0.38, align: "right" });
   }
 
@@ -130,29 +149,41 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
 
   if (einvoice?.irn || ewayBill?.ewbNumber) {
     const boxHeight = qrDataUrl ? 92 : 46;
-    doc.roundedRect(PAGE_MARGIN, y, pageWidth, boxHeight, 4)
-      .fillAndStroke("#f8fafc", LINE);
+    doc.roundedRect(PAGE_MARGIN, y, pageWidth, boxHeight, 4).fillAndStroke("#f8fafc", LINE);
 
     const textWidth = qrDataUrl ? pageWidth - 104 : pageWidth - 16;
     let ty = y + 9;
     if (einvoice?.irn) {
       label(doc, "IRN", PAGE_MARGIN + 10, ty);
-      doc.font("Helvetica").fontSize(7.5).fillColor(INK)
+      doc
+        .font("Helvetica")
+        .fontSize(7.5)
+        .fillColor(INK)
         .text(einvoice.irn, PAGE_MARGIN + 10, ty + 9, { width: textWidth });
       ty = doc.y + 4;
-      doc.fontSize(8).fillColor(MUTED).text(
-        `Ack No ${einvoice.ackNumber ?? "—"}   •   Ack Date ${einvoice.ackDate ? toIsoDate(einvoice.ackDate) : "—"}`,
-        PAGE_MARGIN + 10, ty, { width: textWidth },
-      );
+      doc
+        .fontSize(8)
+        .fillColor(MUTED)
+        .text(
+          `Ack No ${einvoice.ackNumber ?? "—"}   •   Ack Date ${einvoice.ackDate ? toIsoDate(einvoice.ackDate) : "—"}`,
+          PAGE_MARGIN + 10,
+          ty,
+          { width: textWidth },
+        );
       ty = doc.y + 4;
     }
     if (ewayBill?.ewbNumber) {
-      doc.fontSize(8).fillColor(MUTED).text(
-        `e-Way Bill ${ewayBill.ewbNumber}`
-        + (ewayBill.validUntil ? `   •   valid to ${toIsoDate(ewayBill.validUntil)}` : "")
-        + (ewayBill.vehicleNo ? `   •   ${ewayBill.vehicleNo}` : ""),
-        PAGE_MARGIN + 10, ty, { width: textWidth },
-      );
+      doc
+        .fontSize(8)
+        .fillColor(MUTED)
+        .text(
+          `e-Way Bill ${ewayBill.ewbNumber}` +
+            (ewayBill.validUntil ? `   •   valid to ${toIsoDate(ewayBill.validUntil)}` : "") +
+            (ewayBill.vehicleNo ? `   •   ${ewayBill.vehicleNo}` : ""),
+          PAGE_MARGIN + 10,
+          ty,
+          { width: textWidth },
+        );
     }
     if (qrDataUrl) {
       const image = Buffer.from(qrDataUrl.split(",")[1] ?? "", "base64");
@@ -170,9 +201,15 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
   columns.forEach((column, index) => {
     const x = PAGE_MARGIN + index * (columnWidth + 8);
     label(doc, column.title, x, partyTop);
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(INK)
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .fillColor(INK)
       .text(column.address.name, x, partyTop + 11, { width: columnWidth });
-    doc.font("Helvetica").fontSize(8).fillColor(MUTED)
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(MUTED)
       .text(addressLines(column.address).join("\n"), { width: columnWidth });
     if (column.address.gstin) {
       doc.fillColor(INK).text(`GSTIN ${column.address.gstin}`, { width: columnWidth });
@@ -181,15 +218,23 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
   });
 
   y = partyBottom + 8;
-  doc.font("Helvetica").fontSize(8).fillColor(MUTED).text(
-    [
-      `Place of supply: ${invoice.placeOfSupply} — ${GST_STATE_CODES[invoice.placeOfSupply] ?? ""}`,
-      invoice.reverseCharge ? "Reverse charge: Yes" : null,
-      invoice.poNumber ? `PO ${invoice.poNumber}` : null,
-      invoice.dueDate ? `Due ${toIsoDate(invoice.dueDate)}` : null,
-    ].filter(Boolean).join("   •   "),
-    PAGE_MARGIN, y, { width: pageWidth },
-  );
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(MUTED)
+    .text(
+      [
+        `Place of supply: ${invoice.placeOfSupply} — ${GST_STATE_CODES[invoice.placeOfSupply] ?? ""}`,
+        invoice.reverseCharge ? "Reverse charge: Yes" : null,
+        invoice.poNumber ? `PO ${invoice.poNumber}` : null,
+        invoice.dueDate ? `Due ${toIsoDate(invoice.dueDate)}` : null,
+      ]
+        .filter(Boolean)
+        .join("   •   "),
+      PAGE_MARGIN,
+      y,
+      { width: pageWidth },
+    );
   y = doc.y + 10;
 
   /* ------------------------------- Items ------------------------------- */
@@ -283,20 +328,28 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
 
   const totalsTop = y;
   for (const [caption, amount, emphasis] of totalRows) {
-    doc.font(emphasis ? "Helvetica-Bold" : "Helvetica").fontSize(emphasis ? 10 : 8.5)
+    doc
+      .font(emphasis ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(emphasis ? 10 : 8.5)
       .fillColor(emphasis ? INK : MUTED)
       .text(caption, totalsX, y, { width: totalsWidth * 0.5 });
-    doc.fillColor(INK)
-      .text(formatINR(amount), totalsX + totalsWidth * 0.5, y, {
-        width: totalsWidth * 0.5, align: "right",
-      });
+    doc.fillColor(INK).text(formatINR(amount), totalsX + totalsWidth * 0.5, y, {
+      width: totalsWidth * 0.5,
+      align: "right",
+    });
     y += emphasis ? 16 : 13;
   }
 
   // Amount in words sits beside the totals block.
-  doc.font("Helvetica").fontSize(8).fillColor(MUTED)
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(MUTED)
     .text("Amount in words", PAGE_MARGIN, totalsTop, { width: pageWidth - totalsWidth - 16 });
-  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(INK)
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor(INK)
     .text(amountInWords(invoice.grandTotal), PAGE_MARGIN, totalsTop + 11, {
       width: pageWidth - totalsWidth - 16,
     });
@@ -322,15 +375,20 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
     ];
     y = tableHeader(doc, hsnColumns, y);
     for (const row of hsnSummary) {
-      y = tableRow(doc, hsnColumns, {
-        hsn: row.hsnSac,
-        taxable: money(row.taxableValue),
-        rate: `${row.gstRate}%`,
-        igst: money(row.igst),
-        cgst: money(row.cgst),
-        sgst: money(row.sgst),
-        total: money(row.total),
-      }, y);
+      y = tableRow(
+        doc,
+        hsnColumns,
+        {
+          hsn: row.hsnSac,
+          taxable: money(row.taxableValue),
+          rate: `${row.gstRate}%`,
+          igst: money(row.igst),
+          cgst: money(row.cgst),
+          sgst: money(row.sgst),
+          total: money(row.total),
+        },
+        y,
+      );
     }
     y += 8;
   }
@@ -343,26 +401,39 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
     y += 8;
     if (invoice.notes) {
       label(doc, "Notes", PAGE_MARGIN, y);
-      doc.font("Helvetica").fontSize(8).fillColor(MUTED)
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .fillColor(MUTED)
         .text(invoice.notes, PAGE_MARGIN, y + 11, { width: pageWidth * 0.6 });
       y = doc.y + 6;
     }
     if (invoice.terms) {
       label(doc, "Terms", PAGE_MARGIN, y);
-      doc.font("Helvetica").fontSize(8).fillColor(MUTED)
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .fillColor(MUTED)
         .text(invoice.terms, PAGE_MARGIN, y + 11, { width: pageWidth * 0.6 });
       y = doc.y + 6;
     }
   }
 
   const signatureTop = Math.min(Math.max(y + 12, doc.page.height - 118), doc.page.height - 118);
-  doc.font("Helvetica").fontSize(8).fillColor(MUTED)
-    .text(`For ${invoice.billFrom.name}`,
-      PAGE_MARGIN + pageWidth - 180, signatureTop,
-      { width: 180, align: "right", lineBreak: false })
-    .text("Authorised signatory",
-      PAGE_MARGIN + pageWidth - 180, doc.page.height - 74,
-      { width: 180, align: "right", lineBreak: false });
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(MUTED)
+    .text(`For ${invoice.billFrom.name}`, PAGE_MARGIN + pageWidth - 180, signatureTop, {
+      width: 180,
+      align: "right",
+      lineBreak: false,
+    })
+    .text("Authorised signatory", PAGE_MARGIN + pageWidth - 180, doc.page.height - 74, {
+      width: 180,
+      align: "right",
+      lineBreak: false,
+    });
 
   // Page numbers, added once the page count is known. The bottom margin is
   // dropped first: writing inside it would make pdfkit start another page,
@@ -371,12 +442,17 @@ function draw(doc: Doc, detail: InvoiceDetail, qrDataUrl: string | null): void {
   for (let index = 0; index < range.count; index++) {
     doc.switchToPage(range.start + index);
     doc.page.margins.bottom = 0;
-    doc.font("Helvetica").fontSize(7).fillColor(MUTED).text(
-      `${invoice.invoiceNumber}   •   Page ${index + 1} of ${range.count}`
-      + (einvoice?.irn ? "   •   e-Invoice generated on the Government IRP" : ""),
-      PAGE_MARGIN, doc.page.height - 42,
-      { width: pageWidth, align: "center", lineBreak: false },
-    );
+    doc
+      .font("Helvetica")
+      .fontSize(7)
+      .fillColor(MUTED)
+      .text(
+        `${invoice.invoiceNumber}   •   Page ${index + 1} of ${range.count}` +
+          (einvoice?.irn ? "   •   e-Invoice generated on the Government IRP" : ""),
+        PAGE_MARGIN,
+        doc.page.height - 42,
+        { width: pageWidth, align: "center", lineBreak: false },
+      );
   }
 }
 
@@ -390,12 +466,20 @@ interface Column {
 }
 
 function tableHeader(doc: Doc, columns: Column[], y: number): number {
-  doc.rect(PAGE_MARGIN, y, columns.reduce((s, c) => s + c.width, 0), 16).fill("#f3f4f6");
+  doc
+    .rect(
+      PAGE_MARGIN,
+      y,
+      columns.reduce((s, c) => s + c.width, 0),
+      16,
+    )
+    .fill("#f3f4f6");
   let x = PAGE_MARGIN;
   doc.font("Helvetica-Bold").fontSize(7.5).fillColor(MUTED);
   for (const column of columns) {
     doc.text(column.label.toUpperCase(), x + 4, y + 5, {
-      width: column.width - 8, align: column.align,
+      width: column.width - 8,
+      align: column.align,
     });
     x += column.width;
   }
@@ -422,25 +506,38 @@ function tableRow(
   if (subtitle) {
     const descColumn = columns.find((c) => c.key === "desc");
     if (descColumn) {
-      doc.fontSize(7).fillColor(MUTED).text(subtitle, PAGE_MARGIN + 22, next - 1, {
-        width: descColumn.width - 8,
-      });
+      doc
+        .fontSize(7)
+        .fillColor(MUTED)
+        .text(subtitle, PAGE_MARGIN + 22, next - 1, {
+          width: descColumn.width - 8,
+        });
       next = doc.y + 3;
     }
   }
-  doc.moveTo(PAGE_MARGIN, next - 1)
+  doc
+    .moveTo(PAGE_MARGIN, next - 1)
     .lineTo(PAGE_MARGIN + columns.reduce((s, c) => s + c.width, 0), next - 1)
-    .strokeColor(LINE).lineWidth(0.5).stroke();
+    .strokeColor(LINE)
+    .lineWidth(0.5)
+    .stroke();
   return next + 2;
 }
 
 function rule(doc: Doc, y: number): void {
-  doc.moveTo(PAGE_MARGIN, y).lineTo(doc.page.width - PAGE_MARGIN, y)
-    .strokeColor(LINE).lineWidth(0.7).stroke();
+  doc
+    .moveTo(PAGE_MARGIN, y)
+    .lineTo(doc.page.width - PAGE_MARGIN, y)
+    .strokeColor(LINE)
+    .lineWidth(0.7)
+    .stroke();
 }
 
 function label(doc: Doc, text: string, x: number, y: number): void {
-  doc.font("Helvetica-Bold").fontSize(7).fillColor(MUTED)
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(7)
+    .fillColor(MUTED)
     .text(text.toUpperCase(), x, y, { characterSpacing: 0.4 });
 }
 
@@ -451,7 +548,9 @@ function ensureSpace(doc: Doc, y: number, needed: number, onNewPage?: () => numb
   return onNewPage ? onNewPage() : PAGE_MARGIN;
 }
 
-function partyColumns(invoice: InvoiceDetail["invoice"]): Array<{ title: string; address: AddressSnapshot }> {
+function partyColumns(
+  invoice: InvoiceDetail["invoice"],
+): Array<{ title: string; address: AddressSnapshot }> {
   const columns: Array<{ title: string; address: AddressSnapshot }> = [
     { title: "Bill to", address: invoice.billTo },
   ];
@@ -472,7 +571,8 @@ function addressLines(address: AddressSnapshot): string[] {
 
 function money(paise: number): string {
   return toRupees(paise).toLocaleString("en-IN", {
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 

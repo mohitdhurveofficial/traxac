@@ -6,20 +6,36 @@ import { pino, type Logger } from "pino";
  * than relying on every call site to remember.
  */
 export const REDACTED_PATHS = [
-  "password", "*.password", "*.Password",
-  "clientSecret", "*.clientSecret", "*.ClientSecret",
-  "token", "*.token", "*.AuthToken", "*.authToken",
-  "sek", "*.Sek", "*.sek",
-  "encryptedPayload", "*.encryptedPayload",
-  "authorization", "req.headers.authorization", "req.headers.cookie",
-  "*.passwordHash", "*.tokenHash", "*.keyHash",
+  "password",
+  "*.password",
+  "*.Password",
+  "clientSecret",
+  "*.clientSecret",
+  "*.ClientSecret",
+  "token",
+  "*.token",
+  "*.AuthToken",
+  "*.authToken",
+  "sek",
+  "*.Sek",
+  "*.sek",
+  "encryptedPayload",
+  "*.encryptedPayload",
+  "authorization",
+  "req.headers.authorization",
+  "req.headers.cookie",
+  "*.passwordHash",
+  "*.tokenHash",
+  "*.keyHash",
 ];
 
-export function createLogger(options: {
-  level?: string;
-  pretty?: boolean;
-  name?: string;
-} = {}): Logger {
+export function createLogger(
+  options: {
+    level?: string;
+    pretty?: boolean;
+    name?: string;
+  } = {},
+): Logger {
   return pino({
     name: options.name ?? "traxac",
     level: options.level ?? "info",

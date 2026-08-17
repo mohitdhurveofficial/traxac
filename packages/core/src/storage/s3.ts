@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import type { Readable } from "node:stream";
 import {
-  DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { AppError } from "@traxac/shared";
@@ -27,24 +31,25 @@ export class S3ObjectStorage implements ObjectStorage {
       region: config.region,
       endpoint: config.endpoint,
       forcePathStyle: config.forcePathStyle ?? true,
-      credentials: config.accessKeyId && config.secretAccessKey
-        ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
-        : undefined,
+      credentials:
+        config.accessKeyId && config.secretAccessKey
+          ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
+          : undefined,
     });
   }
 
   async put(input: PutObjectInput): Promise<StoredObject> {
-    const body = Buffer.isBuffer(input.body)
-      ? input.body
-      : Buffer.from(input.body);
-    await this.client.send(new PutObjectCommand({
-      Bucket: this.config.bucket,
-      Key: input.key,
-      Body: body,
-      ContentType: input.contentType,
-      Metadata: input.metadata,
-      ChecksumAlgorithm: "SHA256",
-    }));
+    const body = Buffer.isBuffer(input.body) ? input.body : Buffer.from(input.body);
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: input.key,
+        Body: body,
+        ContentType: input.contentType,
+        Metadata: input.metadata,
+        ChecksumAlgorithm: "SHA256",
+      }),
+    );
     return {
       key: input.key,
       size: body.byteLength,
@@ -54,17 +59,27 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async get(key: string): Promise<Buffer> {
-    const res = await this.client.send(new GetObjectCommand({
-      Bucket: this.config.bucket, Key: key,
-    })).catch(() => null);
+    const res = await this.client
+      .send(
+        new GetObjectCommand({
+          Bucket: this.config.bucket,
+          Key: key,
+        }),
+      )
+      .catch(() => null);
     if (!res?.Body) throw new AppError("NOT_FOUND", "Stored file not found");
     return Buffer.from(await res.Body.transformToByteArray());
   }
 
   async getStream(key: string): Promise<Readable> {
-    const res = await this.client.send(new GetObjectCommand({
-      Bucket: this.config.bucket, Key: key,
-    })).catch(() => null);
+    const res = await this.client
+      .send(
+        new GetObjectCommand({
+          Bucket: this.config.bucket,
+          Key: key,
+        }),
+      )
+      .catch(() => null);
     if (!res?.Body) throw new AppError("NOT_FOUND", "Stored file not found");
     return res.Body as Readable;
   }

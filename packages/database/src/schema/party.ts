@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, boolean, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, updatedAt } from "./_shared.js";
 
@@ -12,7 +10,9 @@ export const gstins = pgTable(
   "gstins",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     gstin: text("gstin").notNull(),
     legalName: text("legal_name").notNull(),
     tradeName: text("trade_name").notNull(),
@@ -44,8 +44,12 @@ export const branches = pgTable(
   "branches",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    gstinId: uuid("gstin_id").notNull().references(() => gstins.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    gstinId: uuid("gstin_id")
+      .notNull()
+      .references(() => gstins.id, { onDelete: "cascade" }),
     code: text("code"),
     name: text("name").notNull(),
     /** branch | warehouse | plant | office */
@@ -61,10 +65,7 @@ export const branches = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [
-    index("branches_tenant_idx").on(t.tenantId),
-    index("branches_gstin_idx").on(t.gstinId),
-  ],
+  (t) => [index("branches_tenant_idx").on(t.tenantId), index("branches_gstin_idx").on(t.gstinId)],
 );
 
 /** Customers & suppliers — the tenant's trading partners. */
@@ -72,7 +73,9 @@ export const parties = pgTable(
   "parties",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     legalName: text("legal_name"),
     /** customer | supplier | both */
@@ -112,8 +115,12 @@ export const partyAddresses = pgTable(
   "party_addresses",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    partyId: uuid("party_id").notNull().references(() => parties.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    partyId: uuid("party_id")
+      .notNull()
+      .references(() => parties.id, { onDelete: "cascade" }),
     label: text("label").notNull(),
     /** shipping | billing | dispatch */
     kind: text("kind").notNull().default("shipping"),

@@ -27,16 +27,23 @@ export function moneyCompact(paise: number | string | null | undefined): string 
 }
 
 export function toPaise(rupeeValue: number | string | null | undefined): number {
-  const n = typeof rupeeValue === "string" ? Number.parseFloat(rupeeValue) : rupeeValue ?? 0;
-  return Number.isFinite(n) ? Math.round((n) * 100) : 0;
+  const n = typeof rupeeValue === "string" ? Number.parseFloat(rupeeValue) : (rupeeValue ?? 0);
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Kolkata",
 });
 const DATETIME_FORMAT = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit", month: "short", year: "numeric",
-  hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Kolkata",
 });
 
 export function formatDate(value: string | Date | null | undefined): string {
@@ -64,7 +71,9 @@ export function relativeTime(value: string | Date | null | undefined): string {
   const diffMs = target - Date.now();
   const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
   const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-    ["day", 86_400_000], ["hour", 3_600_000], ["minute", 60_000],
+    ["day", 86_400_000],
+    ["hour", 3_600_000],
+    ["minute", 60_000],
   ];
   for (const [unit, ms] of units) {
     if (Math.abs(diffMs) >= ms || unit === "minute") {
@@ -75,7 +84,12 @@ export function relativeTime(value: string | Date | null | undefined): string {
 }
 
 export function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 /**

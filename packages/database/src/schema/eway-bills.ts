@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, integer, jsonb, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { invoices } from "./invoices.js";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
@@ -10,8 +8,12 @@ export const ewayBills = pgTable(
   "eway_bills",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
     gstin: text("gstin").notNull(),
     provider: text("provider").notNull().default("nic"),
     environment: text("environment").notNull().default("sandbox"),
@@ -67,8 +69,12 @@ export const ewbEvents = pgTable(
   "ewb_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    ewayBillId: uuid("eway_bill_id").notNull().references(() => ewayBills.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    ewayBillId: uuid("eway_bill_id")
+      .notNull()
+      .references(() => ewayBills.id, { onDelete: "cascade" }),
     /** generated | part_b_updated | transporter_updated | extended | cancelled | rejected | failed */
     eventType: text("event_type").notNull(),
     requestPayload: jsonb("request_payload"),

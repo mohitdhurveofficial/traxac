@@ -1,10 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
-  createBranchSchema, createGstinSchema, createPartyAddressSchema, createPartySchema,
-  createProductSchema, createTransporterSchema, createVehicleSchema,
-  updateBranchSchema, updateGstinSchema, updatePartySchema, updateProductSchema,
-  updateTransporterSchema, updateVehicleSchema,
+  createBranchSchema,
+  createGstinSchema,
+  createPartyAddressSchema,
+  createPartySchema,
+  createProductSchema,
+  createTransporterSchema,
+  createVehicleSchema,
+  updateBranchSchema,
+  updateGstinSchema,
+  updatePartySchema,
+  updateProductSchema,
+  updateTransporterSchema,
+  updateVehicleSchema,
 } from "@traxac/shared/contracts";
 import { GST_STATE_CODES, UQC_UNITS } from "@traxac/shared";
 import { requireAuth } from "../context.js";
@@ -141,7 +150,11 @@ export async function masterRoutes(app: FastifyInstance): Promise<void> {
   app.patch("/products/:id", async (request) => {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
-    return request.container.masters.updateProduct(ctx, id, updateProductSchema.parse(request.body));
+    return request.container.masters.updateProduct(
+      ctx,
+      id,
+      updateProductSchema.parse(request.body),
+    );
   });
 
   app.delete("/products/:id", async (request) => {
@@ -168,7 +181,9 @@ export async function masterRoutes(app: FastifyInstance): Promise<void> {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
     return request.container.masters.updateTransporter(
-      ctx, id, updateTransporterSchema.parse(request.body),
+      ctx,
+      id,
+      updateTransporterSchema.parse(request.body),
     );
   });
 
@@ -195,7 +210,11 @@ export async function masterRoutes(app: FastifyInstance): Promise<void> {
   app.patch("/vehicles/:id", async (request) => {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
-    return request.container.masters.updateVehicle(ctx, id, updateVehicleSchema.parse(request.body));
+    return request.container.masters.updateVehicle(
+      ctx,
+      id,
+      updateVehicleSchema.parse(request.body),
+    );
   });
 
   app.delete("/vehicles/:id", async (request) => {

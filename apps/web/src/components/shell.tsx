@@ -38,7 +38,11 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
         </div>
 
         <div className="px-3">
-          <button type="button" className="btn-primary w-full" onClick={() => navigate("/invoices/new")}>
+          <button
+            type="button"
+            className="btn-primary w-full"
+            onClick={() => navigate("/invoices/new")}
+          >
             <PlusIcon /> New invoice
           </button>
         </div>
@@ -53,8 +57,11 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
         </nav>
 
         <div className="space-y-0.5 border-t border-line p-3">
-          <button type="button" onClick={() => setAlertsOpen(true)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:bg-slate-100 hover:text-ink">
+          <button
+            type="button"
+            onClick={() => setAlertsOpen(true)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:bg-slate-100 hover:text-ink"
+          >
             <BellIcon />
             Alerts
             {unread > 0 && (
@@ -77,9 +84,13 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
             <p className="truncate text-xs font-medium">{user.name}</p>
             <p className="truncate text-[11px] text-muted capitalize">{user.role}</p>
           </div>
-          <button type="button" title="Sign out" aria-label="Sign out"
+          <button
+            type="button"
+            title="Sign out"
+            aria-label="Sign out"
             onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/login") })}
-            className="btn-ghost px-1.5">
+            className="btn-ghost px-1.5"
+          >
             <LogoutIcon />
           </button>
         </div>
@@ -90,11 +101,20 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
         <Logo />
         <span className="text-sm font-semibold">Traxac</span>
         <div className="ml-auto flex items-center gap-1">
-          <button type="button" onClick={() => setAlertsOpen(true)} className="btn-ghost relative px-2" aria-label="Alerts">
+          <button
+            type="button"
+            onClick={() => setAlertsOpen(true)}
+            className="btn-ghost relative px-2"
+            aria-label="Alerts"
+          >
             <BellIcon />
-            {unread > 0 && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-red-500" />}
+            {unread > 0 && (
+              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-red-500" />
+            )}
           </button>
-          <NavLink to="/settings" className="btn-ghost px-2" aria-label="Settings"><SettingsIcon /></NavLink>
+          <NavLink to="/settings" className="btn-ghost px-2" aria-label="Settings">
+            <SettingsIcon />
+          </NavLink>
         </div>
       </header>
 
@@ -107,8 +127,12 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
             <item.icon /> <span className="text-[10px]">{item.label}</span>
           </NavLink>
         ))}
-        <button type="button" onClick={() => navigate("/invoices/new")}
-          className="flex flex-col items-center justify-center gap-0.5 py-2" aria-label="New invoice">
+        <button
+          type="button"
+          onClick={() => navigate("/invoices/new")}
+          className="flex flex-col items-center justify-center gap-0.5 py-2"
+          aria-label="New invoice"
+        >
           <span className="grid size-9 place-items-center rounded-full bg-brand-600 text-white shadow-sm">
             <PlusIcon />
           </span>
@@ -125,28 +149,47 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
         onClose={() => setAlertsOpen(false)}
         title="Alerts"
         description={unread > 0 ? `${unread} unread` : "You are all caught up"}
-        footer={unread > 0 ? (
-          <button type="button" className="btn-secondary w-full" onClick={() => markRead.mutate()}>
-            Mark all as read
-          </button>
-        ) : undefined}
+        footer={
+          unread > 0 ? (
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              onClick={() => markRead.mutate()}
+            >
+              Mark all as read
+            </button>
+          ) : undefined
+        }
       >
         <ul className="space-y-2">
           {(notifications.data?.items ?? []).map((item) => (
-            <li key={item.id}
-              className={`rounded-lg border p-3 ${item.readAt ? "border-line bg-white" : "border-brand-100 bg-brand-50"}`}>
+            <li
+              key={item.id}
+              className={`rounded-lg border p-3 ${item.readAt ? "border-line bg-white" : "border-brand-100 bg-brand-50"}`}
+            >
               <div className="flex items-start gap-2">
-                <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
-                  item.severity === "error" ? "bg-red-500"
-                  : item.severity === "warning" ? "bg-amber-500" : "bg-blue-500"}`} />
+                <span
+                  className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
+                    item.severity === "error"
+                      ? "bg-red-500"
+                      : item.severity === "warning"
+                        ? "bg-amber-500"
+                        : "bg-blue-500"
+                  }`}
+                />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{item.title}</p>
                   {item.body && <p className="mt-0.5 text-sm text-muted">{item.body}</p>}
                   <p className="mt-1 text-xs text-slate-400">{formatDateTime(item.createdAt)}</p>
                   {item.entityType === "invoice" && item.entityId && (
-                    <button type="button"
+                    <button
+                      type="button"
                       className="mt-1.5 text-xs font-medium text-brand-700 hover:underline"
-                      onClick={() => { setAlertsOpen(false); navigate(`/invoices/${item.entityId}`); }}>
+                      onClick={() => {
+                        setAlertsOpen(false);
+                        navigate(`/invoices/${item.entityId}`);
+                      }}
+                    >
                       Open invoice →
                     </button>
                   )}
@@ -165,8 +208,16 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
 
 /** Page header used by every screen, so titles and actions line up. */
 export function PageHeader({
-  title, subtitle, actions, children,
-}: { title: string; subtitle?: string; actions?: ReactNode; children?: ReactNode }) {
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className="no-print border-b border-line bg-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
@@ -187,7 +238,9 @@ export function Page({ children }: { children: ReactNode }) {
 
 const navClass = ({ isActive }: { isActive: boolean }): string =>
   `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-    isActive ? "bg-brand-50 font-medium text-brand-700" : "text-muted hover:bg-slate-100 hover:text-ink"
+    isActive
+      ? "bg-brand-50 font-medium text-brand-700"
+      : "text-muted hover:bg-slate-100 hover:text-ink"
   }`;
 
 const mobileNavClass = ({ isActive }: { isActive: boolean }): string =>
@@ -215,7 +268,11 @@ function PlusIcon() {
 function InvoiceIcon() {
   return (
     <svg className="size-4.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-      <path fillRule="evenodd" d="M4 3a2 2 0 012-2h8a2 2 0 012 2v14l-3-1.5L11 17l-2-1.5L7 17l-3-1.5V3zm3 3h6v1.5H7V6zm0 3.5h6V11H7V9.5zm0 3.5h4v1.5H7V13z" clipRule="evenodd" />
+      <path
+        fillRule="evenodd"
+        d="M4 3a2 2 0 012-2h8a2 2 0 012 2v14l-3-1.5L11 17l-2-1.5L7 17l-3-1.5V3zm3 3h6v1.5H7V6zm0 3.5h6V11H7V9.5zm0 3.5h4v1.5H7V13z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }
@@ -243,7 +300,11 @@ function ReportIcon() {
 function SettingsIcon() {
   return (
     <svg className="size-4.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-      <path fillRule="evenodd" d="M8.34 2.3a1 1 0 011-.8h1.32a1 1 0 011 .8l.2 1.03a6.4 6.4 0 011.36.79l.99-.35a1 1 0 011.2.44l.66 1.14a1 1 0 01-.2 1.25l-.79.68a6.5 6.5 0 010 1.58l.79.68a1 1 0 01.2 1.25l-.66 1.14a1 1 0 01-1.2.44l-.99-.35a6.4 6.4 0 01-1.36.79l-.2 1.03a1 1 0 01-1 .8H9.34a1 1 0 01-1-.8l-.2-1.03a6.4 6.4 0 01-1.36-.79l-.99.35a1 1 0 01-1.2-.44l-.66-1.14a1 1 0 01.2-1.25l.79-.68a6.5 6.5 0 010-1.58l-.79-.68a1 1 0 01-.2-1.25l.66-1.14a1 1 0 011.2-.44l.99.35a6.4 6.4 0 011.36-.79l.2-1.03zM10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" clipRule="evenodd" />
+      <path
+        fillRule="evenodd"
+        d="M8.34 2.3a1 1 0 011-.8h1.32a1 1 0 011 .8l.2 1.03a6.4 6.4 0 011.36.79l.99-.35a1 1 0 011.2.44l.66 1.14a1 1 0 01-.2 1.25l-.79.68a6.5 6.5 0 010 1.58l.79.68a1 1 0 01.2 1.25l-.66 1.14a1 1 0 01-1.2.44l-.99-.35a6.4 6.4 0 01-1.36.79l-.2 1.03a1 1 0 01-1 .8H9.34a1 1 0 01-1-.8l-.2-1.03a6.4 6.4 0 01-1.36-.79l-.99.35a1 1 0 01-1.2-.44l-.66-1.14a1 1 0 01.2-1.25l.79-.68a6.5 6.5 0 010-1.58l-.79-.68a1 1 0 01-.2-1.25l.66-1.14a1 1 0 011.2-.44l.99.35a6.4 6.4 0 011.36-.79l.2-1.03zM10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }

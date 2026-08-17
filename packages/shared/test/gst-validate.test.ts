@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  isValidGstin, parseGstin, isValidPan, isValidPincode, isValidVehicleNo,
-  isValidHsn, normaliseVehicleNo, isValidUqc,
+  isValidGstin,
+  parseGstin,
+  isValidPan,
+  isValidPincode,
+  isValidVehicleNo,
+  isValidHsn,
+  normaliseVehicleNo,
+  isValidUqc,
 } from "../src/gst/index.js";
 
 describe("GSTIN validation", () => {

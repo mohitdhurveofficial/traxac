@@ -305,10 +305,25 @@ export interface InvoiceDetail {
 export interface TaxTotals {
   supplyType: "intra_state" | "inter_state";
   lines: Array<{
-    grossValue: number; discountAmount: number; taxableValue: number; gstRate: number;
-    cgst: number; sgst: number; igst: number; cess: number; totalTax: number; lineTotal: number;
+    grossValue: number;
+    discountAmount: number;
+    taxableValue: number;
+    gstRate: number;
+    cgst: number;
+    sgst: number;
+    igst: number;
+    cess: number;
+    totalTax: number;
+    lineTotal: number;
   }>;
-  charges: Array<{ label: string; amount: number; cgst: number; sgst: number; igst: number; taxAmount: number }>;
+  charges: Array<{
+    label: string;
+    amount: number;
+    cgst: number;
+    sgst: number;
+    igst: number;
+    taxAmount: number;
+  }>;
   grossValue: number;
   totalDiscount: number;
   taxableValue: number;
@@ -325,16 +340,30 @@ export interface TaxTotals {
 export interface Dashboard {
   window: { from: string; to: string };
   totals: {
-    invoiceCount: number; taxableValue: number; totalTax: number;
-    grandTotal: number; outstanding: number;
+    invoiceCount: number;
+    taxableValue: number;
+    totalTax: number;
+    grandTotal: number;
+    outstanding: number;
   };
   needsAttention: {
-    drafts: number; einvoicePending: number; einvoiceFailed: number;
-    ewbPending: number; ewbFailed: number; ewbExpiringSoon: number; overdue: number;
+    drafts: number;
+    einvoicePending: number;
+    einvoiceFailed: number;
+    ewbPending: number;
+    ewbFailed: number;
+    ewbExpiringSoon: number;
+    overdue: number;
   };
   recentInvoices: Array<{
-    id: string; invoiceNumber: string; invoiceDate: string; buyerName: string;
-    grandTotal: number; status: string; einvoiceStatus: string; ewbStatus: string;
+    id: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    buyerName: string;
+    grandTotal: number;
+    status: string;
+    einvoiceStatus: string;
+    ewbStatus: string;
   }>;
   monthly: Array<{ month: string; taxableValue: number; totalTax: number; grandTotal: number }>;
 }
@@ -374,5 +403,12 @@ export interface Credential {
   lastError?: string | null;
 }
 
-export interface StateRef { code: string; name: string }
-export interface UnitRef { code: string; description: string; qtyDecimals: number }
+export interface StateRef {
+  code: string;
+  name: string;
+}
+export interface UnitRef {
+  code: string;
+  description: string;
+  qtyDecimals: number;
+}

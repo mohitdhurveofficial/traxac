@@ -1,5 +1,13 @@
 import {
-  pgTable, text, uuid, integer, numeric, jsonb, boolean, index, uniqueIndex,
+  pgTable,
+  text,
+  uuid,
+  integer,
+  numeric,
+  jsonb,
+  boolean,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { gstins, branches, parties } from "./party.js";
@@ -31,8 +39,12 @@ export const invoiceSequences = pgTable(
   "invoice_sequences",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    gstinId: uuid("gstin_id").notNull().references(() => gstins.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    gstinId: uuid("gstin_id")
+      .notNull()
+      .references(() => gstins.id, { onDelete: "cascade" }),
     docType: text("doc_type").notNull().default("invoice"),
     series: text("series").notNull().default("INV"),
     /** e.g. "2026-27" */
@@ -46,7 +58,11 @@ export const invoiceSequences = pgTable(
   },
   (t) => [
     uniqueIndex("invoice_sequences_uq").on(
-      t.tenantId, t.gstinId, t.docType, t.series, t.financialYear,
+      t.tenantId,
+      t.gstinId,
+      t.docType,
+      t.series,
+      t.financialYear,
     ),
   ],
 );
@@ -59,7 +75,9 @@ export const invoices = pgTable(
   "invoices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
 
     /** Human number, e.g. INV/2026-27/0001. Unique per tenant+gstin+FY+series. */
     invoiceNumber: text("invoice_number").notNull(),
@@ -77,7 +95,9 @@ export const invoices = pgTable(
     invoiceDate: tsCol("invoice_date").notNull(),
     dueDate: tsCol("due_date"),
 
-    gstinId: uuid("gstin_id").notNull().references(() => gstins.id, { onDelete: "restrict" }),
+    gstinId: uuid("gstin_id")
+      .notNull()
+      .references(() => gstins.id, { onDelete: "restrict" }),
     branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
     buyerPartyId: uuid("buyer_party_id").references(() => parties.id, { onDelete: "set null" }),
 
@@ -122,7 +142,9 @@ export const invoices = pgTable(
 
     // --- transport (Part-A/Part-B source of truth on the invoice) ---
     ewbRequired: boolean("ewb_required").notNull().default(false),
-    transporterId: uuid("transporter_id").references(() => transporters.id, { onDelete: "set null" }),
+    transporterId: uuid("transporter_id").references(() => transporters.id, {
+      onDelete: "set null",
+    }),
     /** 1=Road 2=Rail 3=Air 4=Ship */
     transportMode: integer("transport_mode"),
     distanceKm: integer("distance_km"),
@@ -159,7 +181,11 @@ export const invoices = pgTable(
   },
   (t) => [
     uniqueIndex("invoices_number_uq").on(
-      t.tenantId, t.gstinId, t.docType, t.financialYear, t.invoiceNumber,
+      t.tenantId,
+      t.gstinId,
+      t.docType,
+      t.financialYear,
+      t.invoiceNumber,
     ),
     index("invoices_tenant_idx").on(t.tenantId),
     index("invoices_tenant_status_idx").on(t.tenantId, t.status),
@@ -175,8 +201,12 @@ export const invoicePayments = pgTable(
   "invoice_payments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
     amount: money("amount"),
     paidAt: tsCol("paid_at").notNull().defaultNow(),
     /** cash | upi | neft | rtgs | cheque | card | other */
@@ -191,4 +221,3 @@ export const invoicePayments = pgTable(
     index("invoice_payments_tenant_idx").on(t.tenantId),
   ],
 );
-

@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, integer, numeric, boolean, index,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, numeric, boolean, index } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { invoices } from "./invoices.js";
 import { products } from "./product.js";
@@ -14,8 +12,12 @@ export const invoiceLines = pgTable(
   "invoice_lines",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
     productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
     position: integer("position").notNull().default(0),
 
@@ -62,8 +64,12 @@ export const invoiceCharges = pgTable(
   "invoice_charges",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
     position: integer("position").notNull().default(0),
     label: text("label").notNull(),
     /** freight | insurance | packing | loading | other */

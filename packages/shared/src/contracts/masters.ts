@@ -1,7 +1,14 @@
 import { z } from "zod";
 import {
-  gstinSchema, hsnSchema, panSchema, pincodeSchema, rupeesSchema,
-  stateCodeSchema, uqcSchema, vehicleNoSchema, gstRateSchema,
+  gstinSchema,
+  hsnSchema,
+  panSchema,
+  pincodeSchema,
+  rupeesSchema,
+  stateCodeSchema,
+  uqcSchema,
+  vehicleNoSchema,
+  gstRateSchema,
 } from "./common.js";
 import { PARTY_TYPES, REGISTRATION_TYPES } from "../constants/status.js";
 
@@ -73,9 +80,10 @@ export const createPartySchema = z
     notes: optionalText(1000),
   })
   .superRefine((value, ctx) => {
-    const needsGstin = value.registrationType === "regular"
-      || value.registrationType === "composition"
-      || value.registrationType === "sez";
+    const needsGstin =
+      value.registrationType === "regular" ||
+      value.registrationType === "composition" ||
+      value.registrationType === "sez";
     if (needsGstin && !value.gstin) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

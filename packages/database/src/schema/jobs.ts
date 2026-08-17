@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, jsonb, integer, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, jsonb, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
 
@@ -54,8 +52,8 @@ export const gatewayCalls = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
-    gateway: text("gateway").notNull(),        // irp | ewb
-    operation: text("operation").notNull(),    // auth | generateIrn | cancelEwb ...
+    gateway: text("gateway").notNull(), // irp | ewb
+    operation: text("operation").notNull(), // auth | generateIrn | cancelEwb ...
     endpoint: text("endpoint").notNull(),
     gstin: text("gstin"),
     idempotencyKey: text("idempotency_key"),

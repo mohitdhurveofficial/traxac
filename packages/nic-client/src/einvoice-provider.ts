@@ -1,14 +1,23 @@
 import {
-  DUPLICATE_IRN_CODES, gatewayFail, gatewayOk,
-  type EinvoiceProvider, type GatewayRequestContext, type GatewayResult,
-  type IrnDetails, type IrnResult, type IrpInvoicePayload,
+  DUPLICATE_IRN_CODES,
+  gatewayFail,
+  gatewayOk,
+  type EinvoiceProvider,
+  type GatewayRequestContext,
+  type GatewayResult,
+  type IrnDetails,
+  type IrnResult,
+  type IrpInvoicePayload,
 } from "@traxac/gst-gateway";
 import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
-  extractErrorDetail, MissingGatewayConfigError, parsePortalExpiry,
-  type NicClientOptions, type NicSessionManager,
+  extractErrorDetail,
+  MissingGatewayConfigError,
+  parsePortalExpiry,
+  type NicClientOptions,
+  type NicSessionManager,
 } from "./session.js";
 
 /**
@@ -73,16 +82,19 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       docDate: payload.DocDtls.Dt,
     });
     if (!lookup.ok || !lookup.data.irn) return null;
-    return gatewayOk({
-      irn: lookup.data.irn,
-      ackNumber: lookup.data.ackNumber ?? "",
-      ackDate: lookup.data.ackDate ?? new Date(),
-      signedInvoice: lookup.data.signedInvoice ?? "",
-      signedQrCode: lookup.data.signedQrCode ?? "",
-      ewbNumber: lookup.data.ewbNumber ?? null,
-      status: lookup.data.status || "ACT",
-      alert: "Recovered an IRN the portal had already issued for this document",
-    }, raw);
+    return gatewayOk(
+      {
+        irn: lookup.data.irn,
+        ackNumber: lookup.data.ackNumber ?? "",
+        ackDate: lookup.data.ackDate ?? new Date(),
+        signedInvoice: lookup.data.signedInvoice ?? "",
+        signedQrCode: lookup.data.signedQrCode ?? "",
+        ewbNumber: lookup.data.ewbNumber ?? null,
+        status: lookup.data.status || "ACT",
+        alert: "Recovered an IRN the portal had already issued for this document",
+      },
+      raw,
+    );
   }
 
   async cancelIrn(
@@ -97,10 +109,13 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
       });
       if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
       const data = body.data;
-      return gatewayOk({
-        irn: String(data["Irn"] ?? input.irn),
-        cancelDate: parsePortalExpiry(String(data["CancelDate"] ?? "")) ?? new Date(),
-      }, body.raw);
+      return gatewayOk(
+        {
+          irn: String(data["Irn"] ?? input.irn),
+          cancelDate: parsePortalExpiry(String(data["CancelDate"] ?? "")) ?? new Date(),
+        },
+        body.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -127,7 +142,10 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     });
     try {
       const body = await this.call(
-        ctx, "getIrnByDocument", "GET", `${IRP_PATHS.getIrnByDoc}?${query.toString()}`,
+        ctx,
+        "getIrnByDocument",
+        "GET",
+        `${IRP_PATHS.getIrnByDoc}?${query.toString()}`,
       );
       if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
       return gatewayOk(mapIrnDetails(body.data, String(body.data["Irn"] ?? "")), body.raw);
@@ -164,7 +182,10 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
         user_name: ctx.credentials.username,
         AuthToken: session.authToken,
       },
-      body: payload === undefined ? undefined : { Data: aesEncrypt(session.sek, JSON.stringify(payload)) },
+      body:
+        payload === undefined
+          ? undefined
+          : { Data: aesEncrypt(session.sek, JSON.stringify(payload)) },
       timeoutMs: this.options.timeoutMs,
       // A document-creating call is sent once; only reads are retried.
       attempts: method === "GET" ? (this.options.attempts ?? 3) : 1,
@@ -185,9 +206,10 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     const status = String(body["Status"] ?? "");
     if (status === "1") {
       const encrypted = body["Data"];
-      const decoded = typeof encrypted === "string" && encrypted
-        ? JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>
-        : (body);
+      const decoded =
+        typeof encrypted === "string" && encrypted
+          ? (JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>)
+          : body;
       return { ok: true, data: decoded, raw: redactRaw(body) };
     }
 
@@ -239,9 +261,7 @@ function mapIrnResponse(data: Record<string, unknown>): IrnResult {
     signedInvoice: String(data["SignedInvoice"] ?? ""),
     signedQrCode: String(data["SignedQRCode"] ?? ""),
     ewbNumber: data["EwbNo"] ? String(data["EwbNo"]) : null,
-    ewbValidUntil: data["EwbValidTill"]
-      ? parsePortalExpiry(String(data["EwbValidTill"]))
-      : null,
+    ewbValidUntil: data["EwbValidTill"] ? parsePortalExpiry(String(data["EwbValidTill"])) : null,
     status: String(data["Status"] ?? "ACT"),
     alert: data["Remarks"] ? String(data["Remarks"]) : null,
   };

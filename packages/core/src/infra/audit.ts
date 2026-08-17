@@ -105,11 +105,13 @@ export async function readTimeline(
   return database.db
     .select()
     .from(auditLogs)
-    .where(and(
-      eq(auditLogs.tenantId, ctx.tenantId),
-      eq(auditLogs.entityType, entityType),
-      eq(auditLogs.entityId, entityId),
-    ))
+    .where(
+      and(
+        eq(auditLogs.tenantId, ctx.tenantId),
+        eq(auditLogs.entityType, entityType),
+        eq(auditLogs.entityId, entityId),
+      ),
+    )
     .orderBy(desc(auditLogs.createdAt))
     .limit(limit);
 }

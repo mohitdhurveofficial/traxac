@@ -4,9 +4,23 @@ import { computeValidity, GST_STATE_CODES } from "@traxac/shared";
 import { useInvoice, useInvoiceAction, useInvoiceTimeline } from "../api/hooks.js";
 import type { AddressSnapshot, InvoiceDetail } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
-import { EinvoiceStatus, EwbStatus, InvoiceStatus, PaymentStatus, Pill } from "../components/status.js";
+import {
+  EinvoiceStatus,
+  EwbStatus,
+  InvoiceStatus,
+  PaymentStatus,
+  Pill,
+} from "../components/status.js";
 import { ErrorNote, Field, Modal, Spinner, useToast } from "../components/ui.js";
-import { checked, field, formatDate, formatDateTime, money, numberField, relativeTime } from "../lib/format.js";
+import {
+  checked,
+  field,
+  formatDate,
+  formatDateTime,
+  money,
+  numberField,
+  relativeTime,
+} from "../lib/format.js";
 
 /**
  * Invoice detail.
@@ -17,8 +31,15 @@ import { checked, field, formatDate, formatDateTime, money, numberField, relativ
  * buttons applies to their situation.
  */
 type DialogKind =
-  | null | "issue" | "cancel" | "payment" | "einvoice-cancel"
-  | "ewb-generate" | "ewb-partb" | "ewb-extend" | "ewb-cancel";
+  | null
+  | "issue"
+  | "cancel"
+  | "payment"
+  | "einvoice-cancel"
+  | "ewb-generate"
+  | "ewb-partb"
+  | "ewb-extend"
+  | "ewb-cancel";
 
 export function InvoiceDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
@@ -31,17 +52,26 @@ export function InvoiceDetailPage() {
   const actions = useInvoiceAction(id);
 
   if (query.isLoading) {
-    return <div className="grid place-items-center py-32 text-muted"><Spinner className="size-6" /></div>;
+    return (
+      <div className="grid place-items-center py-32 text-muted">
+        <Spinner className="size-6" />
+      </div>
+    );
   }
   if (!query.data) {
-    return <Page><ErrorNote error={query.error ?? new Error("Invoice not found")} /></Page>;
+    return (
+      <Page>
+        <ErrorNote error={query.error ?? new Error("Invoice not found")} />
+      </Page>
+    );
   }
 
   const detail = query.data;
   const { invoice, lines, charges, einvoice, ewayBill, payments, documents } = detail;
   const isDraft = invoice.status === "draft";
-  const busy = ["queued", "processing"].includes(invoice.einvoiceStatus)
-    || ["queued", "processing"].includes(invoice.ewbStatus);
+  const busy =
+    ["queued", "processing"].includes(invoice.einvoiceStatus) ||
+    ["queued", "processing"].includes(invoice.ewbStatus);
 
   return (
     <>
@@ -55,22 +85,38 @@ export function InvoiceDetailPage() {
             </button>
             {isDraft ? (
               <>
-                <button type="button" className="btn-secondary"
-                  onClick={() => navigate(`/invoices/${id}/edit`)}>Edit</button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => navigate(`/invoices/${id}/edit`)}
+                >
+                  Edit
+                </button>
                 <button type="button" className="btn-primary" onClick={() => setDialog("issue")}>
                   Issue invoice
                 </button>
               </>
             ) : (
               <>
-                <button type="button" className="btn-secondary"
-                  onClick={() => actions.duplicate.mutate(undefined, {
-                    onSuccess: (created) => navigate(`/invoices/${created.invoice.id}/edit`),
-                  })}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() =>
+                    actions.duplicate.mutate(undefined, {
+                      onSuccess: (created) => navigate(`/invoices/${created.invoice.id}/edit`),
+                    })
+                  }
+                >
                   Duplicate
                 </button>
-                <a className="btn-secondary" href={`/api/v1/invoices/${id}/pdf`}
-                  target="_blank" rel="noreferrer">PDF</a>
+                <a
+                  className="btn-secondary"
+                  href={`/api/v1/invoices/${id}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  PDF
+                </a>
               </>
             )}
           </div>
@@ -104,8 +150,11 @@ export function InvoiceDetailPage() {
                   <p className="font-medium">e-Invoice could not be generated</p>
                   <p className="mt-0.5">{einvoice.lastError}</p>
                   {einvoice.errorCode === "CREDENTIALS_MISSING" && (
-                    <button type="button" className="mt-1.5 text-xs font-medium underline"
-                      onClick={() => navigate("/settings?tab=gst")}>
+                    <button
+                      type="button"
+                      className="mt-1.5 text-xs font-medium underline"
+                      onClick={() => navigate("/settings?tab=gst")}
+                    >
                       Add GST credentials →
                     </button>
                   )}
@@ -130,15 +179,37 @@ export function InvoiceDetailPage() {
                 )}
               </div>
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-line pt-3 text-xs text-muted">
-                <span>Place of supply: <strong className="text-ink">
-                  {GST_STATE_CODES[invoice.placeOfSupply] ?? invoice.placeOfSupply}
-                </strong></span>
-                {invoice.poNumber && <span>PO: <strong className="text-ink">{invoice.poNumber}</strong></span>}
-                {invoice.dueDate && <span>Due: <strong className="text-ink">{formatDate(invoice.dueDate)}</strong></span>}
+                <span>
+                  Place of supply:{" "}
+                  <strong className="text-ink">
+                    {GST_STATE_CODES[invoice.placeOfSupply] ?? invoice.placeOfSupply}
+                  </strong>
+                </span>
+                {invoice.poNumber && (
+                  <span>
+                    PO: <strong className="text-ink">{invoice.poNumber}</strong>
+                  </span>
+                )}
+                {invoice.dueDate && (
+                  <span>
+                    Due: <strong className="text-ink">{formatDate(invoice.dueDate)}</strong>
+                  </span>
+                )}
                 {invoice.ewbTransactionType > 1 && (
-                  <span>EWB type {invoice.ewbTransactionType}: <strong className="text-ink">
-                    {["", "Regular", "Bill To – Ship To", "Bill From – Dispatch From", "Combination"][invoice.ewbTransactionType]}
-                  </strong></span>
+                  <span>
+                    EWB type {invoice.ewbTransactionType}:{" "}
+                    <strong className="text-ink">
+                      {
+                        [
+                          "",
+                          "Regular",
+                          "Bill To – Ship To",
+                          "Bill From – Dispatch From",
+                          "Combination",
+                        ][invoice.ewbTransactionType]
+                      }
+                    </strong>
+                  </span>
                 )}
               </div>
             </section>
@@ -163,25 +234,35 @@ export function InvoiceDetailPage() {
                       <tr key={line.id}>
                         <td className="px-4 py-3">
                           <p className="font-medium">{line.name}</p>
-                          {line.description && <p className="text-xs text-muted">{line.description}</p>}
+                          {line.description && (
+                            <p className="text-xs text-muted">{line.description}</p>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-muted">{line.hsnSac}</td>
-                        <td className="px-4 py-3 text-right">{Number(line.quantity)} {line.unit}</td>
+                        <td className="px-4 py-3 text-right">
+                          {Number(line.quantity)} {line.unit}
+                        </td>
                         <td className="px-4 py-3 text-right">{money(line.unitPrice)}</td>
                         <td className="px-4 py-3 text-right">{money(line.taxableValue)}</td>
                         <td className="px-4 py-3 text-right">
                           {money(line.totalTax)}
                           <span className="block text-xs text-muted">{Number(line.gstRate)}%</span>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium">{money(line.lineTotal)}</td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {money(line.lineTotal)}
+                        </td>
                       </tr>
                     ))}
                     {charges.map((charge) => (
                       <tr key={charge.id} className="text-muted">
-                        <td className="px-4 py-2.5" colSpan={4}>{charge.label}</td>
+                        <td className="px-4 py-2.5" colSpan={4}>
+                          {charge.label}
+                        </td>
                         <td className="px-4 py-2.5 text-right">{money(charge.amount)}</td>
                         <td className="px-4 py-2.5 text-right">{money(charge.taxAmount)}</td>
-                        <td className="px-4 py-2.5 text-right">{money(charge.amount + charge.taxAmount)}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {money(charge.amount + charge.taxAmount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -197,22 +278,28 @@ export function InvoiceDetailPage() {
                     </>
                   )}
                   <Line label="Taxable value" value={money(invoice.taxableValue)} />
-                  {invoice.otherCharges > 0 && <Line label="Other charges" value={money(invoice.otherCharges)} />}
-                  {invoice.igst > 0
-                    ? <Line label="IGST" value={money(invoice.igst)} />
-                    : (
-                      <>
-                        <Line label="CGST" value={money(invoice.cgst)} />
-                        <Line label="SGST" value={money(invoice.sgst)} />
-                      </>
-                    )}
-                  {invoice.roundOff !== 0 && <Line label="Round off" value={money(invoice.roundOff)} />}
+                  {invoice.otherCharges > 0 && (
+                    <Line label="Other charges" value={money(invoice.otherCharges)} />
+                  )}
+                  {invoice.igst > 0 ? (
+                    <Line label="IGST" value={money(invoice.igst)} />
+                  ) : (
+                    <>
+                      <Line label="CGST" value={money(invoice.cgst)} />
+                      <Line label="SGST" value={money(invoice.sgst)} />
+                    </>
+                  )}
+                  {invoice.roundOff !== 0 && (
+                    <Line label="Round off" value={money(invoice.roundOff)} />
+                  )}
                   <div className="flex justify-between border-t border-line pt-1.5 text-base font-semibold">
-                    <dt>Total</dt><dd>{money(invoice.grandTotal)}</dd>
+                    <dt>Total</dt>
+                    <dd>{money(invoice.grandTotal)}</dd>
                   </div>
                   {invoice.amountPaid > 0 && (
                     <div className="flex justify-between text-sm text-muted">
-                      <dt>Balance due</dt><dd>{money(detail.amountDue)}</dd>
+                      <dt>Balance due</dt>
+                      <dd>{money(detail.amountDue)}</dd>
                     </div>
                   )}
                 </dl>
@@ -259,7 +346,9 @@ export function InvoiceDetailPage() {
                         <p className="mt-1 text-xs text-muted">
                           Ack {einvoice.ackNumber} · {formatDate(einvoice.ackDate)}
                           {einvoice.environment === "sandbox" && (
-                            <Pill tone="warn"><span className="text-[10px]">sandbox</span></Pill>
+                            <Pill tone="warn">
+                              <span className="text-[10px]">sandbox</span>
+                            </Pill>
                           )}
                         </p>
                       </>
@@ -275,7 +364,8 @@ export function InvoiceDetailPage() {
                         <p className="mt-0.5 font-mono text-sm">{ewayBill.ewbNumber}</p>
                         {ewayBill.validUntil && (
                           <p className="mt-1 text-xs text-muted">
-                            Valid until {formatDateTime(ewayBill.validUntil)} ({relativeTime(ewayBill.validUntil)})
+                            Valid until {formatDateTime(ewayBill.validUntil)} (
+                            {relativeTime(ewayBill.validUntil)})
                           </p>
                         )}
                         {ewayBill.vehicleNo && (
@@ -294,18 +384,23 @@ export function InvoiceDetailPage() {
                 </div>
 
                 {/*
-                  * Exactly one primary button. The list is built in priority
-                  * order and only the first entry is emphasised, so the next
-                  * step is never a guess — and when credentials are missing,
-                  * fixing that is the step, not retrying something that will
-                  * fail the same way.
-                  */}
+                 * Exactly one primary button. The list is built in priority
+                 * order and only the first entry is emphasised, so the next
+                 * step is never a guess — and when credentials are missing,
+                 * fixing that is the step, not retrying something that will
+                 * fail the same way.
+                 */}
                 <ComplianceActions
                   detail={detail}
                   onDialog={setDialog}
-                  onRetryEinvoice={() => actions.generateEinvoice.mutate({ withEwayBill: false }, {
-                    onSuccess: () => show("Sending to the IRP…"),
-                  })}
+                  onRetryEinvoice={() =>
+                    actions.generateEinvoice.mutate(
+                      { withEwayBill: false },
+                      {
+                        onSuccess: () => show("Sending to the IRP…"),
+                      },
+                    )
+                  }
                   onFixCredentials={() => navigate("/settings?tab=gst")}
                 />
               </section>
@@ -317,8 +412,11 @@ export function InvoiceDetailPage() {
                 <p className="mt-1 text-2xl font-semibold">{money(detail.amountDue)}</p>
                 <p className="text-xs text-muted">outstanding of {money(invoice.grandTotal)}</p>
                 {detail.amountDue > 0 && invoice.status !== "cancelled" && (
-                  <button type="button" className="btn-secondary mt-3 w-full"
-                    onClick={() => setDialog("payment")}>
+                  <button
+                    type="button"
+                    className="btn-secondary mt-3 w-full"
+                    onClick={() => setDialog("payment")}
+                  >
                     Record payment
                   </button>
                 )}
@@ -343,8 +441,12 @@ export function InvoiceDetailPage() {
                 <ul className="mt-2 space-y-1.5 text-sm">
                   {documents.map((document) => (
                     <li key={document.id}>
-                      <a className="text-brand-700 hover:underline"
-                        href={`/api/v1/documents/${document.id}`} target="_blank" rel="noreferrer">
+                      <a
+                        className="text-brand-700 hover:underline"
+                        href={`/api/v1/documents/${document.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         {document.filename}
                       </a>
                       <span className="ml-1.5 text-xs text-muted">
@@ -357,8 +459,11 @@ export function InvoiceDetailPage() {
             )}
 
             {!isDraft && invoice.status !== "cancelled" && (
-              <button type="button" className="btn-ghost w-full text-red-700 hover:bg-red-50"
-                onClick={() => setDialog("cancel")}>
+              <button
+                type="button"
+                className="btn-ghost w-full text-red-700 hover:bg-red-50"
+                onClick={() => setDialog("cancel")}
+              >
                 Cancel invoice
               </button>
             )}
@@ -366,8 +471,13 @@ export function InvoiceDetailPage() {
         </div>
       </Page>
 
-      <Dialogs dialog={dialog} close={() => setDialog(null)} detail={detail}
-        actions={actions} show={show} />
+      <Dialogs
+        dialog={dialog}
+        close={() => setDialog(null)}
+        detail={detail}
+        actions={actions}
+        show={show}
+      />
       {toast}
     </>
   );
@@ -378,7 +488,10 @@ export function InvoiceDetailPage() {
  * first one as primary.
  */
 function ComplianceActions({
-  detail, onDialog, onRetryEinvoice, onFixCredentials,
+  detail,
+  onDialog,
+  onRetryEinvoice,
+  onFixCredentials,
 }: {
   detail: InvoiceDetail;
   onDialog: (dialog: DialogKind) => void;
@@ -389,8 +502,8 @@ function ComplianceActions({
   const inFlight = ["queued", "processing"];
 
   // A missing credential blocks every portal call, so it outranks everything.
-  const credentialsMissing = einvoice?.errorCode === "CREDENTIALS_MISSING"
-    || ewayBill?.errorCode === "CREDENTIALS_MISSING";
+  const credentialsMissing =
+    einvoice?.errorCode === "CREDENTIALS_MISSING" || ewayBill?.errorCode === "CREDENTIALS_MISSING";
 
   type Action = { key: string; label: string; danger?: boolean; run: () => void };
   const actions: Action[] = [];
@@ -414,7 +527,8 @@ function ComplianceActions({
   if (ewayBill?.actions?.canUpdatePartB) {
     actions.push({
       key: "partb",
-      label: invoice.ewbStatus === "part_b_pending" ? "Add vehicle (Part-B)" : "Update vehicle (Part-B)",
+      label:
+        invoice.ewbStatus === "part_b_pending" ? "Add vehicle (Part-B)" : "Update vehicle (Part-B)",
       run: () => onDialog("ewb-partb"),
     });
   }
@@ -422,10 +536,20 @@ function ComplianceActions({
     actions.push({ key: "extend", label: "Extend validity", run: () => onDialog("ewb-extend") });
   }
   if (einvoice?.irn && einvoice.status === "generated") {
-    actions.push({ key: "irn-cancel", label: "Cancel IRN", danger: true, run: () => onDialog("einvoice-cancel") });
+    actions.push({
+      key: "irn-cancel",
+      label: "Cancel IRN",
+      danger: true,
+      run: () => onDialog("einvoice-cancel"),
+    });
   }
   if (ewayBill?.actions?.canCancel) {
-    actions.push({ key: "ewb-cancel", label: "Cancel e-Way Bill", danger: true, run: () => onDialog("ewb-cancel") });
+    actions.push({
+      key: "ewb-cancel",
+      label: "Cancel e-Way Bill",
+      danger: true,
+      run: () => onDialog("ewb-cancel"),
+    });
   }
 
   if (actions.length === 0) return null;
@@ -451,7 +575,8 @@ function ComplianceActions({
 function Line({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-muted">{label}</dt><dd>{value}</dd>
+      <dt className="text-muted">{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }
@@ -462,8 +587,14 @@ function AddressBlock({ title, address }: { title: string; address: AddressSnaps
       <p className="text-xs font-medium tracking-wide text-muted uppercase">{title}</p>
       <p className="mt-1.5 text-sm font-medium">{address.name}</p>
       <p className="text-xs leading-relaxed text-muted">
-        {[address.addressLine1, address.addressLine2, `${address.city} ${address.pincode}`,
-          GST_STATE_CODES[address.stateCode]].filter(Boolean).join(", ")}
+        {[
+          address.addressLine1,
+          address.addressLine2,
+          `${address.city} ${address.pincode}`,
+          GST_STATE_CODES[address.stateCode],
+        ]
+          .filter(Boolean)
+          .join(", ")}
       </p>
       {address.gstin && (
         <p className="mt-1 font-mono text-[11px]">
@@ -497,7 +628,11 @@ function humanAction(action: string): string {
 /* -------------------------------- dialogs ------------------------------- */
 
 function Dialogs({
-  dialog, close, detail, actions, show,
+  dialog,
+  close,
+  detail,
+  actions,
+  show,
 }: {
   dialog: DialogKind;
   close: () => void;
@@ -506,7 +641,12 @@ function Dialogs({
   show: (message: string) => void;
 }) {
   const { invoice, ewayBill } = detail;
-  const done = (message: string) => ({ onSuccess: () => { show(message); close(); } });
+  const done = (message: string) => ({
+    onSuccess: () => {
+      show(message);
+      close();
+    },
+  });
 
   return (
     <>
@@ -514,25 +654,43 @@ function Dialogs({
         <p className="text-sm text-muted">
           The invoice number is assigned now and the invoice can no longer be edited.
         </p>
-        <form id="issue-form" className="mt-4 space-y-3"
+        <form
+          id="issue-form"
+          className="mt-4 space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            actions.finalize.mutate({
-              generateEinvoice: checked(data, "einvoice"),
-              generateEwb: checked(data, "ewb"),
-            }, done("Invoice issued"));
-          }}>
+            actions.finalize.mutate(
+              {
+                generateEinvoice: checked(data, "einvoice"),
+                generateEwb: checked(data, "ewb"),
+              },
+              done("Invoice issued"),
+            );
+          }}
+        >
           <label className="flex items-start gap-2 text-sm">
-            <input name="einvoice" type="checkbox" defaultChecked className="mt-0.5 size-4 rounded border-line" />
+            <input
+              name="einvoice"
+              type="checkbox"
+              defaultChecked
+              className="mt-0.5 size-4 rounded border-line"
+            />
             <span>
               Send to the Government IRP for an IRN
-              <span className="block text-xs text-muted">Required for B2B invoices above the turnover limit.</span>
+              <span className="block text-xs text-muted">
+                Required for B2B invoices above the turnover limit.
+              </span>
             </span>
           </label>
           {invoice.ewbRequired && (
             <label className="flex items-start gap-2 text-sm">
-              <input name="ewb" type="checkbox" defaultChecked className="mt-0.5 size-4 rounded border-line" />
+              <input
+                name="ewb"
+                type="checkbox"
+                defaultChecked
+                className="mt-0.5 size-4 rounded border-line"
+              />
               <span>
                 Also generate the e-Way Bill
                 <span className="block text-xs text-muted">
@@ -546,146 +704,262 @@ function Dialogs({
           <ErrorNote error={actions.finalize.error} />
         </form>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={close}>Not yet</button>
-          <button type="submit" form="issue-form" className="btn-primary" disabled={actions.finalize.isPending}>
+          <button type="button" className="btn-secondary" onClick={close}>
+            Not yet
+          </button>
+          <button
+            type="submit"
+            form="issue-form"
+            className="btn-primary"
+            disabled={actions.finalize.isPending}
+          >
             {actions.finalize.isPending && <Spinner />} Issue invoice
           </button>
         </div>
       </Modal>
 
       <ReasonDialog
-        open={dialog === "cancel"} onClose={close} title="Cancel this invoice"
+        open={dialog === "cancel"}
+        onClose={close}
+        title="Cancel this invoice"
         description="The invoice stays in your records, marked cancelled."
-        pending={actions.cancel.isPending} error={actions.cancel.error}
-        reasons={{ "1": "Duplicate", "2": "Order cancelled", "3": "Data entry mistake", "4": "Other" }}
-        onSubmit={(reasonCode, remark) => actions.cancel.mutate({ reasonCode, remark }, done("Invoice cancelled"))}
+        pending={actions.cancel.isPending}
+        error={actions.cancel.error}
+        reasons={{
+          "1": "Duplicate",
+          "2": "Order cancelled",
+          "3": "Data entry mistake",
+          "4": "Other",
+        }}
+        onSubmit={(reasonCode, remark) =>
+          actions.cancel.mutate({ reasonCode, remark }, done("Invoice cancelled"))
+        }
       />
 
       <ReasonDialog
-        open={dialog === "einvoice-cancel"} onClose={close} title="Cancel the IRN"
+        open={dialog === "einvoice-cancel"}
+        onClose={close}
+        title="Cancel the IRN"
         description="Only possible within 24 hours of the acknowledgement. After that, issue a credit note."
-        pending={actions.cancelEinvoice.isPending} error={actions.cancelEinvoice.error}
-        reasons={{ "1": "Duplicate", "2": "Data entry mistake", "3": "Order cancelled", "4": "Other" }}
+        pending={actions.cancelEinvoice.isPending}
+        error={actions.cancelEinvoice.error}
+        reasons={{
+          "1": "Duplicate",
+          "2": "Data entry mistake",
+          "3": "Order cancelled",
+          "4": "Other",
+        }}
         onSubmit={(reasonCode, remark) =>
-          actions.cancelEinvoice.mutate({ reasonCode, remark }, done("IRN cancelled"))}
+          actions.cancelEinvoice.mutate({ reasonCode, remark }, done("IRN cancelled"))
+        }
       />
 
       <ReasonDialog
-        open={dialog === "ewb-cancel"} onClose={close} title="Cancel the e-Way Bill"
+        open={dialog === "ewb-cancel"}
+        onClose={close}
+        title="Cancel the e-Way Bill"
         description="Only possible within 24 hours of generation, and only if it has not been verified in transit."
-        pending={actions.cancelEwb.isPending} error={actions.cancelEwb.error}
-        reasons={{ "1": "Duplicate", "2": "Order cancelled", "3": "Data entry mistake", "4": "Other" }}
+        pending={actions.cancelEwb.isPending}
+        error={actions.cancelEwb.error}
+        reasons={{
+          "1": "Duplicate",
+          "2": "Order cancelled",
+          "3": "Data entry mistake",
+          "4": "Other",
+        }}
         onSubmit={(reasonCode, remark) =>
-          actions.cancelEwb.mutate({ reasonCode, remark }, done("e-Way Bill cancelled"))}
+          actions.cancelEwb.mutate({ reasonCode, remark }, done("e-Way Bill cancelled"))
+        }
       />
 
       <Modal open={dialog === "payment"} onClose={close} title="Record a payment">
-        <form id="payment-form" className="space-y-3"
+        <form
+          id="payment-form"
+          className="space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            actions.recordPayment.mutate({
-              amount: numberField(data, "amount"),
-              method: field(data, "method"),
-              reference: field(data, "reference"),
-            }, done("Payment recorded"));
-          }}>
+            actions.recordPayment.mutate(
+              {
+                amount: numberField(data, "amount"),
+                method: field(data, "method"),
+                reference: field(data, "reference"),
+              },
+              done("Payment recorded"),
+            );
+          }}
+        >
           <Field label="Amount received (₹)" required>
-            <input name="amount" type="number" step="0.01" min="0.01" className="field" required
-              defaultValue={(detail.amountDue / 100).toFixed(2)} />
+            <input
+              name="amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              className="field"
+              required
+              defaultValue={(detail.amountDue / 100).toFixed(2)}
+            />
           </Field>
           <Field label="Method">
             <select name="method" className="field" defaultValue="neft">
               {["cash", "upi", "neft", "rtgs", "cheque", "card", "other"].map((method) => (
-                <option key={method} value={method}>{method.toUpperCase()}</option>
+                <option key={method} value={method}>
+                  {method.toUpperCase()}
+                </option>
               ))}
             </select>
           </Field>
-          <Field label="Reference"><input name="reference" className="field" /></Field>
+          <Field label="Reference">
+            <input name="reference" className="field" />
+          </Field>
           <ErrorNote error={actions.recordPayment.error} />
         </form>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
-          <button type="submit" form="payment-form" className="btn-primary"
-            disabled={actions.recordPayment.isPending}>Record</button>
+          <button type="button" className="btn-secondary" onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="payment-form"
+            className="btn-primary"
+            disabled={actions.recordPayment.isPending}
+          >
+            Record
+          </button>
         </div>
       </Modal>
 
       <Modal open={dialog === "ewb-generate"} onClose={close} title="Generate the e-Way Bill">
-        <form id="ewb-form" className="space-y-3"
+        <form
+          id="ewb-form"
+          className="space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             const vehicleNo = field(data, "vehicleNo").trim();
-            actions.generateEwb.mutate({
-              distanceKm: numberField(data, "distanceKm"),
-              partB: vehicleNo
-                ? { transportMode: Number(data.get("transportMode") || 1), vehicleNo, vehicleType: "R" }
-                : undefined,
-            }, done("Generating the e-Way Bill…"));
-          }}>
-          <Field label="Distance (km)" required
-            hint="One day of validity per 200 km, rounded up.">
-            <input name="distanceKm" type="number" min="1" max="4000" className="field" required
-              defaultValue={invoice.distanceKm ?? ""} />
+            actions.generateEwb.mutate(
+              {
+                distanceKm: numberField(data, "distanceKm"),
+                partB: vehicleNo
+                  ? {
+                      transportMode: Number(data.get("transportMode") || 1),
+                      vehicleNo,
+                      vehicleType: "R",
+                    }
+                  : undefined,
+              },
+              done("Generating the e-Way Bill…"),
+            );
+          }}
+        >
+          <Field label="Distance (km)" required hint="One day of validity per 200 km, rounded up.">
+            <input
+              name="distanceKm"
+              type="number"
+              min="1"
+              max="4000"
+              className="field"
+              required
+              defaultValue={invoice.distanceKm ?? ""}
+            />
           </Field>
           <Field label="Vehicle number" hint="Leave blank to generate Part-A only.">
-            <input name="vehicleNo" className="field font-mono uppercase"
-              defaultValue={invoice.vehicleNo ?? ""} maxLength={15} />
+            <input
+              name="vehicleNo"
+              className="field font-mono uppercase"
+              defaultValue={invoice.vehicleNo ?? ""}
+              maxLength={15}
+            />
           </Field>
           <Field label="Mode">
-            <select name="transportMode" className="field" defaultValue={String(invoice.transportMode ?? 1)}>
-              <option value="1">Road</option><option value="2">Rail</option>
-              <option value="3">Air</option><option value="4">Ship</option>
+            <select
+              name="transportMode"
+              className="field"
+              defaultValue={String(invoice.transportMode ?? 1)}
+            >
+              <option value="1">Road</option>
+              <option value="2">Rail</option>
+              <option value="3">Air</option>
+              <option value="4">Ship</option>
             </select>
           </Field>
           <ValidityHint distanceKm={invoice.distanceKm ?? 0} />
           <ErrorNote error={actions.generateEwb.error} />
         </form>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
-          <button type="submit" form="ewb-form" className="btn-primary"
-            disabled={actions.generateEwb.isPending}>Generate</button>
+          <button type="button" className="btn-secondary" onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="ewb-form"
+            className="btn-primary"
+            disabled={actions.generateEwb.isPending}
+          >
+            Generate
+          </button>
         </div>
       </Modal>
 
       <Modal open={dialog === "ewb-partb"} onClose={close} title="Update vehicle details">
-        <form id="partb-form" className="space-y-3"
+        <form
+          id="partb-form"
+          className="space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            actions.updatePartB.mutate({
-              transportMode: Number(data.get("transportMode") || 1),
-              vehicleNo: field(data, "vehicleNo"),
-              vehicleType: "R",
-              fromPlace: field(data, "fromPlace"),
-              fromStateCode: field(data, "fromStateCode"),
-              reasonCode: field(data, "reasonCode"),
-              reasonRemark: field(data, "reasonRemark"),
-            }, done("Vehicle updated"));
-          }}>
+            actions.updatePartB.mutate(
+              {
+                transportMode: Number(data.get("transportMode") || 1),
+                vehicleNo: field(data, "vehicleNo"),
+                vehicleType: "R",
+                fromPlace: field(data, "fromPlace"),
+                fromStateCode: field(data, "fromStateCode"),
+                reasonCode: field(data, "reasonCode"),
+                reasonRemark: field(data, "reasonRemark"),
+              },
+              done("Vehicle updated"),
+            );
+          }}
+        >
           <Field label="Vehicle number" required>
-            <input name="vehicleNo" className="field font-mono uppercase" required
-              defaultValue={ewayBill?.vehicleNo ?? ""} />
+            <input
+              name="vehicleNo"
+              className="field font-mono uppercase"
+              required
+              defaultValue={ewayBill?.vehicleNo ?? ""}
+            />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="From place" required>
-              <input name="fromPlace" className="field" required
-                defaultValue={invoice.dispatchFrom?.city ?? invoice.billFrom.city} />
+              <input
+                name="fromPlace"
+                className="field"
+                required
+                defaultValue={invoice.dispatchFrom?.city ?? invoice.billFrom.city}
+              />
             </Field>
             <Field label="From state" required>
-              <select name="fromStateCode" className="field" required
-                defaultValue={invoice.dispatchFrom?.stateCode ?? invoice.billFrom.stateCode}>
+              <select
+                name="fromStateCode"
+                className="field"
+                required
+                defaultValue={invoice.dispatchFrom?.stateCode ?? invoice.billFrom.stateCode}
+              >
                 {Object.entries(GST_STATE_CODES).map(([code, name]) => (
-                  <option key={code} value={code}>{code} — {name}</option>
+                  <option key={code} value={code}>
+                    {code} — {name}
+                  </option>
                 ))}
               </select>
             </Field>
           </div>
           <Field label="Mode">
             <select name="transportMode" className="field" defaultValue="1">
-              <option value="1">Road</option><option value="2">Rail</option>
-              <option value="3">Air</option><option value="4">Ship</option>
+              <option value="1">Road</option>
+              <option value="2">Rail</option>
+              <option value="3">Air</option>
+              <option value="4">Ship</option>
             </select>
           </Field>
           <Field label="Reason">
@@ -702,27 +976,41 @@ function Dialogs({
           <ErrorNote error={actions.updatePartB.error} />
         </form>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
-          <button type="submit" form="partb-form" className="btn-primary"
-            disabled={actions.updatePartB.isPending}>Update</button>
+          <button type="button" className="btn-secondary" onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="partb-form"
+            className="btn-primary"
+            disabled={actions.updatePartB.isPending}
+          >
+            Update
+          </button>
         </div>
       </Modal>
 
       <Modal open={dialog === "ewb-extend"} onClose={close} title="Extend the e-Way Bill">
-        <form id="extend-form" className="space-y-3"
+        <form
+          id="extend-form"
+          className="space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            actions.extendEwb.mutate({
-              remainingDistanceKm: numberField(data, "remainingDistanceKm"),
-              reasonCode: field(data, "reasonCode"),
-              reasonRemark: field(data, "reasonRemark"),
-              currentPlace: field(data, "currentPlace"),
-              currentStateCode: field(data, "currentStateCode"),
-              currentPincode: field(data, "currentPincode"),
-              transitType: field(data, "transitType"),
-            }, done("Validity extended"));
-          }}>
+            actions.extendEwb.mutate(
+              {
+                remainingDistanceKm: numberField(data, "remainingDistanceKm"),
+                reasonCode: field(data, "reasonCode"),
+                reasonRemark: field(data, "reasonRemark"),
+                currentPlace: field(data, "currentPlace"),
+                currentStateCode: field(data, "currentStateCode"),
+                currentPincode: field(data, "currentPincode"),
+                transitType: field(data, "transitType"),
+              },
+              done("Validity extended"),
+            );
+          }}
+        >
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
             Extension is allowed from 8 hours before expiry to 8 hours after.
           </p>
@@ -739,9 +1027,13 @@ function Dialogs({
           </div>
           <Field label="State" required>
             <select name="currentStateCode" className="field" required defaultValue="">
-              <option value="" disabled>Select…</option>
+              <option value="" disabled>
+                Select…
+              </option>
               {Object.entries(GST_STATE_CODES).map(([code, name]) => (
-                <option key={code} value={code}>{code} — {name}</option>
+                <option key={code} value={code}>
+                  {code} — {name}
+                </option>
               ))}
             </select>
           </Field>
@@ -766,9 +1058,17 @@ function Dialogs({
           <ErrorNote error={actions.extendEwb.error} />
         </form>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
-          <button type="submit" form="extend-form" className="btn-primary"
-            disabled={actions.extendEwb.isPending}>Extend</button>
+          <button type="button" className="btn-secondary" onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="extend-form"
+            className="btn-primary"
+            disabled={actions.extendEwb.isPending}
+          >
+            Extend
+          </button>
         </div>
       </Modal>
     </>
@@ -786,7 +1086,14 @@ function ValidityHint({ distanceKm }: { distanceKm: number }) {
 }
 
 function ReasonDialog({
-  open, onClose, title, description, reasons, onSubmit, pending, error,
+  open,
+  onClose,
+  title,
+  description,
+  reasons,
+  onSubmit,
+  pending,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
@@ -800,16 +1107,21 @@ function ReasonDialog({
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="text-sm text-muted">{description}</p>
-      <form id="reason-form" className="mt-4 space-y-3"
+      <form
+        id="reason-form"
+        className="mt-4 space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           onSubmit(field(data, "reasonCode"), field(data, "remark"));
-        }}>
+        }}
+      >
         <Field label="Reason" required>
           <select name="reasonCode" className="field" defaultValue={Object.keys(reasons)[0]}>
             {Object.entries(reasons).map(([code, label]) => (
-              <option key={code} value={code}>{label}</option>
+              <option key={code} value={code}>
+                {label}
+              </option>
             ))}
           </select>
         </Field>
@@ -819,7 +1131,9 @@ function ReasonDialog({
         <ErrorNote error={error} />
       </form>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" className="btn-secondary" onClick={onClose}>Keep it</button>
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Keep it
+        </button>
         <button type="submit" form="reason-form" className="btn-danger" disabled={pending}>
           {pending && <Spinner />} {title}
         </button>

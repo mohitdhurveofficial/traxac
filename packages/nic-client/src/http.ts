@@ -79,12 +79,21 @@ export async function nicFetch(request: NicRequest): Promise<NicResponse> {
       const durationMs = Date.now() - startedAt;
       const json = safeParse(text);
 
-      await recordTelemetry(request, attempt, response.status, json ?? { raw: truncate(text) }, durationMs);
+      await recordTelemetry(
+        request,
+        attempt,
+        response.status,
+        json ?? { raw: truncate(text) },
+        durationMs,
+      );
 
       if (!response.ok && isRetryableStatus(response.status)) {
         lastError = new NicHttpError(
-          response.status, `HTTP_${response.status}`,
-          `The portal returned HTTP ${response.status}`, true, json ?? text,
+          response.status,
+          `HTTP_${response.status}`,
+          `The portal returned HTTP ${response.status}`,
+          true,
+          json ?? text,
         );
       } else {
         return { status: response.status, json, text, durationMs };
@@ -93,10 +102,19 @@ export async function nicFetch(request: NicRequest): Promise<NicResponse> {
       const durationMs = Date.now() - startedAt;
       const aborted = err instanceof Error && err.name === "AbortError";
       lastError = aborted
-        ? new NicHttpError(408, "TIMEOUT", `The portal did not respond within ${request.timeoutMs}ms`, true)
+        ? new NicHttpError(
+            408,
+            "TIMEOUT",
+            `The portal did not respond within ${request.timeoutMs}ms`,
+            true,
+          )
         : err;
       await recordTelemetry(
-        request, attempt, undefined, { error: String(err) }, durationMs,
+        request,
+        attempt,
+        undefined,
+        { error: String(err) },
+        durationMs,
         aborted ? "TIMEOUT" : "NETWORK",
       );
     } finally {
@@ -121,26 +139,30 @@ async function recordTelemetry(
 ): Promise<void> {
   const t = request.telemetry;
   if (!t) return;
-  await t.sink.record({
-    tenantId: t.tenantId,
-    gateway: t.gateway,
-    operation: t.operation,
-    endpoint: request.url,
-    gstin: t.gstin,
-    idempotencyKey: t.idempotencyKey,
-    attempt,
-    requestPayload: t.loggablePayload,
-    responseStatus: status,
-    responsePayload,
-    errorCode,
-    durationMs,
-  }).catch(() => undefined);
+  await t.sink
+    .record({
+      tenantId: t.tenantId,
+      gateway: t.gateway,
+      operation: t.operation,
+      endpoint: request.url,
+      gstin: t.gstin,
+      idempotencyKey: t.idempotencyKey,
+      attempt,
+      requestPayload: t.loggablePayload,
+      responseStatus: status,
+      responsePayload,
+      errorCode,
+      durationMs,
+    })
+    .catch(() => undefined);
 }
 
 function safeParse(text: string): Record<string, unknown> | null {
   try {
     const parsed = JSON.parse(text);
-    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : null;
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }

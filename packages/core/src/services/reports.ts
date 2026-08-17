@@ -65,7 +65,9 @@ export class ReportService {
       from: window?.from ?? this.defaultWindow().from,
       to: window?.to ?? this.defaultWindow().to,
     };
-    const inWindow = scoped(ctx, invoices,
+    const inWindow = scoped(
+      ctx,
+      invoices,
       gte(invoices.invoiceDate, range.from),
       lte(invoices.invoiceDate, range.to),
       ne(invoices.status, "cancelled"),
@@ -75,50 +77,64 @@ export class ReportService {
     const soon = new Date(Date.now() + 24 * 3_600_000);
 
     const [totals, attention, recent, monthly] = await Promise.all([
-      this.db.select({
-        invoiceCount: countExpr,
-        taxableValue: sql<number>`COALESCE(SUM(${invoices.taxableValue}), 0)::bigint`,
-        totalTax: sql<number>`COALESCE(SUM(${invoices.totalTax}), 0)::bigint`,
-        grandTotal: sql<number>`COALESCE(SUM(${invoices.grandTotal}), 0)::bigint`,
-        outstanding: sql<number>`COALESCE(SUM(${invoices.grandTotal} - ${invoices.amountPaid}), 0)::bigint`,
-      }).from(invoices).where(inWindow),
+      this.db
+        .select({
+          invoiceCount: countExpr,
+          taxableValue: sql<number>`COALESCE(SUM(${invoices.taxableValue}), 0)::bigint`,
+          totalTax: sql<number>`COALESCE(SUM(${invoices.totalTax}), 0)::bigint`,
+          grandTotal: sql<number>`COALESCE(SUM(${invoices.grandTotal}), 0)::bigint`,
+          outstanding: sql<number>`COALESCE(SUM(${invoices.grandTotal} - ${invoices.amountPaid}), 0)::bigint`,
+        })
+        .from(invoices)
+        .where(inWindow),
 
-      this.db.select({
-        drafts: sql<number>`COUNT(*) FILTER (WHERE ${invoices.status} = 'draft')::int`,
-        einvoicePending: sql<number>`COUNT(*) FILTER (WHERE ${invoices.einvoiceStatus} IN ('pending','queued','processing'))::int`,
-        einvoiceFailed: sql<number>`COUNT(*) FILTER (WHERE ${invoices.einvoiceStatus} = 'failed')::int`,
-        ewbPending: sql<number>`COUNT(*) FILTER (WHERE ${invoices.ewbStatus} IN ('pending','queued','processing','part_b_pending'))::int`,
-        ewbFailed: sql<number>`COUNT(*) FILTER (WHERE ${invoices.ewbStatus} = 'failed')::int`,
-        overdue: sql<number>`COUNT(*) FILTER (WHERE ${invoices.dueDate} < now() AND ${invoices.amountPaid} < ${invoices.grandTotal} AND ${invoices.status} NOT IN ('cancelled','draft'))::int`,
-      }).from(invoices).where(scoped(ctx, invoices)),
+      this.db
+        .select({
+          drafts: sql<number>`COUNT(*) FILTER (WHERE ${invoices.status} = 'draft')::int`,
+          einvoicePending: sql<number>`COUNT(*) FILTER (WHERE ${invoices.einvoiceStatus} IN ('pending','queued','processing'))::int`,
+          einvoiceFailed: sql<number>`COUNT(*) FILTER (WHERE ${invoices.einvoiceStatus} = 'failed')::int`,
+          ewbPending: sql<number>`COUNT(*) FILTER (WHERE ${invoices.ewbStatus} IN ('pending','queued','processing','part_b_pending'))::int`,
+          ewbFailed: sql<number>`COUNT(*) FILTER (WHERE ${invoices.ewbStatus} = 'failed')::int`,
+          overdue: sql<number>`COUNT(*) FILTER (WHERE ${invoices.dueDate} < now() AND ${invoices.amountPaid} < ${invoices.grandTotal} AND ${invoices.status} NOT IN ('cancelled','draft'))::int`,
+        })
+        .from(invoices)
+        .where(scoped(ctx, invoices)),
 
-      this.db.select({
-        id: invoices.id,
-        invoiceNumber: invoices.invoiceNumber,
-        invoiceDate: invoices.invoiceDate,
-        buyerName: sql<string>`${invoices.billTo}->>'name'`,
-        grandTotal: invoices.grandTotal,
-        status: invoices.status,
-        einvoiceStatus: invoices.einvoiceStatus,
-        ewbStatus: invoices.ewbStatus,
-      }).from(invoices).where(scoped(ctx, invoices))
-        .orderBy(desc(invoices.createdAt)).limit(8),
+      this.db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceDate: invoices.invoiceDate,
+          buyerName: sql<string>`${invoices.billTo}->>'name'`,
+          grandTotal: invoices.grandTotal,
+          status: invoices.status,
+          einvoiceStatus: invoices.einvoiceStatus,
+          ewbStatus: invoices.ewbStatus,
+        })
+        .from(invoices)
+        .where(scoped(ctx, invoices))
+        .orderBy(desc(invoices.createdAt))
+        .limit(8),
 
-      this.db.select({
-        month: sql<string>`to_char(${invoices.invoiceDate} AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM')`,
-        taxableValue: sql<number>`COALESCE(SUM(${invoices.taxableValue}), 0)::bigint`,
-        totalTax: sql<number>`COALESCE(SUM(${invoices.totalTax}), 0)::bigint`,
-        grandTotal: sql<number>`COALESCE(SUM(${invoices.grandTotal}), 0)::bigint`,
-      }).from(invoices).where(inWindow)
+      this.db
+        .select({
+          month: sql<string>`to_char(${invoices.invoiceDate} AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM')`,
+          taxableValue: sql<number>`COALESCE(SUM(${invoices.taxableValue}), 0)::bigint`,
+          totalTax: sql<number>`COALESCE(SUM(${invoices.totalTax}), 0)::bigint`,
+          grandTotal: sql<number>`COALESCE(SUM(${invoices.grandTotal}), 0)::bigint`,
+        })
+        .from(invoices)
+        .where(inWindow)
         .groupBy(sql`to_char(${invoices.invoiceDate} AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM')`)
         .orderBy(asc(sql`to_char(${invoices.invoiceDate} AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM')`)),
     ]);
 
-    const [expiring] = await this.db.select({ n: countExpr }).from(ewayBills)
-      .where(scoped(ctx, ewayBills,
-        eq(ewayBills.status, "generated"),
-        lte(ewayBills.validUntil, soon),
-      ));
+    const [expiring] = await this.db
+      .select({ n: countExpr })
+      .from(ewayBills)
+      .where(
+        scoped(ctx, ewayBills, eq(ewayBills.status, "generated"), lte(ewayBills.validUntil, soon)),
+      );
 
     const t = totals[0];
     const a = attention[0];
@@ -167,13 +183,15 @@ export class ReportService {
       })
       .from(invoiceLines)
       .innerJoin(invoices, eq(invoices.id, invoiceLines.invoiceId))
-      .where(and(
-        eq(invoiceLines.tenantId, ctx.tenantId),
-        gte(invoices.invoiceDate, window.from),
-        lte(invoices.invoiceDate, window.to),
-        ne(invoices.status, "cancelled"),
-        ne(invoices.status, "draft"),
-      ))
+      .where(
+        and(
+          eq(invoiceLines.tenantId, ctx.tenantId),
+          gte(invoices.invoiceDate, window.from),
+          lte(invoices.invoiceDate, window.to),
+          ne(invoices.status, "cancelled"),
+          ne(invoices.status, "draft"),
+        ),
+      )
       .groupBy(invoiceLines.hsnSac, invoiceLines.unit, invoiceLines.gstRate)
       .orderBy(asc(invoiceLines.hsnSac));
 
@@ -185,7 +203,8 @@ export class ReportService {
       sgst: Number(r.sgst),
       igst: Number(r.igst),
       cess: Number(r.cess),
-      total: Number(r.taxableValue) + Number(r.cgst) + Number(r.sgst) + Number(r.igst) + Number(r.cess),
+      total:
+        Number(r.taxableValue) + Number(r.cgst) + Number(r.sgst) + Number(r.igst) + Number(r.cess),
     }));
   }
 
@@ -214,11 +233,15 @@ export class ReportService {
       .from(invoices)
       .leftJoin(einvoices, eq(einvoices.invoiceId, invoices.id))
       .leftJoin(ewayBills, eq(ewayBills.invoiceId, invoices.id))
-      .where(scoped(ctx, invoices,
-        gte(invoices.invoiceDate, window.from),
-        lte(invoices.invoiceDate, window.to),
-        ne(invoices.status, "draft"),
-      ))
+      .where(
+        scoped(
+          ctx,
+          invoices,
+          gte(invoices.invoiceDate, window.from),
+          lte(invoices.invoiceDate, window.to),
+          ne(invoices.status, "draft"),
+        ),
+      )
       .orderBy(asc(invoices.invoiceDate), asc(invoices.invoiceNumber));
     return rows;
   }
@@ -235,11 +258,15 @@ export class ReportService {
         oldestDueDate: sql<Date>`MIN(${invoices.dueDate})`,
       })
       .from(invoices)
-      .where(scoped(ctx, invoices,
-        ne(invoices.status, "cancelled"),
-        ne(invoices.status, "draft"),
-        sql`${invoices.amountPaid} < ${invoices.grandTotal}`,
-      ))
+      .where(
+        scoped(
+          ctx,
+          invoices,
+          ne(invoices.status, "cancelled"),
+          ne(invoices.status, "draft"),
+          sql`${invoices.amountPaid} < ${invoices.grandTotal}`,
+        ),
+      )
       .groupBy(invoices.buyerPartyId, sql`${invoices.billTo}->>'name'`)
       .orderBy(desc(sql`SUM(${invoices.grandTotal} - ${invoices.amountPaid})`));
   }
@@ -263,10 +290,14 @@ export class ReportService {
       })
       .from(ewayBills)
       .innerJoin(invoices, eq(invoices.id, ewayBills.invoiceId))
-      .where(scoped(ctx, ewayBills,
-        gte(ewayBills.createdAt, window.from),
-        lte(ewayBills.createdAt, window.to),
-      ))
+      .where(
+        scoped(
+          ctx,
+          ewayBills,
+          gte(ewayBills.createdAt, window.from),
+          lte(ewayBills.createdAt, window.to),
+        ),
+      )
       .orderBy(desc(ewayBills.generatedAt));
   }
 
@@ -281,13 +312,21 @@ export class ReportService {
         grandTotal: sql<number>`SUM(${invoices.grandTotal})::bigint`,
       })
       .from(invoices)
-      .where(scoped(ctx, invoices,
-        gte(invoices.invoiceDate, window.from),
-        lte(invoices.invoiceDate, window.to),
-        ne(invoices.status, "cancelled"),
-        ne(invoices.status, "draft"),
-      ))
-      .groupBy(invoices.buyerPartyId, sql`${invoices.billTo}->>'name'`, sql`${invoices.billTo}->>'gstin'`)
+      .where(
+        scoped(
+          ctx,
+          invoices,
+          gte(invoices.invoiceDate, window.from),
+          lte(invoices.invoiceDate, window.to),
+          ne(invoices.status, "cancelled"),
+          ne(invoices.status, "draft"),
+        ),
+      )
+      .groupBy(
+        invoices.buyerPartyId,
+        sql`${invoices.billTo}->>'name'`,
+        sql`${invoices.billTo}->>'gstin'`,
+      )
       .orderBy(desc(sql`SUM(${invoices.grandTotal})`))
       .limit(limit);
   }

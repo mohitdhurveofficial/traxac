@@ -1,9 +1,19 @@
 import { z } from "zod";
 import {
-  addressSnapshotSchema, gstRateSchema, hsnSchema, rupeesSchema,
-  stateCodeSchema, uqcSchema, vehicleNoSchema,
+  addressSnapshotSchema,
+  gstRateSchema,
+  hsnSchema,
+  rupeesSchema,
+  stateCodeSchema,
+  uqcSchema,
+  vehicleNoSchema,
 } from "./common.js";
-import { DOC_TYPES, INVOICE_STATUSES, EINVOICE_STATUSES, EWB_STATUSES } from "../constants/status.js";
+import {
+  DOC_TYPES,
+  INVOICE_STATUSES,
+  EINVOICE_STATUSES,
+  EWB_STATUSES,
+} from "../constants/status.js";
 import { SUPPLY_CATEGORIES } from "../gst/supply.js";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
@@ -113,8 +123,10 @@ export const createInvoiceSchema = z
         message: "Choose a customer or enter Bill To details",
       });
     }
-    if ((value.docType === "credit_note" || value.docType === "debit_note")
-      && !value.referenceInvoiceId) {
+    if (
+      (value.docType === "credit_note" || value.docType === "debit_note") &&
+      !value.referenceInvoiceId
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["referenceInvoiceId"],

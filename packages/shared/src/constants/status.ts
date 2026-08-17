@@ -1,12 +1,12 @@
 /** Lifecycle statuses shared across API, worker, database and web. */
 
 export const INVOICE_STATUSES = [
-  "draft",       // editable, no number consumed yet for e-invoicing
-  "pending",     // finalized; compliance work queued
-  "generated",   // IRN and/or EWB successfully generated
-  "failed",      // a government API call failed; retryable
+  "draft", // editable, no number consumed yet for e-invoicing
+  "pending", // finalized; compliance work queued
+  "generated", // IRN and/or EWB successfully generated
+  "failed", // a government API call failed; retryable
   "cancelled",
-  "completed",   // fully paid / closed
+  "completed", // fully paid / closed
 ] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 

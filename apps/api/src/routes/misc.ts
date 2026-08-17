@@ -64,10 +64,12 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/notifications", async (request) => {
     const ctx = requireAuth(request);
-    const query = z.object({
-      unreadOnly: z.coerce.boolean().default(false),
-      limit: z.coerce.number().int().min(1).max(100).default(50),
-    }).parse(request.query);
+    const query = z
+      .object({
+        unreadOnly: z.coerce.boolean().default(false),
+        limit: z.coerce.number().int().min(1).max(100).default(50),
+      })
+      .parse(request.query);
     const [items, unread] = await Promise.all([
       request.container.notifications.list(ctx, query),
       request.container.notifications.unreadCount(ctx),
@@ -95,8 +97,11 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     const { database } = request.container;
     const [[tenant], [settings]] = await Promise.all([
       database.db.select().from(tenants).where(eq(tenants.id, ctx.tenantId)).limit(1),
-      database.db.select().from(tenantSettings)
-        .where(eq(tenantSettings.tenantId, ctx.tenantId)).limit(1),
+      database.db
+        .select()
+        .from(tenantSettings)
+        .where(eq(tenantSettings.tenantId, ctx.tenantId))
+        .limit(1),
     ]);
     if (!tenant) throw new AppError("NOT_FOUND", "Business not found");
     return {
@@ -104,7 +109,9 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
       settings: settings
         ? {
             ...settings,
-            ewbThresholdRupees: toRupees(settings.ewbThreshold?.paise ?? DEFAULT_EWB_THRESHOLD_PAISE),
+            ewbThresholdRupees: toRupees(
+              settings.ewbThreshold?.paise ?? DEFAULT_EWB_THRESHOLD_PAISE,
+            ),
           }
         : null,
     };
@@ -115,25 +122,29 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     if (ctx.role !== "owner" && ctx.role !== "admin") {
       throw new AppError("FORBIDDEN", "Only owners and admins can change settings");
     }
-    const input = z.object({
-      businessName: z.string().trim().min(2).max(200).optional(),
-      autoGenerateEinvoice: z.boolean().optional(),
-      autoGenerateEwb: z.boolean().optional(),
-      ewbThresholdRupees: z.coerce.number().min(0).optional(),
-      defaultTerms: z.string().max(2000).optional(),
-      defaultNotes: z.string().max(2000).optional(),
-      defaultGstinId: z.string().uuid().optional(),
-    }).parse(request.body);
+    const input = z
+      .object({
+        businessName: z.string().trim().min(2).max(200).optional(),
+        autoGenerateEinvoice: z.boolean().optional(),
+        autoGenerateEwb: z.boolean().optional(),
+        ewbThresholdRupees: z.coerce.number().min(0).optional(),
+        defaultTerms: z.string().max(2000).optional(),
+        defaultNotes: z.string().max(2000).optional(),
+        defaultGstinId: z.string().uuid().optional(),
+      })
+      .parse(request.body);
 
     const { database } = request.container;
     if (input.businessName) {
-      await database.db.update(tenants)
+      await database.db
+        .update(tenants)
         .set({ name: input.businessName, updatedAt: new Date() })
         .where(eq(tenants.id, ctx.tenantId));
     }
 
     const patch: Record<string, unknown> = { updatedAt: new Date() };
-    if (input.autoGenerateEinvoice !== undefined) patch["autoGenerateEinvoice"] = input.autoGenerateEinvoice;
+    if (input.autoGenerateEinvoice !== undefined)
+      patch["autoGenerateEinvoice"] = input.autoGenerateEinvoice;
     if (input.autoGenerateEwb !== undefined) patch["autoGenerateEwb"] = input.autoGenerateEwb;
     if (input.ewbThresholdRupees !== undefined) {
       patch["ewbThreshold"] = { paise: toPaise(input.ewbThresholdRupees) };
@@ -142,12 +153,15 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     if (input.defaultNotes !== undefined) patch["defaultNotes"] = input.defaultNotes;
     if (input.defaultGstinId !== undefined) patch["defaultGstinId"] = input.defaultGstinId;
 
-    await database.db.insert(tenantSettings)
+    await database.db
+      .insert(tenantSettings)
       .values({ tenantId: ctx.tenantId, ...patch })
       .onConflictDoUpdate({ target: tenantSettings.tenantId, set: patch });
 
     await request.container.audit.record(ctx, {
-      action: "settings.updated", entityType: "tenant", entityId: ctx.tenantId,
+      action: "settings.updated",
+      entityType: "tenant",
+      entityId: ctx.tenantId,
     });
     return { ok: true };
   });
@@ -162,12 +176,14 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
   app.patch("/number-series/:id", async (request) => {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
-    const input = z.object({
-      prefix: z.string().max(10).optional(),
-      suffix: z.string().max(10).optional(),
-      padding: z.coerce.number().int().min(1).max(10).optional(),
-      nextNumber: z.coerce.number().int().min(1).optional(),
-    }).parse(request.body);
+    const input = z
+      .object({
+        prefix: z.string().max(10).optional(),
+        suffix: z.string().max(10).optional(),
+        padding: z.coerce.number().int().min(1).max(10).optional(),
+        nextNumber: z.coerce.number().int().min(1).optional(),
+      })
+      .parse(request.body);
     return request.container.numbering.configureSeries(ctx, id, input);
   });
 
@@ -178,10 +194,17 @@ export async function miscRoutes(app: FastifyInstance): Promise<void> {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
     const { database } = request.container;
-    const rows = await database.client<Array<{
-      id: string; kind: string; status: string; attempts: number;
-      last_error: string | null; result: unknown; tenant_id: string | null;
-    }>>`SELECT id, kind, status, attempts, last_error, result, tenant_id
+    const rows = await database.client<
+      Array<{
+        id: string;
+        kind: string;
+        status: string;
+        attempts: number;
+        last_error: string | null;
+        result: unknown;
+        tenant_id: string | null;
+      }>
+    >`SELECT id, kind, status, attempts, last_error, result, tenant_id
         FROM jobs WHERE id = ${id} LIMIT 1`;
     const job = rows[0];
     if (!job || job.tenant_id !== ctx.tenantId) throw new AppError("NOT_FOUND", "Job not found");

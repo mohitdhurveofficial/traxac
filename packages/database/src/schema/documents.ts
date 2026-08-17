@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, bigint, index,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, bigint, index } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt } from "./_shared.js";
 
@@ -13,7 +11,9 @@ export const documents = pgTable(
   "documents",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     /** invoice_pdf | einvoice_json | einvoice_qr | ewb_pdf | attachment | logo */
     kind: text("kind").notNull(),
     entityType: text("entity_type").notNull(), // invoice | einvoice | eway_bill | tenant

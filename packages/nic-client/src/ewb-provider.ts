@@ -1,16 +1,26 @@
 import {
-  DUPLICATE_EWB_CODES, gatewayFail, gatewayOk,
-  type EwbCancelPayload, type EwbDetails, type EwbExtendPayload,
-  type EwbGeneratePayload, type EwbGenerateResult, type EwbPartBPayload,
-  type EwbProvider, type EwbUpdateTransporterPayload,
-  type GatewayRequestContext, type GatewayResult,
+  DUPLICATE_EWB_CODES,
+  gatewayFail,
+  gatewayOk,
+  type EwbCancelPayload,
+  type EwbDetails,
+  type EwbExtendPayload,
+  type EwbGeneratePayload,
+  type EwbGenerateResult,
+  type EwbPartBPayload,
+  type EwbProvider,
+  type EwbUpdateTransporterPayload,
+  type GatewayRequestContext,
+  type GatewayResult,
 } from "@traxac/gst-gateway";
 import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { EWB_ACTIONS, EWB_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
-  extractErrorDetail, MissingGatewayConfigError,
-  type NicClientOptions, type NicSessionManager,
+  extractErrorDetail,
+  MissingGatewayConfigError,
+  type NicClientOptions,
+  type NicSessionManager,
 } from "./session.js";
 import type { PortalErrorDetail, PortalOutcome } from "./einvoice-provider.js";
 
@@ -51,24 +61,30 @@ export class NicEwbProvider implements EwbProvider {
           if (existing) {
             const lookup = await this.getEwb(ctx, existing);
             if (lookup.ok) {
-              return gatewayOk({
-                ewbNumber: lookup.data.ewbNumber,
-                generatedAt: lookup.data.generatedAt ?? new Date(),
-                validUntil: lookup.data.validUntil ?? new Date(),
-                alert: "Recovered an e-Way Bill the portal had already issued",
-              }, outcome.raw);
+              return gatewayOk(
+                {
+                  ewbNumber: lookup.data.ewbNumber,
+                  generatedAt: lookup.data.generatedAt ?? new Date(),
+                  validUntil: lookup.data.validUntil ?? new Date(),
+                  alert: "Recovered an e-Way Bill the portal had already issued",
+                },
+                outcome.raw,
+              );
             }
           }
         }
         return gatewayFail(portalError(outcome.detail), outcome.raw);
       }
       const data = outcome.data;
-      return gatewayOk({
-        ewbNumber: String(data["ewayBillNo"] ?? data["ewbNo"] ?? ""),
-        generatedAt: parseEwbDate(String(data["ewayBillDate"] ?? "")) ?? new Date(),
-        validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? new Date(),
-        alert: data["alert"] ? String(data["alert"]) : null,
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(data["ewayBillNo"] ?? data["ewbNo"] ?? ""),
+          generatedAt: parseEwbDate(String(data["ewayBillDate"] ?? "")) ?? new Date(),
+          validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? new Date(),
+          alert: data["alert"] ? String(data["alert"]) : null,
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -82,11 +98,14 @@ export class NicEwbProvider implements EwbProvider {
       const outcome = await this.action(ctx, "updatePartB", EWB_ACTIONS.updatePartB, payload);
       if (!outcome.ok) return gatewayFail(portalError(outcome.detail), outcome.raw);
       const data = outcome.data;
-      return gatewayOk({
-        ewbNumber: String(data["ewayBillNo"] ?? payload.ewbNo),
-        validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? new Date(),
-        vehicleNo: data["vehicleNo"] ? String(data["vehicleNo"]) : payload.vehicleNo,
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(data["ewayBillNo"] ?? payload.ewbNo),
+          validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? new Date(),
+          vehicleNo: data["vehicleNo"] ? String(data["vehicleNo"]) : payload.vehicleNo,
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -98,13 +117,19 @@ export class NicEwbProvider implements EwbProvider {
   ): Promise<GatewayResult<{ ewbNumber: string; transporterId: string }>> {
     try {
       const outcome = await this.action(
-        ctx, "updateTransporter", EWB_ACTIONS.updateTransporter, payload,
+        ctx,
+        "updateTransporter",
+        EWB_ACTIONS.updateTransporter,
+        payload,
       );
       if (!outcome.ok) return gatewayFail(portalError(outcome.detail), outcome.raw);
-      return gatewayOk({
-        ewbNumber: String(outcome.data["ewayBillNo"] ?? payload.ewbNo),
-        transporterId: payload.transporterId,
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(outcome.data["ewayBillNo"] ?? payload.ewbNo),
+          transporterId: payload.transporterId,
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -120,16 +145,22 @@ export class NicEwbProvider implements EwbProvider {
       const data = outcome.data;
       const validUntil = parseEwbDate(String(data["validUpto"] ?? ""));
       if (!validUntil) {
-        return gatewayFail({
-          code: "EWB_NO_VALIDITY",
-          message: "The portal accepted the extension but returned no new validity date",
-          retryable: false,
-        }, outcome.raw);
+        return gatewayFail(
+          {
+            code: "EWB_NO_VALIDITY",
+            message: "The portal accepted the extension but returned no new validity date",
+            retryable: false,
+          },
+          outcome.raw,
+        );
       }
-      return gatewayOk({
-        ewbNumber: String(data["ewayBillNo"] ?? payload.ewbNo),
-        validUntil,
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(data["ewayBillNo"] ?? payload.ewbNo),
+          validUntil,
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -142,10 +173,13 @@ export class NicEwbProvider implements EwbProvider {
     try {
       const outcome = await this.action(ctx, "cancel", EWB_ACTIONS.cancel, payload);
       if (!outcome.ok) return gatewayFail(portalError(outcome.detail), outcome.raw);
-      return gatewayOk({
-        ewbNumber: String(outcome.data["ewayBillNo"] ?? payload.ewbNo),
-        cancelledAt: parseEwbDate(String(outcome.data["cancelDate"] ?? "")) ?? new Date(),
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(outcome.data["ewayBillNo"] ?? payload.ewbNo),
+          cancelledAt: parseEwbDate(String(outcome.data["cancelDate"] ?? "")) ?? new Date(),
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -154,20 +188,25 @@ export class NicEwbProvider implements EwbProvider {
   async getEwb(ctx: GatewayRequestContext, ewbNumber: string): Promise<GatewayResult<EwbDetails>> {
     try {
       const outcome = await this.request(
-        ctx, "getEwb", "GET",
+        ctx,
+        "getEwb",
+        "GET",
         `${EWB_PATHS.getEwb}?ewbNo=${encodeURIComponent(ewbNumber)}`,
       );
       if (!outcome.ok) return gatewayFail(portalError(outcome.detail), outcome.raw);
       const data = outcome.data;
-      return gatewayOk({
-        ewbNumber: String(data["ewbNo"] ?? data["ewayBillNo"] ?? ewbNumber),
-        status: String(data["status"] ?? "ACT"),
-        generatedAt: parseEwbDate(String(data["ewayBillDate"] ?? "")) ?? undefined,
-        validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? undefined,
-        vehicleNo: data["vehicleNo"] ? String(data["vehicleNo"]) : null,
-        transporterId: data["transporterId"] ? String(data["transporterId"]) : null,
-        cancelledAt: data["cancelDate"] ? parseEwbDate(String(data["cancelDate"])) : null,
-      }, outcome.raw);
+      return gatewayOk(
+        {
+          ewbNumber: String(data["ewbNo"] ?? data["ewayBillNo"] ?? ewbNumber),
+          status: String(data["status"] ?? "ACT"),
+          generatedAt: parseEwbDate(String(data["ewayBillDate"] ?? "")) ?? undefined,
+          validUntil: parseEwbDate(String(data["validUpto"] ?? "")) ?? undefined,
+          vehicleNo: data["vehicleNo"] ? String(data["vehicleNo"]) : null,
+          transporterId: data["transporterId"] ? String(data["transporterId"]) : null,
+          cancelledAt: data["cancelDate"] ? parseEwbDate(String(data["cancelDate"])) : null,
+        },
+        outcome.raw,
+      );
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }
@@ -204,7 +243,7 @@ export class NicEwbProvider implements EwbProvider {
         client_secret: ctx.credentials.clientSecret,
         gstin: ctx.gstin,
         username: ctx.credentials.username,
-        "authtoken": session.authToken,
+        authtoken: session.authToken,
       },
       body: input
         ? { action: input.action, data: aesEncrypt(session.sek, JSON.stringify(input.payload)) }
@@ -228,9 +267,10 @@ export class NicEwbProvider implements EwbProvider {
     const status = String(body["status"] ?? body["Status"] ?? "");
     if (status === "1") {
       const encrypted = body["data"] ?? body["Data"];
-      const decoded = typeof encrypted === "string" && encrypted
-        ? JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>
-        : (body);
+      const decoded =
+        typeof encrypted === "string" && encrypted
+          ? (JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>)
+          : body;
       return { ok: true, data: decoded, raw: redactRaw(body) };
     }
 
@@ -272,8 +312,9 @@ function extractExistingEwbNumber(detail: PortalErrorDetail): string | null {
 export function parseEwbDate(value: string): Date | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i
-    .exec(trimmed);
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i.exec(
+    trimmed,
+  );
   if (!match) {
     const parsed = Date.parse(trimmed);
     return Number.isNaN(parsed) ? null : new Date(parsed);
@@ -283,8 +324,8 @@ export function parseEwbDate(value: string): Date | null {
   if (meridiem?.toUpperCase() === "PM" && hours < 12) hours += 12;
   if (meridiem?.toUpperCase() === "AM" && hours === 12) hours = 0;
   return new Date(
-    Date.UTC(Number(y), Number(mo) - 1, Number(d), hours, Number(mi ?? 0), Number(ss ?? 0))
-    - 330 * 60_000,
+    Date.UTC(Number(y), Number(mo) - 1, Number(d), hours, Number(mi ?? 0), Number(ss ?? 0)) -
+      330 * 60_000,
   );
 }
 

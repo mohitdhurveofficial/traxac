@@ -69,20 +69,23 @@ export class DocumentService {
       metadata: { tenantId: ctx.tenantId, kind: input.kind },
     });
 
-    const [row] = await this.db.insert(documents).values({
-      id,
-      tenantId: ctx.tenantId,
-      kind: input.kind,
-      entityType: input.entityType,
-      entityId: input.entityId ?? null,
-      filename: input.filename,
-      contentType: input.contentType,
-      sizeBytes: stored.size,
-      storageKey: stored.key,
-      storageProvider: this.storage.provider,
-      checksumSha256: stored.checksumSha256,
-      uploadedByUserId: ctx.actor === "system" ? null : ctx.userId,
-    }).returning();
+    const [row] = await this.db
+      .insert(documents)
+      .values({
+        id,
+        tenantId: ctx.tenantId,
+        kind: input.kind,
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        filename: input.filename,
+        contentType: input.contentType,
+        sizeBytes: stored.size,
+        storageKey: stored.key,
+        storageProvider: this.storage.provider,
+        checksumSha256: stored.checksumSha256,
+        uploadedByUserId: ctx.actor === "system" ? null : ctx.userId,
+      })
+      .returning();
     if (!row) throw new AppError("INTERNAL", "Could not record the document");
 
     if (input.kind === "attachment") {
@@ -97,15 +100,26 @@ export class DocumentService {
   }
 
   async listFor(ctx: AuthContext, entityType: string, entityId: string): Promise<Document[]> {
-    return this.db.select().from(documents)
-      .where(scoped(ctx, documents,
-        eq(documents.entityType, entityType), eq(documents.entityId, entityId)))
+    return this.db
+      .select()
+      .from(documents)
+      .where(
+        scoped(
+          ctx,
+          documents,
+          eq(documents.entityType, entityType),
+          eq(documents.entityId, entityId),
+        ),
+      )
       .orderBy(desc(documents.createdAt));
   }
 
   async get(ctx: AuthContext, id: string): Promise<Document> {
-    const [row] = await this.db.select().from(documents)
-      .where(scopedById(ctx, documents, id)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(documents)
+      .where(scopedById(ctx, documents, id))
+      .limit(1);
     if (!row) throw new AppError("NOT_FOUND", "Document not found");
     return row;
   }
@@ -116,12 +130,20 @@ export class DocumentService {
     entityType: string,
     entityId: string,
   ): Promise<Document | null> {
-    const [row] = await this.db.select().from(documents)
-      .where(scoped(ctx, documents,
-        eq(documents.kind, kind),
-        eq(documents.entityType, entityType),
-        eq(documents.entityId, entityId)))
-      .orderBy(desc(documents.createdAt)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(documents)
+      .where(
+        scoped(
+          ctx,
+          documents,
+          eq(documents.kind, kind),
+          eq(documents.entityType, entityType),
+          eq(documents.entityId, entityId),
+        ),
+      )
+      .orderBy(desc(documents.createdAt))
+      .limit(1);
     return row ?? null;
   }
 
@@ -178,21 +200,32 @@ export class DocumentService {
     entityType: string,
     entityId: string,
   ): Promise<void> {
-    const rows = await this.db.select().from(documents)
-      .where(scoped(ctx, documents,
-        eq(documents.kind, kind),
-        eq(documents.entityType, entityType),
-        eq(documents.entityId, entityId)));
+    const rows = await this.db
+      .select()
+      .from(documents)
+      .where(
+        scoped(
+          ctx,
+          documents,
+          eq(documents.kind, kind),
+          eq(documents.entityType, entityType),
+          eq(documents.entityId, entityId),
+        ),
+      );
     for (const row of rows) {
       await this.storage.delete(row.storageKey).catch(() => undefined);
     }
     if (rows.length) {
-      await this.db.delete(documents).where(and(
-        eq(documents.tenantId, ctx.tenantId),
-        eq(documents.kind, kind),
-        eq(documents.entityType, entityType),
-        eq(documents.entityId, entityId),
-      ));
+      await this.db
+        .delete(documents)
+        .where(
+          and(
+            eq(documents.tenantId, ctx.tenantId),
+            eq(documents.kind, kind),
+            eq(documents.entityType, entityType),
+            eq(documents.entityId, entityId),
+          ),
+        );
     }
   }
 }

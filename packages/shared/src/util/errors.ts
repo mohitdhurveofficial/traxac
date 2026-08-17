@@ -58,8 +58,7 @@ export class AppError extends Error {
   }
 }
 
-export const notFound = (what: string): AppError =>
-  new AppError("NOT_FOUND", `${what} not found`);
+export const notFound = (what: string): AppError => new AppError("NOT_FOUND", `${what} not found`);
 
 export const invalidState = (message: string, details?: unknown): AppError =>
   new AppError("INVALID_STATE", message, { details });

@@ -1,6 +1,9 @@
 import type { z } from "zod";
 import type {
-  createInvoiceSchema, invoiceListQuerySchema, previewInvoiceSchema, recordPaymentSchema,
+  createInvoiceSchema,
+  invoiceListQuerySchema,
+  previewInvoiceSchema,
+  recordPaymentSchema,
 } from "@traxac/shared/contracts";
 
 /** Parsed contract types, re-exported so services do not import zod directly. */

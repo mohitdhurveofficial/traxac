@@ -2,11 +2,11 @@
 
 Two services and one database.
 
-| Service | Root | Start command | Notes |
-| --- | --- | --- | --- |
-| `traxac-app` | repo root | `pnpm start` | Fastify API **and** the built web app on one origin |
-| `traxac-worker` | repo root | `pnpm start:worker` | Compliance jobs, PDFs, e-Way Bill expiry sweep |
-| Postgres | Railway plugin | — | `DATABASE_URL` is injected automatically |
+| Service         | Root           | Start command       | Notes                                               |
+| --------------- | -------------- | ------------------- | --------------------------------------------------- |
+| `traxac-app`    | repo root      | `pnpm start`        | Fastify API **and** the built web app on one origin |
+| `traxac-worker` | repo root      | `pnpm start:worker` | Compliance jobs, PDFs, e-Way Bill expiry sweep      |
+| Postgres        | Railway plugin | —                   | `DATABASE_URL` is injected automatically            |
 
 ## Why the API also serves the web app
 
@@ -91,7 +91,7 @@ create, issue, number, PDF — and only the IRN and e-Way Bill steps fail, with
   `TRAXAC_MASTER_KEY_VERSION`. Existing ciphertext keeps decrypting with the
   previous key and is re-wrapped with the new one the next time it is read.
   Remove `TRAXAC_MASTER_KEY_PREVIOUS` once `SELECT count(*) FROM
-  gst_credentials WHERE key_version < <new version>` reaches zero.
+gst_credentials WHERE key_version < <new version>` reaches zero.
 
 ## Scaling
 
@@ -119,11 +119,11 @@ rendering of it and can always be regenerated from the database.
 
 ## Monitoring
 
-| Endpoint | Purpose |
-| --- | --- |
-| `/health` | Liveness. Answers while the process is up. |
+| Endpoint        | Purpose                                                                      |
+| --------------- | ---------------------------------------------------------------------------- |
+| `/health`       | Liveness. Answers while the process is up.                                   |
 | `/health/ready` | Readiness. Also checks the database. Use this for the platform health check. |
-| `/health/queue` | Job counts by status. Alert if `failed` grows or `pending` stops draining. |
+| `/health/queue` | Job counts by status. Alert if `failed` grows or `pending` stops draining.   |
 
 Every outbound government API call is recorded in `gateway_calls` with the
 endpoint, attempt number, duration, response status and redacted payloads.

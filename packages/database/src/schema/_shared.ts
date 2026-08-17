@@ -5,8 +5,7 @@ import { bigint, timestamp } from "drizzle-orm/pg-core";
  * invoice can safely exceed the 32-bit integer ceiling (~Rs 2.1 crore).
  * `mode: "number"` is safe: 2^53 paise is ~Rs 90,000 crore.
  */
-export const money = (name: string) =>
-  bigint(name, { mode: "number" }).notNull().default(0);
+export const money = (name: string) => bigint(name, { mode: "number" }).notNull().default(0);
 
 export const moneyNullable = (name: string) => bigint(name, { mode: "number" });
 

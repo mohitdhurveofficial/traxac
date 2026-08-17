@@ -54,11 +54,13 @@ export interface ContainerOptions {
 
 export function createContainer(options: ContainerOptions = {}): Container {
   const config = options.config ?? loadConfig();
-  const logger = options.logger ?? createLogger({
-    level: config.LOG_LEVEL,
-    pretty: config.isDevelopment,
-    name: options.processName ?? "traxac",
-  });
+  const logger =
+    options.logger ??
+    createLogger({
+      level: config.LOG_LEVEL,
+      pretty: config.isDevelopment,
+      name: options.processName ?? "traxac",
+    });
 
   const database = createDatabase(config.DATABASE_URL, {
     max: config.DATABASE_POOL_MAX,
@@ -89,16 +91,18 @@ export function createContainer(options: ContainerOptions = {}): Container {
   // processes share one portal token instead of each authenticating.
   const sessionStore: SessionStore = new MemorySessionStore();
 
-  const registry = options.registry ?? createNicRegistry({
-    publicKeys: {
-      sandbox: config.NIC_PUBLIC_KEY_SANDBOX,
-      production: config.NIC_PUBLIC_KEY_PRODUCTION,
-    },
-    timeoutMs: config.GATEWAY_TIMEOUT_MS,
-    attempts: 3,
-    store: sessionStore,
-    telemetry,
-  });
+  const registry =
+    options.registry ??
+    createNicRegistry({
+      publicKeys: {
+        sandbox: config.NIC_PUBLIC_KEY_SANDBOX,
+        production: config.NIC_PUBLIC_KEY_PRODUCTION,
+      },
+      timeoutMs: config.GATEWAY_TIMEOUT_MS,
+      attempts: 3,
+      store: sessionStore,
+      telemetry,
+    });
 
   const numbering = new NumberingService(database);
   const masters = new MastersService(database, audit);

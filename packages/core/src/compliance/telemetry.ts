@@ -24,9 +24,9 @@ export class DatabaseGatewayTelemetry implements GatewayTelemetry {
         gstin: entry.gstin,
         idempotencyKey: entry.idempotencyKey,
         attempt: entry.attempt,
-        requestPayload: (entry.requestPayload ?? null),
+        requestPayload: entry.requestPayload ?? null,
         responseStatus: entry.responseStatus ?? null,
-        responsePayload: (entry.responsePayload ?? null),
+        responsePayload: entry.responsePayload ?? null,
         errorCode: entry.errorCode ?? null,
         durationMs: entry.durationMs,
       });

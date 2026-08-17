@@ -22,7 +22,10 @@ describe("authentication hardening", () => {
     container = await testContainer();
     await resetDatabase(container);
     await container.auth.register({
-      name: "Hardening", email, password, businessName: "Hardening Co",
+      name: "Hardening",
+      email,
+      password,
+      businessName: "Hardening Co",
     });
     app = await buildApp(container);
     await app.ready();

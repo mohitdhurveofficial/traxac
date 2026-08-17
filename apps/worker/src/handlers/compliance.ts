@@ -40,7 +40,9 @@ export async function handleEinvoiceGenerate(job: Job, container: Container): Pr
   const payload = payloadOf<EinvoicePayload>(job);
   const ctx = systemContext(payload.tenantId);
   const result = await container.compliance.generateEinvoice(
-    ctx, payload.invoiceId, payload.withEwayBill ?? false,
+    ctx,
+    payload.invoiceId,
+    payload.withEwayBill ?? false,
   );
 
   await container.notifications.create({
@@ -78,9 +80,10 @@ export async function handleEwbGenerate(job: Job, container: Container): Promise
     tenantId: payload.tenantId,
     kind: "ewb.generated",
     severity: result.status === "part_b_pending" ? "warning" : "info",
-    title: result.status === "part_b_pending"
-      ? "e-Way Bill Part-A generated — vehicle details still needed"
-      : "e-Way Bill generated",
+    title:
+      result.status === "part_b_pending"
+        ? "e-Way Bill Part-A generated — vehicle details still needed"
+        : "e-Way Bill generated",
     body: `EWB ${result.ewbNumber}${result.validUntil ? `, valid to ${result.validUntil.toISOString().slice(0, 10)}` : ""}`,
     entityType: "invoice",
     entityId: payload.invoiceId,

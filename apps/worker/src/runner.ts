@@ -110,7 +110,11 @@ export class Runner {
   }
 
   private async execute(job: Job): Promise<void> {
-    const log = this.container.logger.child({ jobId: job.id, kind: job.kind, attempt: job.attempts });
+    const log = this.container.logger.child({
+      jobId: job.id,
+      kind: job.kind,
+      attempt: job.attempts,
+    });
     const handler = this.options.handlers[job.kind as JobKind];
 
     if (!handler) {
@@ -142,16 +146,18 @@ export class Runner {
     const payload = job.payload as { invoiceId?: string };
     const label = job.kind.startsWith("einvoice") ? "e-Invoice" : "e-Way Bill";
     if (!job.kind.startsWith("einvoice") && !job.kind.startsWith("ewb")) return;
-    await this.container.notifications.create({
-      tenantId: job.tenantId,
-      kind: `${job.kind}.failed`,
-      severity: "error",
-      title: `${label} could not be generated`,
-      body: message,
-      entityType: "invoice",
-      entityId: payload.invoiceId,
-      dedupeWithinHours: 1,
-    }).catch(() => undefined);
+    await this.container.notifications
+      .create({
+        tenantId: job.tenantId,
+        kind: `${job.kind}.failed`,
+        severity: "error",
+        title: `${label} could not be generated`,
+        body: message,
+        entityType: "invoice",
+        entityId: payload.invoiceId,
+        dedupeWithinHours: 1,
+      })
+      .catch(() => undefined);
   }
 }
 

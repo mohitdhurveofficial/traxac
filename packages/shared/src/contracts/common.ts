@@ -12,26 +12,16 @@ export const gstinSchema = z
   .toUpperCase()
   .refine(isValidGstin, "Not a valid GSTIN (check the 15 characters and check digit)");
 
-export const panSchema = z
-  .string()
-  .trim()
-  .toUpperCase()
-  .refine(isValidPan, "Not a valid PAN");
+export const panSchema = z.string().trim().toUpperCase().refine(isValidPan, "Not a valid PAN");
 
-export const stateCodeSchema = z
-  .string()
-  .trim()
-  .refine(isValidStateCode, "Unknown GST state code");
+export const stateCodeSchema = z.string().trim().refine(isValidStateCode, "Unknown GST state code");
 
 export const pincodeSchema = z
   .string()
   .trim()
   .refine(isValidPincode, "Not a valid 6-digit PIN code");
 
-export const hsnSchema = z
-  .string()
-  .trim()
-  .refine(isValidHsn, "HSN/SAC must be 4, 6 or 8 digits");
+export const hsnSchema = z.string().trim().refine(isValidHsn, "HSN/SAC must be 4, 6 or 8 digits");
 
 export const uqcSchema = z
   .string()

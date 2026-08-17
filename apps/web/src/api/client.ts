@@ -64,7 +64,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   const payload = await response.json();
   if (!response.ok) {
-    const error = (payload as { error?: { code?: string; message?: string; details?: unknown } }).error;
+    const error = (payload as { error?: { code?: string; message?: string; details?: unknown } })
+      .error;
     throw new ApiError(
       error?.code ?? "INTERNAL",
       error?.message ?? "Something went wrong",
@@ -83,5 +84,4 @@ export const put = <T>(path: string, body?: unknown): Promise<T> =>
   api<T>(path, { method: "PUT", body });
 export const patch = <T>(path: string, body?: unknown): Promise<T> =>
   api<T>(path, { method: "PATCH", body });
-export const del = <T>(path: string): Promise<T> =>
-  api<T>(path, { method: "DELETE" });
+export const del = <T>(path: string): Promise<T> => api<T>(path, { method: "DELETE" });

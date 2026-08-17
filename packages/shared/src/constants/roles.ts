@@ -9,38 +9,64 @@ export type Role = (typeof ROLES)[number];
  * changes this table.
  */
 export const PERMISSIONS = [
-  "invoices:read", "invoices:write", "invoices:finalize", "invoices:cancel",
-  "compliance:generate", "compliance:cancel",
-  "parties:read", "parties:write",
-  "products:read", "products:write",
-  "logistics:read", "logistics:write",
-  "documents:read", "documents:write",
+  "invoices:read",
+  "invoices:write",
+  "invoices:finalize",
+  "invoices:cancel",
+  "compliance:generate",
+  "compliance:cancel",
+  "parties:read",
+  "parties:write",
+  "products:read",
+  "products:write",
+  "logistics:read",
+  "logistics:write",
+  "documents:read",
+  "documents:write",
   "reports:read",
-  "settings:read", "settings:write",
-  "credentials:read", "credentials:write",
-  "users:read", "users:invite", "users:manage",
+  "settings:read",
+  "settings:write",
+  "credentials:read",
+  "credentials:write",
+  "users:read",
+  "users:invite",
+  "users:manage",
   "audit:read",
   "apikeys:manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 const READ_ONLY: Permission[] = [
-  "invoices:read", "parties:read", "products:read", "logistics:read",
-  "documents:read", "reports:read", "settings:read",
+  "invoices:read",
+  "parties:read",
+  "products:read",
+  "logistics:read",
+  "documents:read",
+  "reports:read",
+  "settings:read",
 ];
 
 const MEMBER: Permission[] = [
   ...READ_ONLY,
-  "invoices:write", "invoices:finalize",
+  "invoices:write",
+  "invoices:finalize",
   "compliance:generate",
-  "parties:write", "products:write", "logistics:write", "documents:write",
+  "parties:write",
+  "products:write",
+  "logistics:write",
+  "documents:write",
 ];
 
 const ADMIN: Permission[] = [
   ...MEMBER,
-  "invoices:cancel", "compliance:cancel",
-  "settings:write", "credentials:read", "credentials:write",
-  "users:read", "users:invite", "audit:read",
+  "invoices:cancel",
+  "compliance:cancel",
+  "settings:write",
+  "credentials:read",
+  "credentials:write",
+  "users:read",
+  "users:invite",
+  "audit:read",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {

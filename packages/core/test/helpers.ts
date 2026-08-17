@@ -3,8 +3,11 @@ import { promisify } from "node:util";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  createContainer, resetConfigCache, resolveFromRepoRoot,
-  type AuthContext, type Container,
+  createContainer,
+  resetConfigCache,
+  resolveFromRepoRoot,
+  type AuthContext,
+  type Container,
 } from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
@@ -88,10 +91,14 @@ export async function testContainer(
   // these; a test that overrides WEB_DIST_PATH or STORAGE_LOCAL_DIR expects
   // the derived path to change with it.
   merged["cookieSecure"] = merged["NODE_ENV"] === "production" || merged["COOKIE_SECURE"] === true;
-  merged["storageLocalDir"] = resolveFromRepoRoot(String(merged["STORAGE_LOCAL_DIR"]));
-  merged["webDistPath"] = merged["WEB_DIST_PATH"]
-    ? resolveFromRepoRoot(String(merged["WEB_DIST_PATH"]))
-    : resolveFromRepoRoot("apps/web/dist");
+  const storageDir = merged["STORAGE_LOCAL_DIR"];
+  merged["storageLocalDir"] = resolveFromRepoRoot(
+    typeof storageDir === "string" ? storageDir : ".storage-test",
+  );
+  const webDist = merged["WEB_DIST_PATH"];
+  merged["webDistPath"] = resolveFromRepoRoot(
+    typeof webDist === "string" && webDist ? webDist : "apps/web/dist",
+  );
 
   const config = merged as Parameters<typeof createContainer>[0]["config"];
   return createContainer({ processName: "traxac-test", config });
@@ -181,7 +188,13 @@ export async function createBusiness(
     unitPrice: 1000,
   });
 
-  return { ctx, tenantId: ctx.tenantId, gstinId: gstin.id, partyId: party.id, productId: product.id };
+  return {
+    ctx,
+    tenantId: ctx.tenantId,
+    gstinId: gstin.id,
+    partyId: party.id,
+    productId: product.id,
+  };
 }
 
 /** Minimal valid invoice input for the given business. */
@@ -204,25 +217,27 @@ export function invoiceInput(business: TestBusiness, overrides: Record<string, u
     igstOnIntra: false,
     currency: "INR",
     exchangeRate: 1,
-    lines: [{
-      productId: business.productId,
-      name: "Widget",
-      description: "",
-      hsnSac: "7308",
-      isService: false,
-      quantity: 2,
-      unit: "NOS",
-      unitPrice: 1000,
-      discountPercent: 0,
-      discountAmount: 0,
-      gstRate: 18,
-      cessRate: 0,
-      cessNonAdvol: 0,
-      stateCess: 0,
-      batchNo: "",
-      barcode: "",
-      expiryDate: null,
-    }],
+    lines: [
+      {
+        productId: business.productId,
+        name: "Widget",
+        description: "",
+        hsnSac: "7308",
+        isService: false,
+        quantity: 2,
+        unit: "NOS",
+        unitPrice: 1000,
+        discountPercent: 0,
+        discountAmount: 0,
+        gstRate: 18,
+        cessRate: 0,
+        cessNonAdvol: 0,
+        stateCess: 0,
+        batchNo: "",
+        barcode: "",
+        expiryDate: null,
+      },
+    ],
     charges: [],
     poNumber: "",
     notes: "",

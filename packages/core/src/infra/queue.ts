@@ -62,8 +62,11 @@ export class JobQueue {
       .returning();
     if (inserted) return { job: inserted, created: true };
 
-    const [existing] = await this.db.select().from(jobs)
-      .where(eq(jobs.idempotencyKey, values.idempotencyKey)).limit(1);
+    const [existing] = await this.db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.idempotencyKey, values.idempotencyKey))
+      .limit(1);
     return { job: existing as Job, created: false };
   }
 
@@ -85,10 +88,12 @@ export class JobQueue {
         attempts: 0,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(jobs.idempotencyKey, idempotencyKey),
-        sql`${jobs.status} IN ('failed', 'done', 'cancelled')`,
-      ))
+      .where(
+        and(
+          eq(jobs.idempotencyKey, idempotencyKey),
+          sql`${jobs.status} IN ('failed', 'done', 'cancelled')`,
+        ),
+      )
       .returning();
     return row ?? null;
   }
@@ -127,15 +132,18 @@ export class JobQueue {
   }
 
   async complete(jobId: string, result?: unknown): Promise<void> {
-    await this.db.update(jobs).set({
-      status: "done",
-      result: (result ?? null),
-      finishedAt: new Date(),
-      lockedBy: null,
-      lockedAt: null,
-      lastError: null,
-      updatedAt: new Date(),
-    }).where(eq(jobs.id, jobId));
+    await this.db
+      .update(jobs)
+      .set({
+        status: "done",
+        result: result ?? null,
+        finishedAt: new Date(),
+        lockedBy: null,
+        lockedAt: null,
+        lastError: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(jobs.id, jobId));
   }
 
   /**
@@ -154,23 +162,31 @@ export class JobQueue {
     const willRetry = retryable && job.attempts < job.maxAttempts;
     const nextRunAt = willRetry ? new Date(Date.now() + backoffMs(job.attempts)) : undefined;
 
-    await this.db.update(jobs).set({
-      status: willRetry ? "pending" : "failed",
-      lastError: error.slice(0, 2000),
-      runAt: nextRunAt ?? job.runAt,
-      finishedAt: willRetry ? null : new Date(),
-      lockedBy: null,
-      lockedAt: null,
-      updatedAt: new Date(),
-    }).where(eq(jobs.id, jobId));
+    await this.db
+      .update(jobs)
+      .set({
+        status: willRetry ? "pending" : "failed",
+        lastError: error.slice(0, 2000),
+        runAt: nextRunAt ?? job.runAt,
+        finishedAt: willRetry ? null : new Date(),
+        lockedBy: null,
+        lockedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(jobs.id, jobId));
 
     return willRetry ? { willRetry, nextRunAt: nextRunAt as Date } : { willRetry };
   }
 
   async cancel(jobId: string): Promise<void> {
-    await this.db.update(jobs).set({
-      status: "cancelled", finishedAt: new Date(), updatedAt: new Date(),
-    }).where(and(eq(jobs.id, jobId), sql`${jobs.status} IN ('pending', 'running')`));
+    await this.db
+      .update(jobs)
+      .set({
+        status: "cancelled",
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(jobs.id, jobId), sql`${jobs.status} IN ('pending', 'running')`));
   }
 
   /** Release jobs whose worker died mid-run so another worker can pick them up. */

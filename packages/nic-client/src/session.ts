@@ -1,5 +1,11 @@
 import type { GatewayRequestContext, GatewayTelemetry } from "@traxac/gst-gateway";
-import { aesDecrypt, aesDecryptToBase64, generateAppKey, rsaEncrypt, toPublicKeyPem } from "./crypto.js";
+import {
+  aesDecrypt,
+  aesDecryptToBase64,
+  generateAppKey,
+  rsaEncrypt,
+  toPublicKeyPem,
+} from "./crypto.js";
 import { NicHttpError, nicFetch } from "./http.js";
 import { EWB_PATHS, IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 
@@ -72,8 +78,8 @@ export class NicSessionManager {
     const key = this.options.publicKeys[environment];
     if (!key) {
       throw new MissingGatewayConfigError(
-        `No NIC ${environment} public key is configured. Add NIC_PUBLIC_KEY_${environment.toUpperCase()} `
-        + "before e-Invoice or e-Way Bill calls can be made.",
+        `No NIC ${environment} public key is configured. Add NIC_PUBLIC_KEY_${environment.toUpperCase()} ` +
+          "before e-Invoice or e-Way Bill calls can be made.",
       );
     }
     return toPublicKeyPem(key);
@@ -169,7 +175,14 @@ export class NicSessionManager {
     }
 
     const encrypted = String(body["Data"] ?? "");
-    if (!encrypted) throw new NicHttpError(response.status, "AUTH_NO_DATA", "NIC returned no auth data", false, body);
+    if (!encrypted)
+      throw new NicHttpError(
+        response.status,
+        "AUTH_NO_DATA",
+        "NIC returned no auth data",
+        false,
+        body,
+      );
 
     const decoded = JSON.parse(aesDecrypt(appKey, encrypted)) as {
       AuthToken?: string;
@@ -177,7 +190,13 @@ export class NicSessionManager {
       TokenExpiry?: string;
     };
     if (!decoded.AuthToken || !decoded.Sek) {
-      throw new NicHttpError(response.status, "AUTH_INCOMPLETE", "NIC returned an incomplete session", false, body);
+      throw new NicHttpError(
+        response.status,
+        "AUTH_INCOMPLETE",
+        "NIC returned an incomplete session",
+        false,
+        body,
+      );
     }
 
     return {
@@ -213,7 +232,9 @@ export function extractErrorDetail(body: Record<string, unknown>): {
     const e = item as Record<string, unknown>;
     return {
       code: String(e["ErrorCode"] ?? e["error_cd"] ?? e["errorCode"] ?? "UNKNOWN"),
-      message: String(e["ErrorMessage"] ?? e["message"] ?? e["error_desc"] ?? "Unspecified portal error"),
+      message: String(
+        e["ErrorMessage"] ?? e["message"] ?? e["error_desc"] ?? "Unspecified portal error",
+      ),
     };
   });
   const first = errors[0];

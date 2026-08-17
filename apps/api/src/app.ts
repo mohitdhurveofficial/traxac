@@ -75,21 +75,24 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
    * treated the HTML as a response body. One prefix, asserted by a test, is
    * what stops that from recurring.
    */
-  await app.register(async (api) => {
-    await api.register(authRoutes, { prefix: "/v1/auth" });
-    await api.register(masterRoutes, { prefix: "/v1" });
-    await api.register(invoiceRoutes, { prefix: "/v1/invoices" });
-    await api.register(complianceRoutes, { prefix: "/v1" });
-    await api.register(reportRoutes, { prefix: "/v1/reports" });
-    await api.register(miscRoutes, { prefix: "/v1" });
+  await app.register(
+    async (api) => {
+      await api.register(authRoutes, { prefix: "/v1/auth" });
+      await api.register(masterRoutes, { prefix: "/v1" });
+      await api.register(invoiceRoutes, { prefix: "/v1/invoices" });
+      await api.register(complianceRoutes, { prefix: "/v1" });
+      await api.register(reportRoutes, { prefix: "/v1/reports" });
+      await api.register(miscRoutes, { prefix: "/v1" });
 
-    /** Machine-readable route list — a stand-in until OpenAPI is generated. */
-    api.get("/v1", async () => ({
-      name: "Traxac API",
-      version: "1",
-      routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
-    }));
-  }, { prefix: API_PREFIX });
+      /** Machine-readable route list — a stand-in until OpenAPI is generated. */
+      api.get("/v1", async () => ({
+        name: "Traxac API",
+        version: "1",
+        routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
+      }));
+    },
+    { prefix: API_PREFIX },
+  );
 
   await registerWebApp(app, config);
   return app;

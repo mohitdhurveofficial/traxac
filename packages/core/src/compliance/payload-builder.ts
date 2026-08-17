@@ -1,13 +1,20 @@
 import type {
-  AddressSnapshot, Einvoice, Invoice, InvoiceCharge, InvoiceLine,
+  AddressSnapshot,
+  Einvoice,
+  Invoice,
+  InvoiceCharge,
+  InvoiceLine,
 } from "@traxac/database";
 import {
-  IRP_DOC_TYPE, IRP_SUPPLY_TYPE, EWB_DOC_TYPE, rupeeNumber, toNicDate,
-  type DocType, type SupplyCategory,
+  IRP_DOC_TYPE,
+  IRP_SUPPLY_TYPE,
+  EWB_DOC_TYPE,
+  rupeeNumber,
+  toNicDate,
+  type DocType,
+  type SupplyCategory,
 } from "@traxac/shared";
-import type {
-  EwbGeneratePayload, EwbItem, IrpInvoicePayload, IrpItem,
-} from "@traxac/gst-gateway";
+import type { EwbGeneratePayload, EwbItem, IrpInvoicePayload, IrpItem } from "@traxac/gst-gateway";
 
 /**
  * Maps the Traxac domain model onto the government payload schemas.
@@ -95,7 +102,9 @@ export function buildIrpPayload(bundle: InvoiceBundle): IrpInvoicePayload {
       ? {
           Nm: truncate(invoice.dispatchFrom.name, 100),
           Addr1: truncate(invoice.dispatchFrom.addressLine1, 100),
-          Addr2: invoice.dispatchFrom.addressLine2 ? truncate(invoice.dispatchFrom.addressLine2, 100) : null,
+          Addr2: invoice.dispatchFrom.addressLine2
+            ? truncate(invoice.dispatchFrom.addressLine2, 100)
+            : null,
           Loc: truncate(invoice.dispatchFrom.city, 50),
           Pin: pin(invoice.dispatchFrom.pincode),
           Stcd: invoice.dispatchFrom.stateCode,
@@ -126,17 +135,21 @@ export function buildIrpPayload(bundle: InvoiceBundle): IrpInvoicePayload {
       RndOffAmt: rupeeNumber(invoice.roundOff),
       TotInvVal: rupeeNumber(invoice.grandTotal),
     },
-    RefDtls: invoice.notes || invoice.referenceInvoiceNumber
-      ? {
-          InvRm: invoice.notes ? truncate(invoice.notes, 100) : null,
-          PrecDocDtls: invoice.referenceInvoiceNumber && invoice.referenceInvoiceDate
-            ? [{
-                InvNo: invoice.referenceInvoiceNumber,
-                InvDt: toNicDate(invoice.referenceInvoiceDate),
-              }]
-            : null,
-        }
-      : null,
+    RefDtls:
+      invoice.notes || invoice.referenceInvoiceNumber
+        ? {
+            InvRm: invoice.notes ? truncate(invoice.notes, 100) : null,
+            PrecDocDtls:
+              invoice.referenceInvoiceNumber && invoice.referenceInvoiceDate
+                ? [
+                    {
+                      InvNo: invoice.referenceInvoiceNumber,
+                      InvDt: toNicDate(invoice.referenceInvoiceDate),
+                    },
+                  ]
+                : null,
+          }
+        : null,
     ExpDtls: invoice.isExport
       ? {
           ShipBNo: invoice.exportInfo?.shippingBillNo ?? null,

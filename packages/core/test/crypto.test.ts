@@ -54,8 +54,9 @@ describe("hashing helpers", () => {
   });
 
   it("fingerprints payloads regardless of key order", () => {
-    expect(payloadFingerprint({ a: 1, b: { c: 2, d: 3 } }))
-      .toBe(payloadFingerprint({ b: { d: 3, c: 2 }, a: 1 }));
+    expect(payloadFingerprint({ a: 1, b: { c: 2, d: 3 } })).toBe(
+      payloadFingerprint({ b: { d: 3, c: 2 }, a: 1 }),
+    );
   });
 
   it("generates unique tokens", () => {

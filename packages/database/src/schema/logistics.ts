@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, boolean, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, updatedAt } from "./_shared.js";
 
@@ -9,7 +7,9 @@ export const transporters = pgTable(
   "transporters",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     /** GSTIN or 15-char TRANSIN issued by the EWB portal. */
     transporterId: text("transporter_id"),
@@ -34,11 +34,15 @@ export const vehicles = pgTable(
   "vehicles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     vehicleNo: text("vehicle_no").notNull(),
     /** R = Regular, O = Over Dimensional Cargo. */
     vehicleType: text("vehicle_type").notNull().default("R"),
-    transporterId: uuid("transporter_id").references(() => transporters.id, { onDelete: "set null" }),
+    transporterId: uuid("transporter_id").references(() => transporters.id, {
+      onDelete: "set null",
+    }),
     driverName: text("driver_name"),
     driverPhone: text("driver_phone"),
     isActive: boolean("is_active").notNull().default(true),

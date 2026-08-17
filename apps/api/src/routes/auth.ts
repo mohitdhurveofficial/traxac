@@ -1,6 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
-  changePasswordSchema, inviteUserSchema, loginSchema, registerSchema, switchTenantSchema,
+  changePasswordSchema,
+  inviteUserSchema,
+  loginSchema,
+  registerSchema,
+  switchTenantSchema,
 } from "@traxac/shared/contracts";
 import { ROLE_PERMISSIONS, ROLES, AppError } from "@traxac/shared";
 import { requireAuth } from "../context.js";
@@ -55,9 +59,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       ip: request.ip,
       userAgent: request.headers["user-agent"],
     });
-    reply.header("set-cookie", sessionCookie(
-      result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN,
-    ));
+    reply.header(
+      "set-cookie",
+      sessionCookie(result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN),
+    );
     return reply.status(201).send({
       token: result.token,
       expiresAt: result.expiresAt,
@@ -73,9 +78,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       ip: request.ip,
       userAgent: request.headers["user-agent"],
     });
-    reply.header("set-cookie", sessionCookie(
-      result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN,
-    ));
+    reply.header(
+      "set-cookie",
+      sessionCookie(result.token, result.expiresAt, config.cookieSecure, config.COOKIE_DOMAIN),
+    );
     return {
       token: result.token,
       expiresAt: result.expiresAt,
@@ -150,7 +156,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete("/team/:userId", async (request) => {
     const ctx = requireAuth(request);
-    if (ctx.role !== "owner") throw new AppError("FORBIDDEN", "Only the owner can remove teammates");
+    if (ctx.role !== "owner")
+      throw new AppError("FORBIDDEN", "Only the owner can remove teammates");
     const { userId } = request.params as { userId: string };
     await request.container.auth.removeMember(ctx, userId);
     return { ok: true };

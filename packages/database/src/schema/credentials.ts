@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, integer, jsonb, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { gstins } from "./party.js";
 import { users } from "./tenants.js";
@@ -15,8 +13,12 @@ export const gstCredentials = pgTable(
   "gst_credentials",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    gstinId: uuid("gstin_id").notNull().references(() => gstins.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    gstinId: uuid("gstin_id")
+      .notNull()
+      .references(() => gstins.id, { onDelete: "cascade" }),
     gstin: text("gstin").notNull(),
     /** nic | gsp-<vendor> */
     provider: text("provider").notNull().default("nic"),
@@ -36,7 +38,9 @@ export const gstCredentials = pgTable(
     lastUsedAt: tsCol("last_used_at"),
     lastError: text("last_error"),
 
-    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -58,7 +62,9 @@ export const gatewayTokens = pgTable(
     credentialId: uuid("credential_id")
       .notNull()
       .references(() => gstCredentials.id, { onDelete: "cascade" }),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     encryptedToken: text("encrypted_token").notNull(),
     /** Session encryption key (SEK) returned by NIC, encrypted at rest. */
     encryptedSek: text("encrypted_sek"),
@@ -77,8 +83,12 @@ export const sessions = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     tokenHash: text("token_hash").notNull(),
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
     userAgent: text("user_agent"),
     ip: text("ip"),
@@ -99,7 +109,9 @@ export const apiKeys = pgTable(
   "api_keys",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     /** Public, non-secret prefix shown in the UI (e.g. "txk_live_a1b2"). */
     prefix: text("prefix").notNull(),

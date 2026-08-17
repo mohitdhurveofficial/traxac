@@ -27,10 +27,7 @@ export interface CreateDatabaseOptions {
   onNotice?: (notice: unknown) => void;
 }
 
-export function createDatabase(
-  databaseUrl: string,
-  options: CreateDatabaseOptions = {},
-): Database {
+export function createDatabase(databaseUrl: string, options: CreateDatabaseOptions = {}): Database {
   const client = postgres(databaseUrl, {
     max: options.max ?? 10,
     idle_timeout: 20,

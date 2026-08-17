@@ -45,8 +45,12 @@ export function parseNicDateTime(value: string): Date | null {
   if (!match) return null;
   const [, d, m, y, hh, mm, ss] = match;
   const utcMs = Date.UTC(
-    Number(y), Number(m) - 1, Number(d),
-    Number(hh ?? 0), Number(mm ?? 0), Number(ss ?? 0),
+    Number(y),
+    Number(m) - 1,
+    Number(d),
+    Number(hh ?? 0),
+    Number(mm ?? 0),
+    Number(ss ?? 0),
   );
   return new Date(utcMs - IST_OFFSET_MINUTES * 60_000);
 }

@@ -1,11 +1,24 @@
-import {
-  useMutation, useQuery, useQueryClient, type UseQueryOptions,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { del, get, patch, post, put } from "./client.js";
 import type {
-  Branch, Credential, Dashboard, Gstin, InvoiceDetail, InvoiceSummary, Notification,
-  Paginated, Party, PartyDetail, Product, SessionUser, StateRef, TaxTotals,
-  TimelineEntry, Transporter, UnitRef, Vehicle,
+  Branch,
+  Credential,
+  Dashboard,
+  Gstin,
+  InvoiceDetail,
+  InvoiceSummary,
+  Notification,
+  Paginated,
+  Party,
+  PartyDetail,
+  Product,
+  SessionUser,
+  StateRef,
+  TaxTotals,
+  TimelineEntry,
+  Transporter,
+  UnitRef,
+  Vehicle,
 } from "./types.js";
 
 /**
@@ -56,9 +69,8 @@ export function useLogin() {
 export function useRegister() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: {
-      name: string; email: string; password: string; businessName: string;
-    }) => post<{ user: SessionUser }>("/v1/auth/register", input),
+    mutationFn: (input: { name: string; email: string; password: string; businessName: string }) =>
+      post<{ user: SessionUser }>("/v1/auth/register", input),
     onSuccess: () => void qc.invalidateQueries(),
   });
 }
@@ -111,8 +123,8 @@ export function useInvoice(id: string | undefined) {
       const data = query.state.data;
       if (!data) return false;
       const pending = ["queued", "processing", "pending"];
-      return pending.includes(data.invoice.einvoiceStatus)
-        || pending.includes(data.invoice.ewbStatus)
+      return pending.includes(data.invoice.einvoiceStatus) ||
+        pending.includes(data.invoice.ewbStatus)
         ? 3000
         : false;
     },
@@ -122,9 +134,8 @@ export function useInvoice(id: string | undefined) {
 export function useInvoiceTimeline(id: string | undefined) {
   return useQuery({
     queryKey: keys.timeline(id ?? ""),
-    queryFn: () => get<{ entries: TimelineEntry[]; ewbHistory: unknown[] }>(
-      `/v1/invoices/${id}/timeline`,
-    ),
+    queryFn: () =>
+      get<{ entries: TimelineEntry[]; ewbHistory: unknown[] }>(`/v1/invoices/${id}/timeline`),
     enabled: Boolean(id),
   });
 }
@@ -138,9 +149,11 @@ export function useInvoicePreview() {
 export function useNextInvoiceNumber(gstinId: string | undefined, docType = "invoice") {
   return useQuery({
     queryKey: ["next-number", gstinId, docType],
-    queryFn: () => get<{ invoiceNumber: string; financialYear: string }>(
-      "/v1/invoices/next-number", { gstinId: gstinId as string, docType },
-    ),
+    queryFn: () =>
+      get<{ invoiceNumber: string; financialYear: string }>("/v1/invoices/next-number", {
+        gstinId: gstinId as string,
+        docType,
+      }),
     enabled: Boolean(gstinId),
   });
 }
@@ -149,8 +162,9 @@ export function useSaveInvoice(id?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: unknown) =>
-      id ? put<InvoiceDetail>(`/v1/invoices/${id}`, input)
-         : post<InvoiceDetail>("/v1/invoices", input),
+      id
+        ? put<InvoiceDetail>(`/v1/invoices/${id}`, input)
+        : post<InvoiceDetail>("/v1/invoices", input),
     onSuccess: (data) => {
       void qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.setQueryData(keys.invoice(data.invoice.id), data);
@@ -365,9 +379,11 @@ export function useUnits() {
 export function useHsnSearch(q: string) {
   return useQuery({
     queryKey: ["hsn", q],
-    queryFn: () => get<{ items: Array<{ code: string; description: string; defaultGstRate: string | null }> }>(
-      "/v1/reference/hsn", { q },
-    ),
+    queryFn: () =>
+      get<{ items: Array<{ code: string; description: string; defaultGstRate: string | null }> }>(
+        "/v1/reference/hsn",
+        { q },
+      ),
     enabled: q.trim().length >= 2,
     staleTime: 5 * 60_000,
   });
@@ -396,10 +412,11 @@ export function useMarkNotificationsRead() {
 export function useSettings() {
   return useQuery({
     queryKey: keys.settings,
-    queryFn: () => get<{
-      business: { id: string; name: string; slug: string; plan: string };
-      settings: Record<string, unknown> | null;
-    }>("/v1/settings"),
+    queryFn: () =>
+      get<{
+        business: { id: string; name: string; slug: string; plan: string };
+        settings: Record<string, unknown> | null;
+      }>("/v1/settings"),
   });
 }
 
@@ -429,9 +446,12 @@ export function useSaveCredential() {
 export function useTestCredential() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => post<{
-      ok: boolean; verifiedAt?: string; error?: { code: string; message: string };
-    }>(`/v1/credentials/${id}/test`),
+    mutationFn: (id: string) =>
+      post<{
+        ok: boolean;
+        verifiedAt?: string;
+        error?: { code: string; message: string };
+      }>(`/v1/credentials/${id}/test`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.credentials }),
   });
 }

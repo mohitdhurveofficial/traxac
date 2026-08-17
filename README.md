@@ -9,15 +9,15 @@ the GST API vocabulary.
 
 ## Stack
 
-| Layer | Choice | Why |
-| --- | --- | --- |
-| Language | TypeScript (Node 20+, ESM) | one language across API, worker and web |
-| Database | PostgreSQL + Drizzle ORM | SQL-first migrations, no hidden magic |
-| API | Fastify | API-first so a mobile client reuses the same endpoints |
-| Queue | Postgres `SELECT … FOR UPDATE SKIP LOCKED` | no extra infrastructure to run on Railway |
-| Storage | S3-compatible (local driver in dev) | PDFs, signed e-Invoice JSON, attachments |
-| Web | React + Vite + Tailwind | desktop-first, fully responsive |
-| Deploy | Railway | separate development and production configuration |
+| Layer    | Choice                                     | Why                                                    |
+| -------- | ------------------------------------------ | ------------------------------------------------------ |
+| Language | TypeScript (Node 20+, ESM)                 | one language across API, worker and web                |
+| Database | PostgreSQL + Drizzle ORM                   | SQL-first migrations, no hidden magic                  |
+| API      | Fastify                                    | API-first so a mobile client reuses the same endpoints |
+| Queue    | Postgres `SELECT … FOR UPDATE SKIP LOCKED` | no extra infrastructure to run on Railway              |
+| Storage  | S3-compatible (local driver in dev)        | PDFs, signed e-Invoice JSON, attachments               |
+| Web      | React + Vite + Tailwind                    | desktop-first, fully responsive                        |
+| Deploy   | Railway                                    | separate development and production configuration      |
 
 ## Workspace layout
 

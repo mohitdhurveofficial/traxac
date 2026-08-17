@@ -2,18 +2,40 @@ import { randomUUID } from "node:crypto";
 import { asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@traxac/database";
 import {
-  branches, einvoices, ewayBills, gstins, invoiceCharges, invoiceLines,
-  invoicePayments, invoices, parties, partyAddresses, tenantSettings,
+  branches,
+  einvoices,
+  ewayBills,
+  gstins,
+  invoiceCharges,
+  invoiceLines,
+  invoicePayments,
+  invoices,
+  parties,
+  partyAddresses,
+  tenantSettings,
   transporters,
 } from "@traxac/database";
 import {
-  AppError, calculateInvoiceTax, DEFAULT_EWB_THRESHOLD_PAISE, deriveTransactionType,
-  evaluateEwbRequirement, financialYear, isZeroRated, normaliseVehicleNo,
-  summariseByHsn, toPaise,
-  type ChargeInput, type DocType, type TaxLineInput, type TaxTotals,
+  AppError,
+  calculateInvoiceTax,
+  DEFAULT_EWB_THRESHOLD_PAISE,
+  deriveTransactionType,
+  evaluateEwbRequirement,
+  financialYear,
+  isZeroRated,
+  normaliseVehicleNo,
+  summariseByHsn,
+  toPaise,
+  type ChargeInput,
+  type DocType,
+  type TaxLineInput,
+  type TaxTotals,
 } from "@traxac/shared";
 import type {
-  CreateInvoiceInput, InvoiceListQuery, PreviewInvoiceInput, RecordPaymentInput,
+  CreateInvoiceInput,
+  InvoiceListQuery,
+  PreviewInvoiceInput,
+  RecordPaymentInput,
 } from "./invoice-types.js";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
@@ -23,8 +45,12 @@ import { countExpr, orderBy, paginate } from "./query.js";
 import { defaultSeriesFor } from "./numbering.js";
 import type { NumberingService } from "./numbering.js";
 import {
-  isSamePlace, snapshotFromBranch, snapshotFromGstin, snapshotFromInput,
-  snapshotFromParty, snapshotFromPartyAddress,
+  isSamePlace,
+  snapshotFromBranch,
+  snapshotFromGstin,
+  snapshotFromInput,
+  snapshotFromParty,
+  snapshotFromPartyAddress,
 } from "./invoice-mapping.js";
 
 export interface ResolvedAddresses {
@@ -76,8 +102,11 @@ export class InvoiceService {
   async preview(ctx: AuthContext, input: PreviewInvoiceInput): Promise<TaxTotals> {
     let supplierStateCode = input.supplierStateCode;
     if (!supplierStateCode && input.gstinId) {
-      const [row] = await this.db.select({ stateCode: gstins.stateCode }).from(gstins)
-        .where(scopedById(ctx, gstins, input.gstinId)).limit(1);
+      const [row] = await this.db
+        .select({ stateCode: gstins.stateCode })
+        .from(gstins)
+        .where(scopedById(ctx, gstins, input.gstinId))
+        .limit(1);
       supplierStateCode = row?.stateCode;
     }
     if (!supplierStateCode) {
@@ -98,7 +127,9 @@ export class InvoiceService {
 
   async list(ctx: AuthContext, query: InvoiceListQuery) {
     const { limit, page } = query;
-    const where = scoped(ctx, invoices,
+    const where = scoped(
+      ctx,
+      invoices,
       query.status ? eq(invoices.status, query.status) : undefined,
       query.einvoiceStatus ? eq(invoices.einvoiceStatus, query.einvoiceStatus) : undefined,
       query.ewbStatus ? eq(invoices.ewbStatus, query.ewbStatus) : undefined,
@@ -107,8 +138,12 @@ export class InvoiceService {
       query.buyerPartyId ? eq(invoices.buyerPartyId, query.buyerPartyId) : undefined,
       query.from ? gte(invoices.invoiceDate, query.from) : undefined,
       query.to ? lte(invoices.invoiceDate, query.to) : undefined,
-      query.minAmount !== undefined ? gte(invoices.grandTotal, toPaise(query.minAmount)) : undefined,
-      query.maxAmount !== undefined ? lte(invoices.grandTotal, toPaise(query.maxAmount)) : undefined,
+      query.minAmount !== undefined
+        ? gte(invoices.grandTotal, toPaise(query.minAmount))
+        : undefined,
+      query.maxAmount !== undefined
+        ? lte(invoices.grandTotal, toPaise(query.maxAmount))
+        : undefined,
       query.vehicleNo ? eq(invoices.vehicleNo, normaliseVehicleNo(query.vehicleNo)) : undefined,
       // Search spans the number, the buyer's name and their GSTIN.
       query.q
@@ -164,25 +199,40 @@ export class InvoiceService {
   }
 
   async get(ctx: AuthContext, id: string): Promise<InvoiceDetail> {
-    const [invoice] = await this.db.select().from(invoices)
-      .where(scopedById(ctx, invoices, id)).limit(1);
+    const [invoice] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, id))
+      .limit(1);
     if (!invoice) throw new AppError("NOT_FOUND", "Invoice not found");
 
     const [lines, charges, payments, [einvoice], [ewayBill]] = await Promise.all([
-      this.db.select().from(invoiceLines)
+      this.db
+        .select()
+        .from(invoiceLines)
         .where(scoped(ctx, invoiceLines, eq(invoiceLines.invoiceId, id)))
         .orderBy(asc(invoiceLines.position)),
-      this.db.select().from(invoiceCharges)
+      this.db
+        .select()
+        .from(invoiceCharges)
         .where(scoped(ctx, invoiceCharges, eq(invoiceCharges.invoiceId, id)))
         .orderBy(asc(invoiceCharges.position)),
-      this.db.select().from(invoicePayments)
+      this.db
+        .select()
+        .from(invoicePayments)
         .where(scoped(ctx, invoicePayments, eq(invoicePayments.invoiceId, id)))
         .orderBy(desc(invoicePayments.paidAt)),
-      this.db.select().from(einvoices)
-        .where(scoped(ctx, einvoices, eq(einvoices.invoiceId, id))).limit(1),
-      this.db.select().from(ewayBills)
+      this.db
+        .select()
+        .from(einvoices)
+        .where(scoped(ctx, einvoices, eq(einvoices.invoiceId, id)))
+        .limit(1),
+      this.db
+        .select()
+        .from(ewayBills)
         .where(scoped(ctx, ewayBills, eq(ewayBills.invoiceId, id)))
-        .orderBy(desc(ewayBills.createdAt)).limit(1),
+        .orderBy(desc(ewayBills.createdAt))
+        .limit(1),
     ]);
 
     return {
@@ -192,23 +242,25 @@ export class InvoiceService {
       payments,
       einvoice: einvoice ?? null,
       ewayBill: ewayBill ?? null,
-      hsnSummary: summariseByHsn(lines.map((l) => ({
-        grossValue: l.grossValue,
-        discountAmount: l.discountAmount,
-        taxableValue: l.taxableValue,
-        gstRate: Number(l.gstRate),
-        cgst: l.cgst,
-        sgst: l.sgst,
-        igst: l.igst,
-        cess: l.cess,
-        cessNonAdvol: l.cessNonAdvol,
-        stateCess: l.stateCess,
-        totalTax: l.totalTax,
-        lineTotal: l.lineTotal,
-        hsnSac: l.hsnSac,
-        quantity: Number(l.quantity),
-        unit: l.unit,
-      }))),
+      hsnSummary: summariseByHsn(
+        lines.map((l) => ({
+          grossValue: l.grossValue,
+          discountAmount: l.discountAmount,
+          taxableValue: l.taxableValue,
+          gstRate: Number(l.gstRate),
+          cgst: l.cgst,
+          sgst: l.sgst,
+          igst: l.igst,
+          cess: l.cess,
+          cessNonAdvol: l.cessNonAdvol,
+          stateCess: l.stateCess,
+          totalTax: l.totalTax,
+          lineTotal: l.lineTotal,
+          hsnSac: l.hsnSac,
+          quantity: Number(l.quantity),
+          unit: l.unit,
+        })),
+      ),
       amountDue: invoice.grandTotal - invoice.amountPaid,
     };
   }
@@ -225,17 +277,20 @@ export class InvoiceService {
     const invoiceId = randomUUID();
 
     const created = await this.db.transaction(async (tx) => {
-      const [invoice] = await tx.insert(invoices).values({
-        ...prepared.header,
-        id: invoiceId,
-        tenantId: ctx.tenantId,
-        invoiceNumber: input.invoiceNumber?.trim() || draftNumber(invoiceId),
-        status: "draft",
-        einvoiceStatus: "not_required",
-        ewbStatus: "not_required",
-        createdByUserId: ctx.userId,
-        updatedByUserId: ctx.userId,
-      }).returning();
+      const [invoice] = await tx
+        .insert(invoices)
+        .values({
+          ...prepared.header,
+          id: invoiceId,
+          tenantId: ctx.tenantId,
+          invoiceNumber: input.invoiceNumber?.trim() || draftNumber(invoiceId),
+          status: "draft",
+          einvoiceStatus: "not_required",
+          ewbStatus: "not_required",
+          createdByUserId: ctx.userId,
+          updatedByUserId: ctx.userId,
+        })
+        .returning();
       if (!invoice) throw new AppError("INTERNAL", "Could not create the invoice");
       await this.writeChildren(tx, ctx, invoice.id, prepared);
       return invoice;
@@ -251,26 +306,37 @@ export class InvoiceService {
     return this.get(ctx, created.id);
   }
 
-  async updateDraft(ctx: AuthContext, id: string, input: CreateInvoiceInput): Promise<InvoiceDetail> {
+  async updateDraft(
+    ctx: AuthContext,
+    id: string,
+    input: CreateInvoiceInput,
+  ): Promise<InvoiceDetail> {
     requirePermission(ctx, "invoices:write");
-    const [existing] = await this.db.select().from(invoices)
-      .where(scopedById(ctx, invoices, id)).limit(1);
+    const [existing] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, id))
+      .limit(1);
     if (!existing) throw new AppError("NOT_FOUND", "Invoice not found");
     if (existing.status !== "draft") {
-      throw new AppError("INVALID_STATE",
-        `A ${existing.status} invoice cannot be edited. Cancel it and issue a credit note instead.`);
+      throw new AppError(
+        "INVALID_STATE",
+        `A ${existing.status} invoice cannot be edited. Cancel it and issue a credit note instead.`,
+      );
     }
 
     const prepared = await this.prepare(ctx, input);
     const updated = await this.db.transaction(async (tx) => {
-      const [invoice] = await tx.update(invoices)
+      const [invoice] = await tx
+        .update(invoices)
         .set({
           ...prepared.header,
           invoiceNumber: input.invoiceNumber?.trim() || existing.invoiceNumber,
           updatedByUserId: ctx.userId,
           updatedAt: new Date(),
         })
-        .where(eq(invoices.id, id)).returning();
+        .where(eq(invoices.id, id))
+        .returning();
       if (!invoice) throw new AppError("INTERNAL", "Could not update the invoice");
       await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, id));
       await tx.delete(invoiceCharges).where(eq(invoiceCharges.invoiceId, id));
@@ -279,7 +345,9 @@ export class InvoiceService {
     });
 
     await this.audit.record(ctx, {
-      action: "invoice.updated", entityType: "invoice", entityId: id,
+      action: "invoice.updated",
+      entityType: "invoice",
+      entityId: id,
       diff: diffRecords(existing, updated),
     });
     return this.get(ctx, id);
@@ -292,21 +360,29 @@ export class InvoiceService {
    */
   async finalize(ctx: AuthContext, id: string): Promise<Invoice> {
     requirePermission(ctx, "invoices:finalize");
-    const [existing] = await this.db.select().from(invoices)
-      .where(scopedById(ctx, invoices, id)).limit(1);
+    const [existing] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, id))
+      .limit(1);
     if (!existing) throw new AppError("NOT_FOUND", "Invoice not found");
     if (existing.status !== "draft") {
       throw new AppError("INVALID_STATE", `This invoice is already ${existing.status}`);
     }
 
-    const lineCount = await this.db.select({ n: countExpr }).from(invoiceLines)
+    const lineCount = await this.db
+      .select({ n: countExpr })
+      .from(invoiceLines)
       .where(eq(invoiceLines.invoiceId, id));
     if ((lineCount[0]?.n ?? 0) === 0) {
       throw new AppError("VALIDATION_FAILED", "Add at least one item before finalizing");
     }
 
-    const [gstin] = await this.db.select().from(gstins)
-      .where(scopedById(ctx, gstins, existing.gstinId)).limit(1);
+    const [gstin] = await this.db
+      .select()
+      .from(gstins)
+      .where(scopedById(ctx, gstins, existing.gstinId))
+      .limit(1);
     if (!gstin) throw new AppError("NOT_FOUND", "Billing GSTIN not found");
 
     const finalized = await this.db.transaction(async (tx) => {
@@ -316,21 +392,26 @@ export class InvoiceService {
         series: existing.series,
         invoiceDate: existing.invoiceDate,
       });
-      const einvoiceApplies = gstin.einvoiceEnabled
-        && existing.docType !== "delivery_challan"
-        && (existing.billTo.gstin ?? "URP") !== "URP";
+      const einvoiceApplies =
+        gstin.einvoiceEnabled &&
+        existing.docType !== "delivery_challan" &&
+        (existing.billTo.gstin ?? "URP") !== "URP";
 
-      const [row] = await tx.update(invoices).set({
-        invoiceNumber: allocated.invoiceNumber,
-        series: allocated.series,
-        financialYear: allocated.financialYear,
-        status: "pending",
-        einvoiceStatus: einvoiceApplies ? "pending" : "not_required",
-        ewbStatus: existing.ewbRequired ? "pending" : "not_required",
-        finalizedAt: new Date(),
-        updatedByUserId: ctx.userId,
-        updatedAt: new Date(),
-      }).where(eq(invoices.id, id)).returning();
+      const [row] = await tx
+        .update(invoices)
+        .set({
+          invoiceNumber: allocated.invoiceNumber,
+          series: allocated.series,
+          financialYear: allocated.financialYear,
+          status: "pending",
+          einvoiceStatus: einvoiceApplies ? "pending" : "not_required",
+          ewbStatus: existing.ewbRequired ? "pending" : "not_required",
+          finalizedAt: new Date(),
+          updatedByUserId: ctx.userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, id))
+        .returning();
       if (!row) throw new AppError("INTERNAL", "Could not finalize the invoice");
       return row;
     });
@@ -352,37 +433,52 @@ export class InvoiceService {
    */
   async cancel(ctx: AuthContext, id: string, reason: string): Promise<Invoice> {
     requirePermission(ctx, "invoices:cancel");
-    const [existing] = await this.db.select().from(invoices)
-      .where(scopedById(ctx, invoices, id)).limit(1);
+    const [existing] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, id))
+      .limit(1);
     if (!existing) throw new AppError("NOT_FOUND", "Invoice not found");
     if (existing.status === "cancelled") return existing;
     if (existing.einvoiceStatus === "generated") {
-      throw new AppError("INVALID_STATE",
-        "Cancel the e-Invoice (IRN) first — the IRP must be told before the invoice is voided");
+      throw new AppError(
+        "INVALID_STATE",
+        "Cancel the e-Invoice (IRN) first — the IRP must be told before the invoice is voided",
+      );
     }
     if (existing.ewbStatus === "generated") {
       throw new AppError("INVALID_STATE", "Cancel the e-Way Bill first");
     }
 
-    const [row] = await this.db.update(invoices).set({
-      status: "cancelled",
-      cancelledAt: new Date(),
-      cancelledByUserId: ctx.userId,
-      cancelReason: reason,
-      updatedAt: new Date(),
-    }).where(eq(invoices.id, id)).returning();
+    const [row] = await this.db
+      .update(invoices)
+      .set({
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancelledByUserId: ctx.userId,
+        cancelReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(invoices.id, id))
+      .returning();
     if (!row) throw new AppError("INTERNAL", "Could not cancel the invoice");
 
     await this.audit.record(ctx, {
-      action: "invoice.cancelled", entityType: "invoice", entityId: id, summary: reason,
+      action: "invoice.cancelled",
+      entityType: "invoice",
+      entityId: id,
+      summary: reason,
     });
     return row;
   }
 
   async recordPayment(ctx: AuthContext, id: string, input: RecordPaymentInput) {
     requirePermission(ctx, "invoices:write");
-    const [invoice] = await this.db.select().from(invoices)
-      .where(scopedById(ctx, invoices, id)).limit(1);
+    const [invoice] = await this.db
+      .select()
+      .from(invoices)
+      .where(scopedById(ctx, invoices, id))
+      .limit(1);
     if (!invoice) throw new AppError("NOT_FOUND", "Invoice not found");
     if (invoice.status === "draft") {
       throw new AppError("INVALID_STATE", "Finalize the invoice before recording a payment");
@@ -403,18 +499,25 @@ export class InvoiceService {
         recordedByUserId: ctx.userId,
       });
       const paid = invoice.amountPaid + amount;
-      const [row] = await tx.update(invoices).set({
-        amountPaid: paid,
-        status: paid >= invoice.grandTotal && invoice.status !== "cancelled"
-          ? "completed"
-          : invoice.status,
-        updatedAt: new Date(),
-      }).where(eq(invoices.id, id)).returning();
+      const [row] = await tx
+        .update(invoices)
+        .set({
+          amountPaid: paid,
+          status:
+            paid >= invoice.grandTotal && invoice.status !== "cancelled"
+              ? "completed"
+              : invoice.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, id))
+        .returning();
       return row;
     });
 
     await this.audit.record(ctx, {
-      action: "invoice.payment_recorded", entityType: "invoice", entityId: id,
+      action: "invoice.payment_recorded",
+      entityType: "invoice",
+      entityId: id,
       metadata: { amount, method: input.method },
     });
     return updated;
@@ -426,40 +529,53 @@ export class InvoiceService {
     const source = await this.get(ctx, id);
     const invoiceId = randomUUID();
     const created = await this.db.transaction(async (tx) => {
-      const [invoice] = await tx.insert(invoices).values({
-        ...stripIdentity(source.invoice),
-        id: invoiceId,
-        tenantId: ctx.tenantId,
-        invoiceNumber: draftNumber(invoiceId),
-        invoiceDate: new Date(),
-        financialYear: financialYear(new Date()),
-        status: "draft",
-        einvoiceStatus: "not_required",
-        ewbStatus: "not_required",
-        amountPaid: 0,
-        finalizedAt: null,
-        cancelledAt: null,
-        cancelledByUserId: null,
-        cancelReason: null,
-        createdByUserId: ctx.userId,
-        updatedByUserId: ctx.userId,
-      }).returning();
+      const [invoice] = await tx
+        .insert(invoices)
+        .values({
+          ...stripIdentity(source.invoice),
+          id: invoiceId,
+          tenantId: ctx.tenantId,
+          invoiceNumber: draftNumber(invoiceId),
+          invoiceDate: new Date(),
+          financialYear: financialYear(new Date()),
+          status: "draft",
+          einvoiceStatus: "not_required",
+          ewbStatus: "not_required",
+          amountPaid: 0,
+          finalizedAt: null,
+          cancelledAt: null,
+          cancelledByUserId: null,
+          cancelReason: null,
+          createdByUserId: ctx.userId,
+          updatedByUserId: ctx.userId,
+        })
+        .returning();
       if (!invoice) throw new AppError("INTERNAL", "Could not duplicate the invoice");
 
       if (source.lines.length) {
-        await tx.insert(invoiceLines).values(source.lines.map((l) => ({
-          ...stripIdentity(l), tenantId: ctx.tenantId, invoiceId: invoice.id,
-        })));
+        await tx.insert(invoiceLines).values(
+          source.lines.map((l) => ({
+            ...stripIdentity(l),
+            tenantId: ctx.tenantId,
+            invoiceId: invoice.id,
+          })),
+        );
       }
       if (source.charges.length) {
-        await tx.insert(invoiceCharges).values(source.charges.map((c) => ({
-          ...stripIdentity(c), tenantId: ctx.tenantId, invoiceId: invoice.id,
-        })));
+        await tx.insert(invoiceCharges).values(
+          source.charges.map((c) => ({
+            ...stripIdentity(c),
+            tenantId: ctx.tenantId,
+            invoiceId: invoice.id,
+          })),
+        );
       }
       return invoice;
     });
     await this.audit.record(ctx, {
-      action: "invoice.duplicated", entityType: "invoice", entityId: created.id,
+      action: "invoice.duplicated",
+      entityType: "invoice",
+      entityId: created.id,
       metadata: { sourceInvoiceId: id },
     });
     return this.get(ctx, created.id);
@@ -472,13 +588,21 @@ export class InvoiceService {
    * every address, runs the tax engine and decides whether an EWB applies.
    */
   private async prepare(ctx: AuthContext, input: CreateInvoiceInput) {
-    const [gstin] = await this.db.select().from(gstins)
-      .where(scopedById(ctx, gstins, input.gstinId)).limit(1);
+    const [gstin] = await this.db
+      .select()
+      .from(gstins)
+      .where(scopedById(ctx, gstins, input.gstinId))
+      .limit(1);
     if (!gstin) throw new AppError("NOT_FOUND", "Billing GSTIN not found");
 
     const branch = input.branchId
-      ? (await this.db.select().from(branches)
-          .where(scopedById(ctx, branches, input.branchId)).limit(1))[0] ?? null
+      ? ((
+          await this.db
+            .select()
+            .from(branches)
+            .where(scopedById(ctx, branches, input.branchId))
+            .limit(1)
+        )[0] ?? null)
       : null;
 
     const addresses = await this.resolveAddresses(ctx, input, gstin, branch);
@@ -513,8 +637,11 @@ export class InvoiceService {
     const transport = input.transport;
     const vehicleNo = transport?.vehicleNo ? normaliseVehicleNo(transport.vehicleNo) : null;
     if (transport?.transporterId) {
-      const [row] = await this.db.select({ id: transporters.id }).from(transporters)
-        .where(scopedById(ctx, transporters, transport.transporterId)).limit(1);
+      const [row] = await this.db
+        .select({ id: transporters.id })
+        .from(transporters)
+        .where(scopedById(ctx, transporters, transport.transporterId))
+        .limit(1);
       if (!row) throw new AppError("NOT_FOUND", "Transporter not found");
     }
 
@@ -593,58 +720,62 @@ export class InvoiceService {
   ): Promise<void> {
     const { input, totals } = prepared;
     if (input.lines.length) {
-      await tx.insert(invoiceLines).values(input.lines.map((line, index) => {
-        const computed = totals.lines[index]!;
-        return {
-          tenantId: ctx.tenantId,
-          invoiceId,
-          productId: line.productId ?? null,
-          position: index,
-          name: line.name,
-          description: line.description || null,
-          hsnSac: line.hsnSac,
-          isService: line.isService,
-          barcode: line.barcode || null,
-          batchNo: line.batchNo || null,
-          expiryDate: line.expiryDate ?? null,
-          quantity: String(line.quantity),
-          unit: line.unit,
-          unitPrice: toPaise(line.unitPrice),
-          discountPercent: String(line.discountPercent),
-          discountAmount: computed.discountAmount,
-          grossValue: computed.grossValue,
-          taxableValue: computed.taxableValue,
-          gstRate: String(computed.gstRate),
-          cgst: computed.cgst,
-          sgst: computed.sgst,
-          igst: computed.igst,
-          cessRate: String(line.cessRate),
-          cess: computed.cess,
-          cessNonAdvol: computed.cessNonAdvol,
-          stateCess: computed.stateCess,
-          totalTax: computed.totalTax,
-          lineTotal: computed.lineTotal,
-        };
-      }));
+      await tx.insert(invoiceLines).values(
+        input.lines.map((line, index) => {
+          const computed = totals.lines[index]!;
+          return {
+            tenantId: ctx.tenantId,
+            invoiceId,
+            productId: line.productId ?? null,
+            position: index,
+            name: line.name,
+            description: line.description || null,
+            hsnSac: line.hsnSac,
+            isService: line.isService,
+            barcode: line.barcode || null,
+            batchNo: line.batchNo || null,
+            expiryDate: line.expiryDate ?? null,
+            quantity: String(line.quantity),
+            unit: line.unit,
+            unitPrice: toPaise(line.unitPrice),
+            discountPercent: String(line.discountPercent),
+            discountAmount: computed.discountAmount,
+            grossValue: computed.grossValue,
+            taxableValue: computed.taxableValue,
+            gstRate: String(computed.gstRate),
+            cgst: computed.cgst,
+            sgst: computed.sgst,
+            igst: computed.igst,
+            cessRate: String(line.cessRate),
+            cess: computed.cess,
+            cessNonAdvol: computed.cessNonAdvol,
+            stateCess: computed.stateCess,
+            totalTax: computed.totalTax,
+            lineTotal: computed.lineTotal,
+          };
+        }),
+      );
     }
     if (input.charges.length) {
-      await tx.insert(invoiceCharges).values(input.charges.map((charge, index) => {
-        const computed = totals.charges[index]!;
-        return {
-          tenantId: ctx.tenantId,
-          invoiceId,
-          position: index,
-          label: charge.label,
-          kind: charge.kind,
-          hsnSac: charge.hsnSac || null,
-          amount: computed.amount,
-          gstRate: String(computed.gstRate),
-          cgst: computed.cgst,
-          sgst: computed.sgst,
-          igst: computed.igst,
-          taxAmount: computed.taxAmount,
-        };
-      }));
+      await tx.insert(invoiceCharges).values(
+        input.charges.map((charge, index) => {
+          const computed = totals.charges[index]!;
+          return {
+            tenantId: ctx.tenantId,
+            invoiceId,
+            position: index,
+            label: charge.label,
+            kind: charge.kind,
+            hsnSac: charge.hsnSac || null,
+            amount: computed.amount,
+            gstRate: String(computed.gstRate),
+            cgst: computed.cgst,
+            sgst: computed.sgst,
+            igst: computed.igst,
+            taxAmount: computed.taxAmount,
+          };
+        }),
+      );
     }
   }
 
@@ -662,8 +793,10 @@ export class InvoiceService {
     const isNote = input.docType === "credit_note" || input.docType === "debit_note";
     if (!input.referenceInvoiceId) {
       if (isNote) {
-        throw new AppError("VALIDATION_FAILED",
-          "A credit or debit note must reference the original invoice");
+        throw new AppError(
+          "VALIDATION_FAILED",
+          "A credit or debit note must reference the original invoice",
+        );
       }
       return null;
     }
@@ -682,12 +815,16 @@ export class InvoiceService {
 
     if (!original) throw new AppError("NOT_FOUND", "The referenced invoice was not found");
     if (original.status === "draft") {
-      throw new AppError("VALIDATION_FAILED",
-        "The referenced invoice is still a draft — issue it before raising a note against it");
+      throw new AppError(
+        "VALIDATION_FAILED",
+        "The referenced invoice is still a draft — issue it before raising a note against it",
+      );
     }
     if (original.docType !== "invoice") {
-      throw new AppError("VALIDATION_FAILED",
-        "A note can only reference a tax invoice, not another note");
+      throw new AppError(
+        "VALIDATION_FAILED",
+        "A note can only reference a tax invoice, not another note",
+      );
     }
 
     return {
@@ -709,8 +846,11 @@ export class InvoiceService {
     if (input.billTo) {
       billTo = snapshotFromInput(input.billTo);
     } else if (input.buyerPartyId) {
-      const [party] = await this.db.select().from(parties)
-        .where(scopedById(ctx, parties, input.buyerPartyId)).limit(1);
+      const [party] = await this.db
+        .select()
+        .from(parties)
+        .where(scopedById(ctx, parties, input.buyerPartyId))
+        .limit(1);
       if (!party) throw new AppError("NOT_FOUND", "Customer not found");
       billTo = snapshotFromParty(party);
     } else {
@@ -721,8 +861,11 @@ export class InvoiceService {
     if (input.shipTo) {
       shipTo = snapshotFromInput(input.shipTo);
     } else if (input.shipToAddressId) {
-      const [address] = await this.db.select().from(partyAddresses)
-        .where(scopedById(ctx, partyAddresses, input.shipToAddressId)).limit(1);
+      const [address] = await this.db
+        .select()
+        .from(partyAddresses)
+        .where(scopedById(ctx, partyAddresses, input.shipToAddressId))
+        .limit(1);
       if (!address) throw new AppError("NOT_FOUND", "Ship To address not found");
       shipTo = snapshotFromPartyAddress(address);
     }
@@ -731,8 +874,11 @@ export class InvoiceService {
     if (input.dispatchFrom) {
       dispatchFrom = snapshotFromInput(input.dispatchFrom);
     } else if (input.dispatchFromBranchId) {
-      const [dispatchBranch] = await this.db.select().from(branches)
-        .where(scopedById(ctx, branches, input.dispatchFromBranchId)).limit(1);
+      const [dispatchBranch] = await this.db
+        .select()
+        .from(branches)
+        .where(scopedById(ctx, branches, input.dispatchFromBranchId))
+        .limit(1);
       if (!dispatchBranch) throw new AppError("NOT_FOUND", "Dispatch From branch not found");
       dispatchFrom = snapshotFromBranch(dispatchBranch, gstin);
     }
@@ -741,8 +887,11 @@ export class InvoiceService {
   }
 
   private async settingsFor(ctx: AuthContext) {
-    const [row] = await this.db.select().from(tenantSettings)
-      .where(eq(tenantSettings.tenantId, ctx.tenantId)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, ctx.tenantId))
+      .limit(1);
     return {
       ewbThresholdPaise: row?.ewbThreshold?.paise ?? DEFAULT_EWB_THRESHOLD_PAISE,
       defaultTerms: row?.defaultTerms ?? null,
@@ -783,7 +932,9 @@ function draftNumber(invoiceId: string): string {
 }
 
 /** Strip primary keys and timestamps so a row can be re-inserted as a copy. */
-function stripIdentity<T extends Record<string, unknown>>(row: T): Omit<T, "id" | "createdAt" | "updatedAt"> {
+function stripIdentity<T extends Record<string, unknown>>(
+  row: T,
+): Omit<T, "id" | "createdAt" | "updatedAt"> {
   const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row as Record<string, unknown>;
   return rest as Omit<T, "id" | "createdAt" | "updatedAt">;
 }

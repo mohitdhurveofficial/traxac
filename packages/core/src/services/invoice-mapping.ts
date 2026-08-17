@@ -1,6 +1,4 @@
-import type {
-  AddressSnapshot, Branch, Gstin, Party, PartyAddress,
-} from "@traxac/database";
+import type { AddressSnapshot, Branch, Gstin, Party, PartyAddress } from "@traxac/database";
 import { GST_STATE_CODES } from "@traxac/shared";
 import type { AddressSnapshotInput } from "@traxac/shared/contracts";
 
@@ -37,7 +35,7 @@ export function snapshotFromParty(party: Party): AddressSnapshot {
     addressLine2: party.addressLine2 ?? null,
     city: party.city ?? "",
     stateCode: party.stateCode ?? "",
-    stateName: party.stateCode ? GST_STATE_CODES[party.stateCode] ?? null : null,
+    stateName: party.stateCode ? (GST_STATE_CODES[party.stateCode] ?? null) : null,
     pincode: party.pincode ?? "",
     phone: party.phone ?? null,
     email: party.email ?? null,
@@ -105,7 +103,9 @@ export function isSamePlace(
   b: AddressSnapshot | null | undefined,
 ): boolean {
   if (!a || !b) return true;
-  return (a.gstin ?? "") === (b.gstin ?? "")
-    && a.addressLine1.trim().toLowerCase() === b.addressLine1.trim().toLowerCase()
-    && a.pincode === b.pincode;
+  return (
+    (a.gstin ?? "") === (b.gstin ?? "") &&
+    a.addressLine1.trim().toLowerCase() === b.addressLine1.trim().toLowerCase() &&
+    a.pincode === b.pincode
+  );
 }

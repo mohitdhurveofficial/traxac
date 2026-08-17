@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  computeValidity, canExtend, canCancel, evaluateEwbRequirement, deriveTransactionType,
+  computeValidity,
+  canExtend,
+  canCancel,
+  evaluateEwbRequirement,
+  deriveTransactionType,
 } from "../src/gst/eway.js";
 import { toNicDate, toNicDateTime, parseNicDateTime, financialYear } from "../src/util/dates.js";
 
@@ -41,27 +45,47 @@ describe("EWB validity", () => {
 
 describe("EWB requirement", () => {
   it("is not required for services or below threshold", () => {
-    expect(evaluateEwbRequirement({
-      grandTotalPaise: 100_000_00, isIntraState: true, goodsInvolved: false,
-    }).required).toBe(false);
-    expect(evaluateEwbRequirement({
-      grandTotalPaise: 49_999_00, isIntraState: false, goodsInvolved: true,
-    }).required).toBe(false);
+    expect(
+      evaluateEwbRequirement({
+        grandTotalPaise: 100_000_00,
+        isIntraState: true,
+        goodsInvolved: false,
+      }).required,
+    ).toBe(false);
+    expect(
+      evaluateEwbRequirement({
+        grandTotalPaise: 49_999_00,
+        isIntraState: false,
+        goodsInvolved: true,
+      }).required,
+    ).toBe(false);
   });
 
   it("is required above the threshold", () => {
-    expect(evaluateEwbRequirement({
-      grandTotalPaise: 50_001_00, isIntraState: false, goodsInvolved: true,
-    }).required).toBe(true);
+    expect(
+      evaluateEwbRequirement({
+        grandTotalPaise: 50_001_00,
+        isIntraState: false,
+        goodsInvolved: true,
+      }).required,
+    ).toBe(true);
   });
 });
 
 describe("transaction type derivation", () => {
   it("maps address combinations to EWB transaction types", () => {
-    expect(deriveTransactionType({ hasSeparateShipTo: false, hasSeparateDispatchFrom: false })).toBe(1);
-    expect(deriveTransactionType({ hasSeparateShipTo: true, hasSeparateDispatchFrom: false })).toBe(2);
-    expect(deriveTransactionType({ hasSeparateShipTo: false, hasSeparateDispatchFrom: true })).toBe(3);
-    expect(deriveTransactionType({ hasSeparateShipTo: true, hasSeparateDispatchFrom: true })).toBe(4);
+    expect(
+      deriveTransactionType({ hasSeparateShipTo: false, hasSeparateDispatchFrom: false }),
+    ).toBe(1);
+    expect(deriveTransactionType({ hasSeparateShipTo: true, hasSeparateDispatchFrom: false })).toBe(
+      2,
+    );
+    expect(deriveTransactionType({ hasSeparateShipTo: false, hasSeparateDispatchFrom: true })).toBe(
+      3,
+    );
+    expect(deriveTransactionType({ hasSeparateShipTo: true, hasSeparateDispatchFrom: true })).toBe(
+      4,
+    );
   });
 });
 

@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, jsonb, index,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, jsonb, index } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, tsCol } from "./_shared.js";
 
@@ -15,8 +13,8 @@ export const auditLogs = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
     actorUserId: uuid("actor_user_id"),
-    actorLabel: text("actor_label"),            // "user@x.com" or "system:worker"
-    action: text("action").notNull(),           // invoice.created | ewb.generated ...
+    actorLabel: text("actor_label"), // "user@x.com" or "system:worker"
+    action: text("action").notNull(), // invoice.created | ewb.generated ...
     entityType: text("entity_type").notNull(),
     entityId: text("entity_id").notNull(),
     summary: text("summary"),
@@ -39,8 +37,10 @@ export const notifications = pgTable(
   "notifications",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    userId: uuid("user_id"),                    // null = whole tenant
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id"), // null = whole tenant
     channel: text("channel").notNull().default("in_app"), // in_app | email
     /** ewb.expiring | einvoice.failed | invoice.overdue ... */
     kind: text("kind").notNull(),

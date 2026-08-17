@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, boolean, jsonb, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, boolean, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
 
 /** Tenant = one business on Traxac. Every tenant-owned row references this. */
@@ -32,8 +30,12 @@ export const memberships = pgTable(
   "memberships",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"), // owner | admin | member | viewer
     status: text("status").notNull().default("active"), // active | invited | disabled
     invitedByUserId: uuid("invited_by_user_id"),
@@ -57,7 +59,10 @@ export const tenantSettings = pgTable("tenant_settings", {
   /** Auto-generate the e-Way Bill when the invoice crosses the threshold. */
   autoGenerateEwb: boolean("auto_generate_ewb").notNull().default(false),
   /** Invoice value (paise) above which an EWB is required. Default Rs 50,000. */
-  ewbThreshold: jsonb("ewb_threshold").$type<{ paise: number }>().notNull().default({ paise: 5_000_000 }),
+  ewbThreshold: jsonb("ewb_threshold")
+    .$type<{ paise: number }>()
+    .notNull()
+    .default({ paise: 5_000_000 }),
   defaultTerms: text("default_terms"),
   defaultNotes: text("default_notes"),
   logoDocumentId: uuid("logo_document_id"),

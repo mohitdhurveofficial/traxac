@@ -4,7 +4,11 @@ import { invoices } from "@traxac/database";
 import type { Container } from "../src/index.js";
 import { buildIrpPayload } from "../src/compliance/payload-builder.js";
 import {
-  createBusiness, invoiceInput, resetDatabase, testContainer, type TestBusiness,
+  createBusiness,
+  invoiceInput,
+  resetDatabase,
+  testContainer,
+  type TestBusiness,
 } from "./helpers.js";
 
 /**
@@ -26,7 +30,9 @@ describe("credit and debit notes", () => {
     container = await testContainer();
     await resetDatabase(container);
     business = await createBusiness(container, {
-      slug: "notes", gstin: "27AAPFU0939F1ZV", stateCode: "27",
+      slug: "notes",
+      gstin: "27AAPFU0939F1ZV",
+      stateCode: "27",
     });
     const draft = await container.invoices.createDraft(business.ctx, invoiceInput(business));
     const finalized = await container.invoices.finalize(business.ctx, draft.invoice.id);
@@ -90,7 +96,9 @@ describe("credit and debit notes", () => {
     const note = await container.invoices.createDraft(business.ctx, noteInput("debit_note"));
     const detail = await container.invoices.get(business.ctx, note.invoice.id);
     const payload = buildIrpPayload({
-      invoice: detail.invoice, lines: detail.lines, charges: detail.charges,
+      invoice: detail.invoice,
+      lines: detail.lines,
+      charges: detail.charges,
     });
     expect(payload.DocDtls.Typ).toBe("DBN");
     expect(payload.RefDtls?.PrecDocDtls?.[0]?.InvNo).toBe(originalNumber);
@@ -98,18 +106,25 @@ describe("credit and debit notes", () => {
 
   it("refuses a note with no reference", async () => {
     await expect(
-      container.invoices.createDraft(business.ctx, invoiceInput(business, {
-        docType: "credit_note", referenceInvoiceId: null,
-      })),
+      container.invoices.createDraft(
+        business.ctx,
+        invoiceInput(business, {
+          docType: "credit_note",
+          referenceInvoiceId: null,
+        }),
+      ),
     ).rejects.toThrow(/must reference the original invoice/i);
   });
 
   it("refuses a note against a draft", async () => {
     const draft = await container.invoices.createDraft(business.ctx, invoiceInput(business));
     await expect(
-      container.invoices.createDraft(business.ctx, noteInput("credit_note", {
-        referenceInvoiceId: draft.invoice.id,
-      })),
+      container.invoices.createDraft(
+        business.ctx,
+        noteInput("credit_note", {
+          referenceInvoiceId: draft.invoice.id,
+        }),
+      ),
     ).rejects.toThrow(/still a draft/i);
   });
 
@@ -117,20 +132,29 @@ describe("credit and debit notes", () => {
     const note = await container.invoices.createDraft(business.ctx, noteInput("credit_note"));
     const finalized = await container.invoices.finalize(business.ctx, note.invoice.id);
     await expect(
-      container.invoices.createDraft(business.ctx, noteInput("credit_note", {
-        referenceInvoiceId: finalized.id,
-      })),
+      container.invoices.createDraft(
+        business.ctx,
+        noteInput("credit_note", {
+          referenceInvoiceId: finalized.id,
+        }),
+      ),
     ).rejects.toThrow(/only reference a tax invoice/i);
   });
 
   it("refuses a note referencing another business's invoice", async () => {
     const other = await createBusiness(container, {
-      slug: "notes-other", gstin: "29AAGCB7383J1Z4", stateCode: "29",
+      slug: "notes-other",
+      gstin: "29AAGCB7383J1Z4",
+      stateCode: "29",
     });
     await expect(
-      container.invoices.createDraft(other.ctx, invoiceInput(other, {
-        docType: "credit_note", referenceInvoiceId: originalId,
-      })),
+      container.invoices.createDraft(
+        other.ctx,
+        invoiceInput(other, {
+          docType: "credit_note",
+          referenceInvoiceId: originalId,
+        }),
+      ),
     ).rejects.toThrow(/not found/i);
   });
 
@@ -139,14 +163,16 @@ describe("credit and debit notes", () => {
     const finalized = await container.invoices.finalize(business.ctx, note.invoice.id);
 
     // Simulate the original being renumbered by an out-of-band correction.
-    await container.database.db.update(invoices)
+    await container.database.db
+      .update(invoices)
       .set({ invoiceNumber: "INV/2026-27/9999" })
       .where(eq(invoices.id, originalId));
 
     const reloaded = await container.invoices.get(business.ctx, finalized.id);
     expect(reloaded.invoice.referenceInvoiceNumber).toBe(originalNumber);
 
-    await container.database.db.update(invoices)
+    await container.database.db
+      .update(invoices)
       .set({ invoiceNumber: originalNumber })
       .where(eq(invoices.id, originalId));
   });
@@ -162,12 +188,19 @@ describe("credit and debit notes", () => {
 
   it("lists notes alongside invoices and filters by document type", async () => {
     const all = await container.invoices.list(business.ctx, {
-      limit: 100, page: 1, sort: "createdAt", order: "desc",
+      limit: 100,
+      page: 1,
+      sort: "createdAt",
+      order: "desc",
     } as never);
     expect(all.items.some((i) => i.docType === "credit_note")).toBe(true);
 
     const onlyNotes = await container.invoices.list(business.ctx, {
-      limit: 100, page: 1, sort: "createdAt", order: "desc", docType: "credit_note",
+      limit: 100,
+      page: 1,
+      sort: "createdAt",
+      order: "desc",
+      docType: "credit_note",
     } as never);
     expect(onlyNotes.total).toBeGreaterThan(0);
     expect(onlyNotes.items.every((i) => i.docType === "credit_note")).toBe(true);

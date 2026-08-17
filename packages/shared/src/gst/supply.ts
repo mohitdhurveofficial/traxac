@@ -9,8 +9,8 @@ export type SupplyType = "intra_state" | "inter_state";
 export const SUPPLY_CATEGORIES = [
   "b2b",
   "b2c",
-  "export_wp",      // export with payment of tax
-  "export_wop",     // export without payment (LUT/bond)
+  "export_wp", // export with payment of tax
+  "export_wop", // export without payment (LUT/bond)
   "sez_wp",
   "sez_wop",
   "deemed_export",

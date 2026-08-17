@@ -2,7 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Container } from "../src/index.js";
 import { financialYear } from "@traxac/shared";
 import {
-  createBusiness, invoiceInput, resetDatabase, testContainer, type TestBusiness,
+  createBusiness,
+  invoiceInput,
+  resetDatabase,
+  testContainer,
+  type TestBusiness,
 } from "./helpers.js";
 
 /**
@@ -20,7 +24,9 @@ describe("invoice lifecycle", () => {
     container = await testContainer();
     await resetDatabase(container);
     business = await createBusiness(container, {
-      slug: "lifecycle", gstin: "27AAPFU0939F1ZV", stateCode: "27",
+      slug: "lifecycle",
+      gstin: "27AAPFU0939F1ZV",
+      stateCode: "27",
     });
   }, 60_000);
 
@@ -55,16 +61,19 @@ describe("invoice lifecycle", () => {
     const created = await container.invoices.createDraft(business.ctx, invoiceInput(business));
     await container.invoices.finalize(business.ctx, created.invoice.id);
 
-    await expect(container.invoices.updateDraft(business.ctx, created.invoice.id, invoiceInput(business)))
-      .rejects.toThrow(/cannot be edited/i);
-    await expect(container.invoices.finalize(business.ctx, created.invoice.id))
-      .rejects.toThrow(/already/i);
+    await expect(
+      container.invoices.updateDraft(business.ctx, created.invoice.id, invoiceInput(business)),
+    ).rejects.toThrow(/cannot be edited/i);
+    await expect(container.invoices.finalize(business.ctx, created.invoice.id)).rejects.toThrow(
+      /already/i,
+    );
   });
 
   it("never issues the same number twice under concurrent finalization", async () => {
     const drafts = await Promise.all(
       Array.from({ length: 12 }, () =>
-        container.invoices.createDraft(business.ctx, invoiceInput(business))),
+        container.invoices.createDraft(business.ctx, invoiceInput(business)),
+      ),
     );
 
     // Fire every finalization at once: the sequence row lock is the only thing
@@ -77,9 +86,7 @@ describe("invoice lifecycle", () => {
     expect(new Set(numbers).size).toBe(numbers.length);
 
     // The series must also be gapless.
-    const sequence = numbers
-      .map((number) => Number(number.split("/").pop()))
-      .sort((a, b) => a - b);
+    const sequence = numbers.map((number) => Number(number.split("/").pop())).sort((a, b) => a - b);
     for (let index = 1; index < sequence.length; index++) {
       expect(sequence[index]).toBe((sequence[index - 1] as number) + 1);
     }
@@ -95,7 +102,8 @@ describe("invoice lifecycle", () => {
 
   it("charges IGST when the place of supply is another state", async () => {
     const created = await container.invoices.createDraft(
-      business.ctx, invoiceInput(business, { placeOfSupply: "29" }),
+      business.ctx,
+      invoiceInput(business, { placeOfSupply: "29" }),
     );
     expect(created.invoice.igst).toBe(36_000);
     expect(created.invoice.cgst).toBe(0);
@@ -106,27 +114,63 @@ describe("invoice lifecycle", () => {
     const small = await container.invoices.createDraft(business.ctx, invoiceInput(business));
     expect(small.invoice.ewbRequired).toBe(false);
 
-    const large = await container.invoices.createDraft(business.ctx, invoiceInput(business, {
-      lines: [{
-        productId: business.productId, name: "Widget", description: "", hsnSac: "7308",
-        isService: false, quantity: 100, unit: "NOS", unitPrice: 1000,
-        discountPercent: 0, discountAmount: 0, gstRate: 18, cessRate: 0,
-        cessNonAdvol: 0, stateCess: 0, batchNo: "", barcode: "", expiryDate: null,
-      }],
-    }));
+    const large = await container.invoices.createDraft(
+      business.ctx,
+      invoiceInput(business, {
+        lines: [
+          {
+            productId: business.productId,
+            name: "Widget",
+            description: "",
+            hsnSac: "7308",
+            isService: false,
+            quantity: 100,
+            unit: "NOS",
+            unitPrice: 1000,
+            discountPercent: 0,
+            discountAmount: 0,
+            gstRate: 18,
+            cessRate: 0,
+            cessNonAdvol: 0,
+            stateCess: 0,
+            batchNo: "",
+            barcode: "",
+            expiryDate: null,
+          },
+        ],
+      }),
+    );
     expect(large.invoice.grandTotal).toBeGreaterThan(50_000_00);
     expect(large.invoice.ewbRequired).toBe(true);
   });
 
   it("does not require an e-Way Bill for a services-only invoice", async () => {
-    const created = await container.invoices.createDraft(business.ctx, invoiceInput(business, {
-      lines: [{
-        productId: null, name: "Consulting", description: "", hsnSac: "998313",
-        isService: true, quantity: 100, unit: "NOS", unitPrice: 5000,
-        discountPercent: 0, discountAmount: 0, gstRate: 18, cessRate: 0,
-        cessNonAdvol: 0, stateCess: 0, batchNo: "", barcode: "", expiryDate: null,
-      }],
-    }));
+    const created = await container.invoices.createDraft(
+      business.ctx,
+      invoiceInput(business, {
+        lines: [
+          {
+            productId: null,
+            name: "Consulting",
+            description: "",
+            hsnSac: "998313",
+            isService: true,
+            quantity: 100,
+            unit: "NOS",
+            unitPrice: 5000,
+            discountPercent: 0,
+            discountAmount: 0,
+            gstRate: 18,
+            cessRate: 0,
+            cessNonAdvol: 0,
+            stateCess: 0,
+            batchNo: "",
+            barcode: "",
+            expiryDate: null,
+          },
+        ],
+      }),
+    );
     expect(created.invoice.grandTotal).toBeGreaterThan(50_000_00);
     expect(created.invoice.ewbRequired).toBe(false);
   });
@@ -136,14 +180,16 @@ describe("invoice lifecycle", () => {
     await container.invoices.finalize(business.ctx, created.invoice.id);
 
     await container.invoices.recordPayment(business.ctx, created.invoice.id, {
-      amount: 1000, method: "neft",
+      amount: 1000,
+      method: "neft",
     } as never);
     let detail = await container.invoices.get(business.ctx, created.invoice.id);
     expect(detail.invoice.status).toBe("pending");
     expect(detail.amountDue).toBe(236_000 - 100_000);
 
     await container.invoices.recordPayment(business.ctx, created.invoice.id, {
-      amount: 1360, method: "upi",
+      amount: 1360,
+      method: "upi",
     } as never);
     detail = await container.invoices.get(business.ctx, created.invoice.id);
     expect(detail.invoice.status).toBe("completed");
@@ -152,9 +198,12 @@ describe("invoice lifecycle", () => {
 
   it("blocks a payment against a draft", async () => {
     const created = await container.invoices.createDraft(business.ctx, invoiceInput(business));
-    await expect(container.invoices.recordPayment(business.ctx, created.invoice.id, {
-      amount: 100, method: "cash",
-    } as never)).rejects.toThrow(/finalize/i);
+    await expect(
+      container.invoices.recordPayment(business.ctx, created.invoice.id, {
+        amount: 100,
+        method: "cash",
+      } as never),
+    ).rejects.toThrow(/finalize/i);
   });
 
   it("copies an invoice into a fresh, unnumbered draft", async () => {
@@ -176,7 +225,8 @@ describe("invoice lifecycle", () => {
     const before = await container.invoices.get(business.ctx, created.invoice.id);
 
     await container.masters.updateParty(business.ctx, business.partyId, {
-      name: "Renamed Buyer", addressLine1: "99 New Street",
+      name: "Renamed Buyer",
+      addressLine1: "99 New Street",
     });
 
     const after = await container.invoices.get(business.ctx, created.invoice.id);
@@ -190,7 +240,8 @@ describe("invoice lifecycle", () => {
     await container.database.client`
       UPDATE invoices SET einvoice_status = 'generated' WHERE id = ${created.invoice.id}
     `;
-    await expect(container.invoices.cancel(business.ctx, created.invoice.id, "test"))
-      .rejects.toThrow(/cancel the e-invoice/i);
+    await expect(
+      container.invoices.cancel(business.ctx, created.invoice.id, "test"),
+    ).rejects.toThrow(/cancel the e-invoice/i);
   });
 });

@@ -1,10 +1,13 @@
-import type {
-  GatewayRequestContext, GatewayResult,
-} from "./types.js";
+import type { GatewayRequestContext, GatewayResult } from "./types.js";
 import type { IrnDetails, IrnResult, IrpInvoicePayload } from "./einvoice-types.js";
 import type {
-  EwbCancelPayload, EwbDetails, EwbExtendPayload, EwbGeneratePayload,
-  EwbGenerateResult, EwbPartBPayload, EwbUpdateTransporterPayload,
+  EwbCancelPayload,
+  EwbDetails,
+  EwbExtendPayload,
+  EwbGeneratePayload,
+  EwbGenerateResult,
+  EwbPartBPayload,
+  EwbUpdateTransporterPayload,
 } from "./ewb-types.js";
 
 /** e-Invoice Registration Portal capabilities the application depends on. */

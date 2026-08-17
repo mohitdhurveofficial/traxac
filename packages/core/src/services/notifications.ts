@@ -33,64 +33,89 @@ export class NotificationService {
   async create(input: CreateNotificationInput): Promise<Notification | null> {
     if (input.dedupeWithinHours && input.entityId) {
       const since = new Date(Date.now() - input.dedupeWithinHours * 3_600_000);
-      const [existing] = await this.db.select({ id: notifications.id }).from(notifications)
-        .where(and(
-          eq(notifications.tenantId, input.tenantId),
-          eq(notifications.kind, input.kind),
-          eq(notifications.entityId, input.entityId),
-          // Use the column operator, not a raw template: it applies the
-          // column's type mapping so the Date is serialised correctly.
-          gt(notifications.createdAt, since),
-        )).limit(1);
+      const [existing] = await this.db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.tenantId, input.tenantId),
+            eq(notifications.kind, input.kind),
+            eq(notifications.entityId, input.entityId),
+            // Use the column operator, not a raw template: it applies the
+            // column's type mapping so the Date is serialised correctly.
+            gt(notifications.createdAt, since),
+          ),
+        )
+        .limit(1);
       if (existing) return null;
     }
 
-    const [row] = await this.db.insert(notifications).values({
-      tenantId: input.tenantId,
-      userId: input.userId ?? null,
-      kind: input.kind,
-      severity: input.severity ?? "info",
-      title: input.title,
-      body: input.body ?? null,
-      entityType: input.entityType ?? null,
-      entityId: input.entityId ?? null,
-    }).returning();
+    const [row] = await this.db
+      .insert(notifications)
+      .values({
+        tenantId: input.tenantId,
+        userId: input.userId ?? null,
+        kind: input.kind,
+        severity: input.severity ?? "info",
+        title: input.title,
+        body: input.body ?? null,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+      })
+      .returning();
     return row ?? null;
   }
 
   async list(ctx: AuthContext, options: { unreadOnly?: boolean; limit?: number } = {}) {
-    return this.db.select().from(notifications)
-      .where(scoped(ctx, notifications,
-        options.unreadOnly ? isNull(notifications.readAt) : undefined,
-        sql`(${notifications.userId} IS NULL OR ${notifications.userId} = ${ctx.userId})`,
-      ))
+    return this.db
+      .select()
+      .from(notifications)
+      .where(
+        scoped(
+          ctx,
+          notifications,
+          options.unreadOnly ? isNull(notifications.readAt) : undefined,
+          sql`(${notifications.userId} IS NULL OR ${notifications.userId} = ${ctx.userId})`,
+        ),
+      )
       .orderBy(desc(notifications.createdAt))
       .limit(options.limit ?? 50);
   }
 
   async unreadCount(ctx: AuthContext): Promise<number> {
-    const [row] = await this.db.select({ n: countExpr }).from(notifications)
-      .where(scoped(ctx, notifications,
-        isNull(notifications.readAt),
-        sql`(${notifications.userId} IS NULL OR ${notifications.userId} = ${ctx.userId})`,
-      ));
+    const [row] = await this.db
+      .select({ n: countExpr })
+      .from(notifications)
+      .where(
+        scoped(
+          ctx,
+          notifications,
+          isNull(notifications.readAt),
+          sql`(${notifications.userId} IS NULL OR ${notifications.userId} = ${ctx.userId})`,
+        ),
+      );
     return row?.n ?? 0;
   }
 
   async markRead(ctx: AuthContext, id: string): Promise<void> {
-    await this.db.update(notifications).set({ readAt: new Date() })
+    await this.db
+      .update(notifications)
+      .set({ readAt: new Date() })
       .where(scopedById(ctx, notifications, id));
   }
 
   async markAllRead(ctx: AuthContext): Promise<void> {
-    await this.db.update(notifications).set({ readAt: new Date() })
+    await this.db
+      .update(notifications)
+      .set({ readAt: new Date() })
       .where(scoped(ctx, notifications, isNull(notifications.readAt)));
   }
 
   /** Housekeeping: drop read notifications older than 90 days. */
   async purgeOld(): Promise<number> {
     const cutoff = new Date(Date.now() - 90 * 86_400_000);
-    const rows = await this.db.delete(notifications)
+    const rows = await this.db
+      .delete(notifications)
       .where(and(lt(notifications.createdAt, cutoff), sql`${notifications.readAt} IS NOT NULL`))
       .returning({ id: notifications.id });
     return rows.length;

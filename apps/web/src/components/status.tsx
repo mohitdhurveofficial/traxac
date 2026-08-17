@@ -24,8 +24,11 @@ export function Pill({ tone = "neutral", children }: { tone?: Tone; children: Re
 
 function Dot({ tone }: { tone: Tone }) {
   const colour = {
-    neutral: "bg-slate-400", progress: "bg-blue-500", good: "bg-emerald-500",
-    warn: "bg-amber-500", bad: "bg-red-500",
+    neutral: "bg-slate-400",
+    progress: "bg-blue-500",
+    good: "bg-emerald-500",
+    warn: "bg-amber-500",
+    bad: "bg-red-500",
   }[tone];
   return <span className={`size-1.5 rounded-full ${colour}`} aria-hidden />;
 }
@@ -41,7 +44,12 @@ const INVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
 
 export function InvoiceStatus({ status }: { status: string }) {
   const meta = INVOICE_STATUS[status] ?? { label: status, tone: "neutral" as Tone };
-  return <Pill tone={meta.tone}><Dot tone={meta.tone} />{meta.label}</Pill>;
+  return (
+    <Pill tone={meta.tone}>
+      <Dot tone={meta.tone} />
+      {meta.label}
+    </Pill>
+  );
 }
 
 const EINVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -57,7 +65,12 @@ const EINVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
 export function EinvoiceStatus({ status }: { status: string }) {
   const meta = EINVOICE_STATUS[status] ?? { label: status, tone: "neutral" as Tone };
   if (status === "not_required") return null;
-  return <Pill tone={meta.tone}><Dot tone={meta.tone} />{meta.label}</Pill>;
+  return (
+    <Pill tone={meta.tone}>
+      <Dot tone={meta.tone} />
+      {meta.label}
+    </Pill>
+  );
 }
 
 const EWB_STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -81,13 +94,28 @@ export function EwbStatus({ status, validUntil }: { status: string; validUntil?:
   if (status === "generated" && validUntil) {
     const hoursLeft = (new Date(validUntil).getTime() - Date.now()) / 3_600_000;
     if (hoursLeft < 0) {
-      return <Pill tone="bad"><Dot tone="bad" />e-Way Bill expired</Pill>;
+      return (
+        <Pill tone="bad">
+          <Dot tone="bad" />
+          e-Way Bill expired
+        </Pill>
+      );
     }
     if (hoursLeft < 12) {
-      return <Pill tone="warn"><Dot tone="warn" />e-Way Bill expires {relativeTime(validUntil)}</Pill>;
+      return (
+        <Pill tone="warn">
+          <Dot tone="warn" />
+          e-Way Bill expires {relativeTime(validUntil)}
+        </Pill>
+      );
     }
   }
-  return <Pill tone={meta.tone}><Dot tone={meta.tone} />{meta.label}</Pill>;
+  return (
+    <Pill tone={meta.tone}>
+      <Dot tone={meta.tone} />
+      {meta.label}
+    </Pill>
+  );
 }
 
 export function PaymentStatus({ total, paid }: { total: number; paid: number }) {

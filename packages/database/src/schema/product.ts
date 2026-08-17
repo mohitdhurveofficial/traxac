@@ -1,5 +1,12 @@
 import {
-  pgTable, text, uuid, numeric, integer, boolean, index, uniqueIndex,
+  pgTable,
+  text,
+  uuid,
+  numeric,
+  integer,
+  boolean,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, money, updatedAt } from "./_shared.js";
@@ -9,7 +16,9 @@ export const products = pgTable(
   "products",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     sku: text("sku"),

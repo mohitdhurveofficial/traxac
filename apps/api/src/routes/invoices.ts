@@ -1,8 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import {
-  cancelInvoiceSchema, createInvoiceSchema, finalizeInvoiceSchema,
-  invoiceListQuerySchema, previewInvoiceSchema, recordPaymentSchema, updateInvoiceSchema,
+  cancelInvoiceSchema,
+  createInvoiceSchema,
+  finalizeInvoiceSchema,
+  invoiceListQuerySchema,
+  previewInvoiceSchema,
+  recordPaymentSchema,
+  updateInvoiceSchema,
 } from "@traxac/shared/contracts";
 import { AppError, financialYear } from "@traxac/shared";
 import { readTimeline } from "@traxac/core";
@@ -53,12 +58,14 @@ export async function invoiceRoutes(app: FastifyInstance): Promise<void> {
   /** The number the next invoice in this series will receive. */
   app.get("/next-number", async (request) => {
     const ctx = requireAuth(request);
-    const query = z.object({
-      gstinId: z.string().uuid(),
-      docType: z.string().default("invoice"),
-      series: z.string().optional(),
-      invoiceDate: z.coerce.date().default(() => new Date()),
-    }).parse(request.query);
+    const query = z
+      .object({
+        gstinId: z.string().uuid(),
+        docType: z.string().default("invoice"),
+        series: z.string().optional(),
+        invoiceDate: z.coerce.date().default(() => new Date()),
+      })
+      .parse(request.query);
     const invoiceNumber = await request.container.numbering.peek(ctx, {
       gstinId: query.gstinId,
       docType: query.docType as never,
@@ -144,7 +151,12 @@ export async function invoiceRoutes(app: FastifyInstance): Promise<void> {
   app.get("/:id/pdf", async (request, reply) => {
     const ctx = requireAuth(request);
     const { id } = idParam.parse(request.params);
-    const document = await request.container.documents.findByKind(ctx, "invoice_pdf", "invoice", id);
+    const document = await request.container.documents.findByKind(
+      ctx,
+      "invoice_pdf",
+      "invoice",
+      id,
+    );
     if (!document) {
       throw new AppError("NOT_FOUND", "The PDF is still being prepared. Try again in a moment.");
     }
@@ -163,7 +175,9 @@ export async function invoiceRoutes(app: FastifyInstance): Promise<void> {
 async function rememberTransport(
   request: FastifyRequest,
   ctx: ReturnType<typeof requireAuth>,
-  input: { transport?: { vehicleNo?: string | undefined; vehicleType?: string | null } | undefined },
+  input: {
+    transport?: { vehicleNo?: string | undefined; vehicleType?: string | null } | undefined;
+  },
 ): Promise<void> {
   const vehicleNo = input.transport?.vehicleNo;
   if (!vehicleNo) return;

@@ -1,8 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
-  cancelEinvoiceSchema, cancelEwbSchema, extendEwbSchema, generateEinvoiceSchema,
-  generateEwbSchema, partBSchema, saveCredentialSchema, updateEwbTransporterSchema,
+  cancelEinvoiceSchema,
+  cancelEwbSchema,
+  extendEwbSchema,
+  generateEinvoiceSchema,
+  generateEwbSchema,
+  partBSchema,
+  saveCredentialSchema,
+  updateEwbTransporterSchema,
 } from "@traxac/shared/contracts";
 import { AppError, computeValidity, canExtend, canCancel } from "@traxac/shared";
 import { requireAuth } from "../context.js";
@@ -89,10 +95,14 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
       events,
       // What the user is actually allowed to do right now.
       actions: {
-        canExtend: Boolean(record.validUntil) && record.status === "generated"
-          && canExtend(record.validUntil as Date, now),
-        canCancel: Boolean(record.generatedAt) && record.status !== "cancelled"
-          && canCancel(record.generatedAt as Date, now),
+        canExtend:
+          Boolean(record.validUntil) &&
+          record.status === "generated" &&
+          canExtend(record.validUntil as Date, now),
+        canCancel:
+          Boolean(record.generatedAt) &&
+          record.status !== "cancelled" &&
+          canCancel(record.generatedAt as Date, now),
         canUpdatePartB: record.status === "generated" || record.status === "part_b_pending",
       },
     };
@@ -103,8 +113,10 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
     const { id } = idParam.parse(request.params);
     const input = partBSchema.parse(request.body);
     if (!input.fromPlace || !input.fromStateCode) {
-      throw new AppError("VALIDATION_FAILED",
-        "The place and state the vehicle starts from are required for Part-B");
+      throw new AppError(
+        "VALIDATION_FAILED",
+        "The place and state the vehicle starts from are required for Part-B",
+      );
     }
     return request.container.compliance.updatePartB(ctx, id, {
       transportMode: input.transportMode,
@@ -158,10 +170,12 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
 
   /** Preview validity before generating, so the user knows the deadline. */
   app.get("/ewb/validity-preview", async (request) => {
-    const query = z.object({
-      distanceKm: z.coerce.number().int().min(0).max(4000),
-      vehicleType: z.enum(["R", "O"]).default("R"),
-    }).parse(request.query);
+    const query = z
+      .object({
+        distanceKm: z.coerce.number().int().min(0).max(4000),
+        vehicleType: z.enum(["R", "O"]).default("R"),
+      })
+      .parse(request.query);
     const { days, validUntil } = computeValidity({
       distanceKm: query.distanceKm,
       generatedAt: new Date(),
@@ -220,9 +234,10 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
       environment: summary.environment as "sandbox" | "production",
     });
 
-    const provider = summary.service === "einvoice"
-      ? registry.einvoice(summary.environment as "sandbox" | "production")
-      : registry.ewb(summary.environment as "sandbox" | "production");
+    const provider =
+      summary.service === "einvoice"
+        ? registry.einvoice(summary.environment as "sandbox" | "production")
+        : registry.ewb(summary.environment as "sandbox" | "production");
 
     const result = await provider.verify({
       tenantId: ctx.tenantId,

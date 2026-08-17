@@ -30,27 +30,38 @@ const COMMON_HSN: Array<[code: string, description: string, rate: string, servic
   ["8708", "Parts and accessories of motor vehicles", "28"],
   ["9403", "Other furniture and parts thereof", "18"],
   ["996511", "Road transport services of goods", "5", true],
-  ["997212", "Rental or leasing services involving own or leased non-residential property", "18", true],
+  [
+    "997212",
+    "Rental or leasing services involving own or leased non-residential property",
+    "18",
+    true,
+  ],
   ["998313", "Information technology consulting and support services", "18", true],
   ["998399", "Other professional, technical and business services", "18", true],
   ["999799", "Other services not elsewhere classified", "18", true],
 ];
 
 export async function seedReferenceData(database: Database): Promise<void> {
-  await database.db.insert(units).values(
-    UQC_UNITS.map((u) => ({
-      code: u.code,
-      description: u.description,
-      qtyDecimals: u.qtyDecimals,
-    })),
-  ).onConflictDoNothing();
+  await database.db
+    .insert(units)
+    .values(
+      UQC_UNITS.map((u) => ({
+        code: u.code,
+        description: u.description,
+        qtyDecimals: u.qtyDecimals,
+      })),
+    )
+    .onConflictDoNothing();
 
-  await database.db.insert(hsnCodes).values(
-    COMMON_HSN.map(([code, description, defaultGstRate, isService]) => ({
-      code,
-      description,
-      defaultGstRate,
-      isService: isService ?? false,
-    })),
-  ).onConflictDoNothing();
+  await database.db
+    .insert(hsnCodes)
+    .values(
+      COMMON_HSN.map(([code, description, defaultGstRate, isService]) => ({
+        code,
+        description,
+        defaultGstRate,
+        isService: isService ?? false,
+      })),
+    )
+    .onConflictDoNothing();
 }

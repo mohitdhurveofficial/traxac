@@ -81,8 +81,10 @@ export class NumberingService {
       })
       .onConflictDoUpdate({
         target: [
-          invoiceSequences.tenantId, invoiceSequences.gstinId,
-          invoiceSequences.docType, invoiceSequences.series,
+          invoiceSequences.tenantId,
+          invoiceSequences.gstinId,
+          invoiceSequences.docType,
+          invoiceSequences.series,
           invoiceSequences.financialYear,
         ],
         set: {
@@ -110,21 +112,28 @@ export class NumberingService {
   async peek(ctx: AuthContext, input: AllocateNumberInput): Promise<string> {
     const series = input.series?.trim() || DEFAULT_SERIES[input.docType];
     const fy = financialYear(input.invoiceDate);
-    const [row] = await this.database.db.select().from(invoiceSequences)
-      .where(and(
-        eq(invoiceSequences.tenantId, ctx.tenantId),
-        eq(invoiceSequences.gstinId, input.gstinId),
-        eq(invoiceSequences.docType, input.docType),
-        eq(invoiceSequences.series, series),
-        eq(invoiceSequences.financialYear, fy),
-      )).limit(1);
+    const [row] = await this.database.db
+      .select()
+      .from(invoiceSequences)
+      .where(
+        and(
+          eq(invoiceSequences.tenantId, ctx.tenantId),
+          eq(invoiceSequences.gstinId, input.gstinId),
+          eq(invoiceSequences.docType, input.docType),
+          eq(invoiceSequences.series, series),
+          eq(invoiceSequences.financialYear, fy),
+        ),
+      )
+      .limit(1);
     const next = row?.nextNumber ?? 1;
     const padding = row?.padding ?? 4;
     return `${row?.prefix ?? ""}${series}/${fy}/${String(next).padStart(padding, "0")}${row?.suffix ?? ""}`;
   }
 
   async listSeries(ctx: AuthContext) {
-    return this.database.db.select().from(invoiceSequences)
+    return this.database.db
+      .select()
+      .from(invoiceSequences)
       .where(eq(invoiceSequences.tenantId, ctx.tenantId));
   }
 
@@ -133,18 +142,30 @@ export class NumberingService {
    * backwards is refused: reusing a consumed number breaks the GST
    * requirement that a series is consecutive and unique.
    */
-  async configureSeries(ctx: AuthContext, id: string, input: {
-    prefix?: string; suffix?: string; padding?: number; nextNumber?: number;
-  }) {
-    const [current] = await this.database.db.select().from(invoiceSequences)
+  async configureSeries(
+    ctx: AuthContext,
+    id: string,
+    input: {
+      prefix?: string;
+      suffix?: string;
+      padding?: number;
+      nextNumber?: number;
+    },
+  ) {
+    const [current] = await this.database.db
+      .select()
+      .from(invoiceSequences)
       .where(and(eq(invoiceSequences.id, id), eq(invoiceSequences.tenantId, ctx.tenantId)))
       .limit(1);
     if (!current) throw new AppError("NOT_FOUND", "Number series not found");
     if (input.nextNumber !== undefined && input.nextNumber < current.nextNumber) {
-      throw new AppError("VALIDATION_FAILED",
-        `The next number cannot go below ${current.nextNumber} — those numbers are already issued`);
+      throw new AppError(
+        "VALIDATION_FAILED",
+        `The next number cannot go below ${current.nextNumber} — those numbers are already issued`,
+      );
     }
-    const [row] = await this.database.db.update(invoiceSequences)
+    const [row] = await this.database.db
+      .update(invoiceSequences)
       .set({
         prefix: input.prefix ?? current.prefix,
         suffix: input.suffix ?? current.suffix,
@@ -152,7 +173,8 @@ export class NumberingService {
         nextNumber: input.nextNumber ?? current.nextNumber,
         updatedAt: new Date(),
       })
-      .where(eq(invoiceSequences.id, id)).returning();
+      .where(eq(invoiceSequences.id, id))
+      .returning();
     return row;
   }
 }

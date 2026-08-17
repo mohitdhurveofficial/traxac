@@ -76,8 +76,11 @@ export class CredentialService {
 
   async save(ctx: AuthContext, input: SaveCredentialInput): Promise<CredentialSummary> {
     requirePermission(ctx, "credentials:write");
-    const [gstin] = await this.db.select().from(gstins)
-      .where(scopedById(ctx, gstins, input.gstinId)).limit(1);
+    const [gstin] = await this.db
+      .select()
+      .from(gstins)
+      .where(scopedById(ctx, gstins, input.gstinId))
+      .limit(1);
     if (!gstin) throw new AppError("NOT_FOUND", "GSTIN registration not found");
 
     const payload: StoredCredential = {
@@ -104,11 +107,16 @@ export class CredentialService {
       updatedAt: new Date(),
     };
 
-    const [row] = await this.db.insert(gstCredentials).values(values)
+    const [row] = await this.db
+      .insert(gstCredentials)
+      .values(values)
       .onConflictDoUpdate({
         target: [
-          gstCredentials.tenantId, gstCredentials.gstin, gstCredentials.provider,
-          gstCredentials.environment, gstCredentials.service,
+          gstCredentials.tenantId,
+          gstCredentials.gstin,
+          gstCredentials.provider,
+          gstCredentials.environment,
+          gstCredentials.service,
         ],
         set: {
           encryptedPayload: values.encryptedPayload,
@@ -138,7 +146,9 @@ export class CredentialService {
     requirePermission(ctx, "credentials:write");
     await this.db.delete(gstCredentials).where(scopedById(ctx, gstCredentials, id));
     await this.audit.record(ctx, {
-      action: "credential.deleted", entityType: "gst_credential", entityId: id,
+      action: "credential.deleted",
+      entityType: "gst_credential",
+      entityId: id,
     });
   }
 
@@ -147,17 +157,26 @@ export class CredentialService {
     ctx: AuthContext,
     input: { gstin: string; service: GatewayService; environment: GatewayEnvironment },
   ): Promise<{ credential: GstCredential; credentials: GatewayCredentials }> {
-    const [row] = await this.db.select().from(gstCredentials)
-      .where(scoped(ctx, gstCredentials,
-        eq(gstCredentials.gstin, input.gstin),
-        eq(gstCredentials.service, input.service),
-        eq(gstCredentials.environment, input.environment),
-      )).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(gstCredentials)
+      .where(
+        scoped(
+          ctx,
+          gstCredentials,
+          eq(gstCredentials.gstin, input.gstin),
+          eq(gstCredentials.service, input.service),
+          eq(gstCredentials.environment, input.environment),
+        ),
+      )
+      .limit(1);
 
     if (!row) {
-      throw new AppError("CREDENTIALS_MISSING",
-        `No ${input.service === "einvoice" ? "e-Invoice" : "e-Way Bill"} credentials saved for `
-        + `${input.gstin} (${input.environment}). Add them in Settings → GST credentials.`);
+      throw new AppError(
+        "CREDENTIALS_MISSING",
+        `No ${input.service === "einvoice" ? "e-Invoice" : "e-Way Bill"} credentials saved for ` +
+          `${input.gstin} (${input.environment}). Add them in Settings → GST credentials.`,
+      );
     }
     if (row.status === "disabled") {
       throw new AppError("CREDENTIALS_MISSING", `The credentials for ${input.gstin} are disabled`);
@@ -167,11 +186,15 @@ export class CredentialService {
 
     // Lazily re-wrap ciphertext written with a retired key.
     if (this.secrets.needsRewrap(row.encryptedPayload)) {
-      await this.db.update(gstCredentials).set({
-        encryptedPayload: this.secrets.encryptJson(stored),
-        keyVersion: this.secrets.keyVersion,
-        updatedAt: new Date(),
-      }).where(eq(gstCredentials.id, row.id)).catch(() => undefined);
+      await this.db
+        .update(gstCredentials)
+        .set({
+          encryptedPayload: this.secrets.encryptJson(stored),
+          keyVersion: this.secrets.keyVersion,
+          updatedAt: new Date(),
+        })
+        .where(eq(gstCredentials.id, row.id))
+        .catch(() => undefined);
     }
 
     return {
@@ -187,20 +210,23 @@ export class CredentialService {
   }
 
   async markUsed(credentialId: string): Promise<void> {
-    await this.db.update(gstCredentials)
+    await this.db
+      .update(gstCredentials)
       .set({ lastUsedAt: new Date() })
       .where(eq(gstCredentials.id, credentialId))
       .catch(() => undefined);
   }
 
   async markVerified(credentialId: string): Promise<void> {
-    await this.db.update(gstCredentials)
+    await this.db
+      .update(gstCredentials)
       .set({ lastVerifiedAt: new Date(), status: "active", lastError: null, updatedAt: new Date() })
       .where(eq(gstCredentials.id, credentialId));
   }
 
   async markFailed(credentialId: string, error: string, disable = false): Promise<void> {
-    await this.db.update(gstCredentials)
+    await this.db
+      .update(gstCredentials)
       .set({
         lastError: error.slice(0, 500),
         status: disable ? "invalid" : "active",
@@ -219,14 +245,19 @@ export class DatabaseSessionStore implements SessionStore {
   constructor(
     private readonly database: Database,
     private readonly secrets: SecretBox,
-    private readonly lookup: (cacheKey: string) => { credentialId: string; tenantId: string } | null,
+    private readonly lookup: (
+      cacheKey: string,
+    ) => { credentialId: string; tenantId: string } | null,
   ) {}
 
   async read(key: string): Promise<NicSession | null> {
     const ref = this.lookup(key);
     if (!ref) return null;
-    const [row] = await this.database.db.select().from(gatewayTokens)
-      .where(eq(gatewayTokens.credentialId, ref.credentialId)).limit(1);
+    const [row] = await this.database.db
+      .select()
+      .from(gatewayTokens)
+      .where(eq(gatewayTokens.credentialId, ref.credentialId))
+      .limit(1);
     if (!row || row.expiresAt.getTime() <= Date.now()) return null;
     try {
       return {
@@ -242,26 +273,30 @@ export class DatabaseSessionStore implements SessionStore {
   async write(key: string, session: NicSession): Promise<void> {
     const ref = this.lookup(key);
     if (!ref) return;
-    await this.database.db.insert(gatewayTokens).values({
-      credentialId: ref.credentialId,
-      tenantId: ref.tenantId,
-      encryptedToken: this.secrets.encrypt(session.authToken),
-      encryptedSek: this.secrets.encrypt(session.sek),
-      expiresAt: session.expiresAt,
-    }).onConflictDoUpdate({
-      target: gatewayTokens.credentialId,
-      set: {
+    await this.database.db
+      .insert(gatewayTokens)
+      .values({
+        credentialId: ref.credentialId,
+        tenantId: ref.tenantId,
         encryptedToken: this.secrets.encrypt(session.authToken),
         encryptedSek: this.secrets.encrypt(session.sek),
         expiresAt: session.expiresAt,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: gatewayTokens.credentialId,
+        set: {
+          encryptedToken: this.secrets.encrypt(session.authToken),
+          encryptedSek: this.secrets.encrypt(session.sek),
+          expiresAt: session.expiresAt,
+        },
+      });
   }
 
   async clear(key: string): Promise<void> {
     const ref = this.lookup(key);
     if (!ref) return;
-    await this.database.db.delete(gatewayTokens)
+    await this.database.db
+      .delete(gatewayTokens)
       .where(eq(gatewayTokens.credentialId, ref.credentialId));
   }
 }

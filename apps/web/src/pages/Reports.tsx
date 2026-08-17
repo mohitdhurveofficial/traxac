@@ -67,8 +67,16 @@ export function ReportsPage() {
         title="Reports"
         subtitle={`Financial year ${fy}`}
         actions={
-          <select className="field w-auto" value={fy} onChange={(event) => setFy(event.target.value)}>
-            {years.map((year) => <option key={year} value={year}>FY {year}</option>)}
+          <select
+            className="field w-auto"
+            value={fy}
+            onChange={(event) => setFy(event.target.value)}
+          >
+            {years.map((year) => (
+              <option key={year} value={year}>
+                FY {year}
+              </option>
+            ))}
           </select>
         }
       />
@@ -78,25 +86,38 @@ export function ReportsPage() {
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Invoices issued" value={String(totals?.invoiceCount ?? 0)} />
-          <Stat label="Taxable value" value={moneyCompact(totals?.taxableValue ?? 0)}
-            detail={money(totals?.taxableValue ?? 0)} />
-          <Stat label="GST collected" value={moneyCompact(totals?.totalTax ?? 0)}
-            detail={money(totals?.totalTax ?? 0)} />
-          <Stat label="Outstanding" value={moneyCompact(totals?.outstanding ?? 0)}
-            detail={money(totals?.outstanding ?? 0)} tone={totals?.outstanding ? "warn" : undefined} />
+          <Stat
+            label="Taxable value"
+            value={moneyCompact(totals?.taxableValue ?? 0)}
+            detail={money(totals?.taxableValue ?? 0)}
+          />
+          <Stat
+            label="GST collected"
+            value={moneyCompact(totals?.totalTax ?? 0)}
+            detail={money(totals?.totalTax ?? 0)}
+          />
+          <Stat
+            label="Outstanding"
+            value={moneyCompact(totals?.outstanding ?? 0)}
+            detail={money(totals?.outstanding ?? 0)}
+            tone={totals?.outstanding ? "warn" : undefined}
+          />
         </div>
 
         {monthly.length > 0 && (
           <section className="card mt-4 p-4">
             <h2 className="text-sm font-medium">Billed by month</h2>
             {/*
-              * `items-stretch` matters: with `items-end` the columns collapse
-              * to their content height, leaving the bars nothing to fill and
-              * rendering an empty chart.
-              */}
+             * `items-stretch` matters: with `items-end` the columns collapse
+             * to their content height, leaving the bars nothing to fill and
+             * rendering an empty chart.
+             */}
             <div className="mt-4 flex h-40 items-stretch gap-1.5">
               {monthly.map((month) => (
-                <div key={month.month} className="group flex h-full flex-1 flex-col items-center gap-1.5">
+                <div
+                  key={month.month}
+                  className="group flex h-full flex-1 flex-col items-center gap-1.5"
+                >
                   <div className="relative flex w-full max-w-24 flex-1 items-end self-center">
                     <div
                       className="w-full rounded-t bg-brand-500 transition-colors group-hover:bg-brand-600"
@@ -118,9 +139,12 @@ export function ReportsPage() {
             <div key={report.key} className="card flex flex-col p-4">
               <h3 className="text-sm font-medium">{report.title}</h3>
               <p className="mt-1 flex-1 text-xs text-muted">{report.description}</p>
-              <button type="button" className="btn-secondary mt-3"
+              <button
+                type="button"
+                className="btn-secondary mt-3"
                 disabled={downloading === report.key}
-                onClick={() => void download(report.key)}>
+                onClick={() => void download(report.key)}
+              >
                 {downloading === report.key ? <Spinner /> : null}
                 Download CSV
               </button>
@@ -133,13 +157,26 @@ export function ReportsPage() {
 }
 
 function Stat({
-  label, value, detail, tone,
-}: { label: string; value: string; detail?: string; tone?: "warn" }) {
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  tone?: "warn";
+}) {
   return (
     <div className="card p-4">
       <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tracking-tight ${
-        tone === "warn" ? "text-amber-700" : ""}`}>{value}</p>
+      <p
+        className={`mt-1 text-2xl font-semibold tracking-tight ${
+          tone === "warn" ? "text-amber-700" : ""
+        }`}
+      >
+        {value}
+      </p>
       {detail && <p className="mt-0.5 text-xs text-slate-400">{detail}</p>}
     </div>
   );

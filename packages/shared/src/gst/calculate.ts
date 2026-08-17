@@ -1,9 +1,5 @@
-import {
-  roundPaise, roundToRupee, splitHalf, toPaise, type Paise,
-} from "./money.js";
-import {
-  determineSupplyType, type SupplyCategory, type SupplyType,
-} from "./supply.js";
+import { roundPaise, roundToRupee, splitHalf, toPaise, type Paise } from "./money.js";
+import { determineSupplyType, type SupplyCategory, type SupplyType } from "./supply.js";
 
 /**
  * Deterministic GST computation engine.
@@ -156,7 +152,7 @@ function computeCharge(
   zeroRated: boolean,
 ): ChargeTaxResult {
   const amount = roundPaise(charge.amount);
-  const gstRate = zeroRated ? 0 : charge.gstRate ?? 0;
+  const gstRate = zeroRated ? 0 : (charge.gstRate ?? 0);
   const tax = roundPaise((amount * gstRate) / 100);
   let cgst = 0;
   let sgst = 0;
@@ -226,10 +222,12 @@ export function calculateFromRupees(input: {
   supplyCategory?: SupplyCategory;
   igstOnIntra?: boolean;
   zeroRated?: boolean;
-  lines: Array<Omit<TaxLineInput, "unitPrice" | "discountAmount"> & {
-    unitPrice: number | string;
-    discountAmount?: number | string;
-  }>;
+  lines: Array<
+    Omit<TaxLineInput, "unitPrice" | "discountAmount"> & {
+      unitPrice: number | string;
+      discountAmount?: number | string;
+    }
+  >;
   charges?: Array<Omit<ChargeInput, "amount"> & { amount: number | string }>;
 }): TaxTotals {
   return calculateInvoiceTax({

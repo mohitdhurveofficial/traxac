@@ -106,5 +106,7 @@
 
 /* Print: the browser-printed invoice should not carry app chrome. */
 @media print {
-  .no-print { display: none !important; }
+  .no-print {
+    display: none !important;
+  }
 }

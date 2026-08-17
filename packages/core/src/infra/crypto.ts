@@ -1,6 +1,10 @@
 import {
-  createCipheriv, createDecipheriv, createHash, randomBytes,
-  scryptSync, timingSafeEqual,
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
 } from "node:crypto";
 
 /**
@@ -52,14 +56,19 @@ export class SecretBox {
       throw new Error("Malformed encrypted payload");
     }
     const declared = Number.parseInt(version.slice(1), 10);
-    const candidates = declared === this.keyring.version
-      ? [this.keyring.masterKey]
-      : [this.keyring.previousKey, this.keyring.masterKey].filter(Boolean) as string[];
+    const candidates =
+      declared === this.keyring.version
+        ? [this.keyring.masterKey]
+        : ([this.keyring.previousKey, this.keyring.masterKey].filter(Boolean) as string[]);
 
     let lastError: unknown;
     for (const key of candidates) {
       try {
-        const decipher = createDecipheriv("aes-256-gcm", keyBytes(key), Buffer.from(ivB64, "base64"));
+        const decipher = createDecipheriv(
+          "aes-256-gcm",
+          keyBytes(key),
+          Buffer.from(ivB64, "base64"),
+        );
         decipher.setAuthTag(Buffer.from(tagB64, "base64"));
         return Buffer.concat([
           decipher.update(Buffer.from(dataB64, "base64")),

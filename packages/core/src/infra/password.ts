@@ -32,8 +32,12 @@ export async function hashPassword(password: string): Promise<string> {
     maxmem: maxmem(PARAMS.N, PARAMS.r),
   });
   return [
-    "scrypt", PARAMS.N, PARAMS.r, PARAMS.p,
-    salt.toString("base64"), derived.toString("base64"),
+    "scrypt",
+    PARAMS.N,
+    PARAMS.r,
+    PARAMS.p,
+    salt.toString("base64"),
+    derived.toString("base64"),
   ].join("$");
 }
 
@@ -49,7 +53,10 @@ export async function verifyPassword(password: string, stored: string): Promise<
   if (expected.length === 0) return false;
   try {
     const derived = await derive(password, salt, expected.length, {
-      N: n, r, p, maxmem: maxmem(n, r),
+      N: n,
+      r,
+      p,
+      maxmem: maxmem(n, r),
     });
     return derived.length === expected.length && timingSafeEqual(derived, expected);
   } catch {

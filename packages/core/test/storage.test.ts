@@ -62,7 +62,9 @@ describe("document round-trip across processes", () => {
     writer = await testContainer();
     await resetDatabase(writer);
     business = await createBusiness(writer, {
-      slug: "storage", gstin: "27AAPFU0939F1ZV", stateCode: "27",
+      slug: "storage",
+      gstin: "27AAPFU0939F1ZV",
+      stateCode: "27",
     });
     reader = await testContainer();
   }, 60_000);
@@ -105,7 +107,9 @@ describe("document round-trip across processes", () => {
 
   it("keeps documents tenant-scoped", async () => {
     const other = await createBusiness(writer, {
-      slug: "storage-other", gstin: "29AAGCB7383J1Z4", stateCode: "29",
+      slug: "storage-other",
+      gstin: "29AAGCB7383J1Z4",
+      stateCode: "29",
     });
     const stored = await writer.documents.store(business.ctx, {
       kind: "attachment",

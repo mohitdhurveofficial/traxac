@@ -8,7 +8,7 @@ export function searchAcross(columns: PgColumn[], term?: string): SQL | undefine
   if (!q) return undefined;
   const pattern = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
   const clauses = columns.map((c) => ilike(c, pattern));
-  return clauses.length === 1 ? clauses[0] : (or(...clauses));
+  return clauses.length === 1 ? clauses[0] : or(...clauses);
 }
 
 export function orderBy(column: PgColumn, direction: "asc" | "desc"): SQL {

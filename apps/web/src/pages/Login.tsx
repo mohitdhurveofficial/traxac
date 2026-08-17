@@ -22,17 +22,23 @@ export function LoginPage() {
     const done = { onSuccess: () => navigate("/invoices", { replace: true }) };
 
     if (mode === "login") {
-      login.mutate({
-        email: field(data, "email"),
-        password: field(data, "password"),
-      }, done);
+      login.mutate(
+        {
+          email: field(data, "email"),
+          password: field(data, "password"),
+        },
+        done,
+      );
     } else {
-      register.mutate({
-        name: field(data, "name"),
-        email: field(data, "email"),
-        password: field(data, "password"),
-        businessName: field(data, "businessName"),
-      }, done);
+      register.mutate(
+        {
+          name: field(data, "name"),
+          email: field(data, "email"),
+          password: field(data, "password"),
+          businessName: field(data, "businessName"),
+        },
+        done,
+      );
     }
   };
 
@@ -41,7 +47,9 @@ export function LoginPage() {
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">T</span>
+            <span className="grid size-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">
+              T
+            </span>
             <span className="text-lg font-semibold tracking-tight">Traxac</span>
           </div>
 
@@ -58,27 +66,53 @@ export function LoginPage() {
             {mode === "register" && (
               <>
                 <Field label="Your name" required>
-                  <input name="name" className="field" required autoComplete="name" placeholder="Ramesh Kumar" />
+                  <input
+                    name="name"
+                    className="field"
+                    required
+                    autoComplete="name"
+                    placeholder="Ramesh Kumar"
+                  />
                 </Field>
                 <Field label="Business name" required hint="This appears on your invoices.">
-                  <input name="businessName" className="field" required placeholder="Sundar Steel Traders" />
+                  <input
+                    name="businessName"
+                    className="field"
+                    required
+                    placeholder="Sundar Steel Traders"
+                  />
                 </Field>
               </>
             )}
 
             <Field label="Email" required>
-              <input name="email" type="email" className="field" required
-                autoComplete="email" placeholder="you@business.in" />
+              <input
+                name="email"
+                type="email"
+                className="field"
+                required
+                autoComplete="email"
+                placeholder="you@business.in"
+              />
             </Field>
 
             <Field
               label="Password"
               required
-              hint={mode === "register" ? "At least 10 characters, with an uppercase letter and a number." : undefined}
+              hint={
+                mode === "register"
+                  ? "At least 10 characters, with an uppercase letter and a number."
+                  : undefined
+              }
             >
-              <input name="password" type="password" className="field" required
+              <input
+                name="password"
+                type="password"
+                className="field"
+                required
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                minLength={mode === "register" ? 10 : 8} />
+                minLength={mode === "register" ? 10 : 8}
+              />
             </Field>
 
             <ErrorNote error={error} />
@@ -91,8 +125,11 @@ export function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-muted">
             {mode === "login" ? "New to Traxac?" : "Already have an account?"}{" "}
-            <button type="button" className="font-medium text-brand-700 hover:underline"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}>
+            <button
+              type="button"
+              className="font-medium text-brand-700 hover:underline"
+              onClick={() => setMode(mode === "login" ? "register" : "login")}
+            >
               {mode === "login" ? "Create an account" : "Sign in"}
             </button>
           </p>
@@ -102,7 +139,9 @@ export function LoginPage() {
       {/* The value proposition, stated once, in the customer's own words. */}
       <div className="hidden flex-col justify-center bg-ink px-12 text-white lg:flex">
         <p className="text-2xl leading-snug font-semibold tracking-tight">
-          Invoice, e-Invoice and e-Way Bill.<br />One screen, one click.
+          Invoice, e-Invoice and e-Way Bill.
+          <br />
+          One screen, one click.
         </p>
         <ul className="mt-8 space-y-3 text-sm text-slate-300">
           {[
@@ -112,8 +151,17 @@ export function LoginPage() {
             "Everything you billed, searchable — by number, buyer, IRN or vehicle.",
           ].map((line) => (
             <li key={line} className="flex gap-3">
-              <svg className="mt-0.5 size-4 shrink-0 text-brand-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z" clipRule="evenodd" />
+              <svg
+                className="mt-0.5 size-4 shrink-0 text-brand-500"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z"
+                  clipRule="evenodd"
+                />
               </svg>
               {line}
             </li>

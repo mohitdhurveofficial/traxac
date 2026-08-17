@@ -1,6 +1,4 @@
-import {
-  pgTable, text, uuid, integer, jsonb, index, uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { invoices } from "./invoices.js";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
@@ -10,8 +8,12 @@ export const einvoices = pgTable(
   "einvoices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
     /** Seller GSTIN the IRN was generated under. */
     gstin: text("gstin").notNull(),
     provider: text("provider").notNull().default("nic"),

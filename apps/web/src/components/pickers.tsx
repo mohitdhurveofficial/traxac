@@ -16,7 +16,16 @@ export interface PickerOption<T> {
 }
 
 export function Picker<T>({
-  value, options, onSelect, onSearch, placeholder, onCreate, createLabel, loading, error, autoFocus,
+  value,
+  options,
+  onSelect,
+  onSearch,
+  placeholder,
+  onCreate,
+  createLabel,
+  loading,
+  error,
+  autoFocus,
 }: {
   value: PickerOption<T> | null;
   options: PickerOption<T>[];
@@ -63,14 +72,24 @@ export function Picker<T>({
 
   if (value) {
     return (
-      <div className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 ${
-        error ? "border-red-300" : "border-line"}`}>
+      <div
+        className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 ${
+          error ? "border-red-300" : "border-line"
+        }`}
+      >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{value.label}</p>
           {value.sublabel && <p className="truncate text-xs text-muted">{value.sublabel}</p>}
         </div>
-        <button type="button" onClick={() => { onSelect(null); setTerm(""); }}
-          className="btn-ghost -mr-1 px-1.5" aria-label="Change">
+        <button
+          type="button"
+          onClick={() => {
+            onSelect(null);
+            setTerm("");
+          }}
+          className="btn-ghost -mr-1 px-1.5"
+          aria-label="Change"
+        >
           <svg className="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
           </svg>
@@ -121,7 +140,8 @@ export function Picker<T>({
               onMouseEnter={() => setHighlight(index)}
               onClick={() => commit(index)}
               className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                highlight === index ? "bg-brand-50" : ""}`}
+                highlight === index ? "bg-brand-50" : ""
+              }`}
             >
               {row.kind === "create" ? (
                 <span className="font-medium text-brand-700">
@@ -132,7 +152,9 @@ export function Picker<T>({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{row.option.label}</span>
                     {row.option.sublabel && (
-                      <span className="block truncate text-xs text-muted">{row.option.sublabel}</span>
+                      <span className="block truncate text-xs text-muted">
+                        {row.option.sublabel}
+                      </span>
                     )}
                   </span>
                   {row.option.meta && (
@@ -151,7 +173,11 @@ export function Picker<T>({
 
 /** Collapsible optional section — keeps the default form short. */
 export function Section({
-  title, hint, badge, defaultOpen, children,
+  title,
+  hint,
+  badge,
+  defaultOpen,
+  children,
 }: {
   title: string;
   hint?: string;
@@ -162,18 +188,27 @@ export function Section({
   const [open, setOpen] = useState(defaultOpen ?? false);
   return (
     <section className="card overflow-hidden">
-      <button type="button" onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"
+      >
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{title}</p>
           {hint && !open && <p className="mt-0.5 truncate text-xs text-muted">{hint}</p>}
         </div>
-        {badge && (
-          <span className="pill bg-brand-50 text-brand-700">{badge}</span>
-        )}
-        <svg className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-          <path fillRule="evenodd" d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z" clipRule="evenodd" />
+        {badge && <span className="pill bg-brand-50 text-brand-700">{badge}</span>}
+        <svg
+          className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
       {open && <div className="border-t border-line p-4">{children}</div>}

@@ -14,17 +14,16 @@ export const API_PREFIX = "/api";
 /** True for anything the API owns — used to keep HTML out of API responses. */
 export function isApiPath(url: string): boolean {
   const pathname = url.split("?")[0] ?? "";
-  return pathname === API_PREFIX
-    || pathname.startsWith(`${API_PREFIX}/`)
-    || pathname === "/health"
-    || pathname.startsWith("/health/");
+  return (
+    pathname === API_PREFIX ||
+    pathname.startsWith(`${API_PREFIX}/`) ||
+    pathname === "/health" ||
+    pathname.startsWith("/health/")
+  );
 }
 
 /** API routes reachable without a session. Every other one needs a session. */
-const PUBLIC_PATHS = new Set([
-  `${API_PREFIX}/v1/auth/login`,
-  `${API_PREFIX}/v1/auth/register`,
-]);
+const PUBLIC_PATHS = new Set([`${API_PREFIX}/v1/auth/login`, `${API_PREFIX}/v1/auth/register`]);
 
 /**
  * Only the API surface is guarded. Health checks stay open for the platform

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  calculateInvoiceTax, summariseByHsn, toPaise, amountInWords, formatINR,
+  calculateInvoiceTax,
+  summariseByHsn,
+  toPaise,
+  amountInWords,
+  formatINR,
 } from "../src/gst/index.js";
 
 const line = (over: Partial<Parameters<typeof calculateInvoiceTax>[0]["lines"][number]> = {}) => ({
@@ -52,13 +56,15 @@ describe("calculateInvoiceTax", () => {
     const r = calculateInvoiceTax({
       supplierStateCode: "27",
       placeOfSupplyStateCode: "27",
-      lines: [line({
-        quantity: 2,
-        unitPrice: toPaise(500),
-        discountPercent: 10,
-        discountAmount: toPaise(50),
-        gstRate: 5,
-      })],
+      lines: [
+        line({
+          quantity: 2,
+          unitPrice: toPaise(500),
+          discountPercent: 10,
+          discountAmount: toPaise(50),
+          gstRate: 5,
+        }),
+      ],
     });
     // gross 1000, -10% = 100, -50 flat => taxable 850
     expect(r.grossValue).toBe(100_000);

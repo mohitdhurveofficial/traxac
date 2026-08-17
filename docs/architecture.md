@@ -65,6 +65,7 @@ on save, and in the worker when building the portal payload. There is no second
 implementation to drift.
 
 Rounding rules, applied in this order and nowhere else:
+
 - every intermediate rounds to whole paise, half-up;
 - CGST and SGST are derived so their sum is exactly the total GST, even when
   the total is odd;

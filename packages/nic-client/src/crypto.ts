@@ -1,5 +1,9 @@
 import {
-  createCipheriv, createDecipheriv, publicEncrypt, randomBytes, constants,
+  createCipheriv,
+  createDecipheriv,
+  publicEncrypt,
+  randomBytes,
+  constants,
 } from "node:crypto";
 
 /**
@@ -73,7 +77,11 @@ export function generateAppKey(): string {
 export function toPublicKeyPem(value: string): string {
   const trimmed = value.trim();
   if (trimmed.includes("BEGIN")) return trimmed.replace(/\\n/g, "\n");
-  const body = trimmed.replace(/\s+/g, "").match(/.{1,64}/g)?.join("\n") ?? trimmed;
+  const body =
+    trimmed
+      .replace(/\s+/g, "")
+      .match(/.{1,64}/g)
+      ?.join("\n") ?? trimmed;
   return `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
 }
 

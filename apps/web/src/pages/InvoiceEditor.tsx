@@ -1,11 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  calculateInvoiceTax, evaluateEwbRequirement, GST_STATE_CODES, UQC_UNITS,
+  calculateInvoiceTax,
+  evaluateEwbRequirement,
+  GST_STATE_CODES,
+  UQC_UNITS,
 } from "@traxac/shared";
 import {
-  useBranches, useGstins, useInvoice, useNextInvoiceNumber, useParties, useParty,
-  useProducts, useSaveInvoice, useSaveParty, useSaveProduct, useTransporters,
+  useBranches,
+  useGstins,
+  useInvoice,
+  useNextInvoiceNumber,
+  useParties,
+  useParty,
+  useProducts,
+  useSaveInvoice,
+  useSaveParty,
+  useSaveProduct,
+  useTransporters,
 } from "../api/hooks.js";
 import type { Party, Product } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";
@@ -127,27 +139,31 @@ export function InvoiceEditorPage() {
     setVehicleNo(inv.vehicleNo ?? "");
     setTransportDocNo(inv.transportDocNo ?? "");
     setDispatchFromBranchId(inv.branchId ?? "");
-    setLines(detail.lines.map((line) => ({
-      key: newKey(),
-      productId: line.productId ?? null,
-      name: line.name,
-      description: line.description ?? "",
-      hsnSac: line.hsnSac,
-      isService: line.isService,
-      quantity: line.quantity,
-      unit: line.unit,
-      unitPrice: String(line.unitPrice / 100),
-      discountPercent: line.discountPercent,
-      gstRate: line.gstRate,
-    })));
-    setCharges(detail.charges.map((charge) => ({
-      key: newKey(),
-      label: charge.label,
-      kind: charge.kind,
-      hsnSac: charge.hsnSac ?? "",
-      amount: String(charge.amount / 100),
-      gstRate: charge.gstRate,
-    })));
+    setLines(
+      detail.lines.map((line) => ({
+        key: newKey(),
+        productId: line.productId ?? null,
+        name: line.name,
+        description: line.description ?? "",
+        hsnSac: line.hsnSac,
+        isService: line.isService,
+        quantity: line.quantity,
+        unit: line.unit,
+        unitPrice: String(line.unitPrice / 100),
+        discountPercent: line.discountPercent,
+        gstRate: line.gstRate,
+      })),
+    );
+    setCharges(
+      detail.charges.map((charge) => ({
+        key: newKey(),
+        label: charge.label,
+        kind: charge.kind,
+        hsnSac: charge.hsnSac ?? "",
+        amount: String(charge.amount / 100),
+        gstRate: charge.gstRate,
+      })),
+    );
     if (inv.buyerPartyId) {
       setBuyer({
         id: inv.buyerPartyId,
@@ -271,12 +287,18 @@ export function InvoiceEditorPage() {
   };
 
   const canSave = Boolean(
-    gstinId && placeOfSupply && buyer
-    && lines.some((line) => line.name.trim() && Number(line.quantity) > 0),
+    gstinId &&
+    placeOfSupply &&
+    buyer &&
+    lines.some((line) => line.name.trim() && Number(line.quantity) > 0),
   );
 
   if (id && existing.isLoading) {
-    return <div className="grid place-items-center py-32 text-muted"><Spinner className="size-6" /></div>;
+    return (
+      <div className="grid place-items-center py-32 text-muted">
+        <Spinner className="size-6" />
+      </div>
+    );
   }
   if (id && existing.data && !isDraft) {
     return (
@@ -286,7 +308,11 @@ export function InvoiceEditorPage() {
           <p className="mt-1 text-sm text-muted">
             Issue a credit note if the amounts need to change.
           </p>
-          <button type="button" className="btn-primary mt-4" onClick={() => navigate(`/invoices/${id}`)}>
+          <button
+            type="button"
+            className="btn-primary mt-4"
+            onClick={() => navigate(`/invoices/${id}`)}
+          >
             View invoice
           </button>
         </div>
@@ -300,7 +326,9 @@ export function InvoiceEditorPage() {
         title={id ? "Edit draft" : "New invoice"}
         subtitle={nextNumber.data ? `Will be numbered ${nextNumber.data.invoiceNumber}` : undefined}
         actions={
-          <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
+          <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>
+            Cancel
+          </button>
         }
       />
 
@@ -314,12 +342,16 @@ export function InvoiceEditorPage() {
                   <Field label="Customer" required>
                     <Picker<Party>
                       autoFocus={!id}
-                      value={buyer ? {
-                        id: buyer.id,
-                        label: buyer.name,
-                        sublabel: [buyer.gstin, buyer.city].filter(Boolean).join(" · "),
-                        value: buyer,
-                      } : null}
+                      value={
+                        buyer
+                          ? {
+                              id: buyer.id,
+                              label: buyer.name,
+                              sublabel: [buyer.gstin, buyer.city].filter(Boolean).join(" · "),
+                              value: buyer,
+                            }
+                          : null
+                      }
                       options={(parties.data?.items ?? []).map((party) => ({
                         id: party.id,
                         label: party.name,
@@ -329,7 +361,9 @@ export function InvoiceEditorPage() {
                       }))}
                       onSelect={(option) => {
                         setBuyer(option?.value ?? null);
-                        setPlaceOfSupply(option?.value?.defaultPlaceOfSupply ?? option?.value?.stateCode ?? "");
+                        setPlaceOfSupply(
+                          option?.value?.defaultPlaceOfSupply ?? option?.value?.stateCode ?? "",
+                        );
                         setShipToAddressId("");
                       }}
                       onSearch={setPartyQuery}
@@ -342,20 +376,33 @@ export function InvoiceEditorPage() {
                 </div>
 
                 <Field label="Invoice date" required>
-                  <input type="date" className="field" value={invoiceDate}
-                    onChange={(event) => setInvoiceDate(event.target.value)} />
+                  <input
+                    type="date"
+                    className="field"
+                    value={invoiceDate}
+                    onChange={(event) => setInvoiceDate(event.target.value)}
+                  />
                 </Field>
                 <Field label="Payment due">
-                  <input type="date" className="field" value={dueDate}
-                    onChange={(event) => setDueDate(event.target.value)} />
+                  <input
+                    type="date"
+                    className="field"
+                    value={dueDate}
+                    onChange={(event) => setDueDate(event.target.value)}
+                  />
                 </Field>
 
                 {(gstins.data?.items.length ?? 0) > 1 && (
                   <Field label="Billing from">
-                    <select className="field" value={gstinId}
-                      onChange={(event) => setGstinId(event.target.value)}>
+                    <select
+                      className="field"
+                      value={gstinId}
+                      onChange={(event) => setGstinId(event.target.value)}
+                    >
                       {gstins.data?.items.map((g) => (
-                        <option key={g.id} value={g.id}>{g.tradeName} — {g.gstin}</option>
+                        <option key={g.id} value={g.id}>
+                          {g.tradeName} — {g.gstin}
+                        </option>
                       ))}
                     </select>
                   </Field>
@@ -364,17 +411,24 @@ export function InvoiceEditorPage() {
                 <Field
                   label="Place of supply"
                   required
-                  hint={totals
-                    ? totals.supplyType === "intra_state"
-                      ? "Same state — CGST + SGST applies"
-                      : "Different state — IGST applies"
-                    : "Sets whether IGST or CGST+SGST applies"}
+                  hint={
+                    totals
+                      ? totals.supplyType === "intra_state"
+                        ? "Same state — CGST + SGST applies"
+                        : "Different state — IGST applies"
+                      : "Sets whether IGST or CGST+SGST applies"
+                  }
                 >
-                  <select className="field" value={placeOfSupply}
-                    onChange={(event) => setPlaceOfSupply(event.target.value)}>
+                  <select
+                    className="field"
+                    value={placeOfSupply}
+                    onChange={(event) => setPlaceOfSupply(event.target.value)}
+                  >
                     <option value="">Select…</option>
                     {Object.entries(GST_STATE_CODES).map(([code, name]) => (
-                      <option key={code} value={code}>{code} — {name}</option>
+                      <option key={code} value={code}>
+                        {code} — {name}
+                      </option>
                     ))}
                   </select>
                 </Field>
@@ -392,9 +446,12 @@ export function InvoiceEditorPage() {
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Ship to" hint="A saved delivery address for this customer">
-                  <select className="field" value={shipToAddressId}
+                  <select
+                    className="field"
+                    value={shipToAddressId}
                     onChange={(event) => setShipToAddressId(event.target.value)}
-                    disabled={!buyerDetail.data}>
+                    disabled={!buyerDetail.data}
+                  >
                     <option value="">Same as customer address</option>
                     {buyerDetail.data?.addresses.map((address) => (
                       <option key={address.id} value={address.id}>
@@ -403,9 +460,15 @@ export function InvoiceEditorPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Dispatch from" hint="Your plant or warehouse, if not your main address">
-                  <select className="field" value={dispatchFromBranchId}
-                    onChange={(event) => setDispatchFromBranchId(event.target.value)}>
+                <Field
+                  label="Dispatch from"
+                  hint="Your plant or warehouse, if not your main address"
+                >
+                  <select
+                    className="field"
+                    value={dispatchFromBranchId}
+                    onChange={(event) => setDispatchFromBranchId(event.target.value)}
+                  >
                     <option value="">Main business address</option>
                     {branches.data?.items.map((branch) => (
                       <option key={branch.id} value={branch.id}>
@@ -427,38 +490,60 @@ export function InvoiceEditorPage() {
 
             <Section
               title="Transport"
-              hint={ewb?.required
-                ? "An e-Way Bill is needed — add the vehicle to complete it"
-                : "Transporter, vehicle and distance"}
+              hint={
+                ewb?.required
+                  ? "An e-Way Bill is needed — add the vehicle to complete it"
+                  : "Transporter, vehicle and distance"
+              }
               badge={vehicleNo ? vehicleNo : ewb?.required ? "Needed" : null}
               defaultOpen={Boolean(ewb?.required)}
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Transporter">
-                  <select className="field" value={transporterId}
-                    onChange={(event) => setTransporterId(event.target.value)}>
+                  <select
+                    className="field"
+                    value={transporterId}
+                    onChange={(event) => setTransporterId(event.target.value)}
+                  >
                     <option value="">Not decided yet</option>
                     {transporters.data?.items.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                 </Field>
                 <Field label="Vehicle number" hint="For example MH12AB1234">
-                  <input className="field font-mono uppercase" value={vehicleNo}
+                  <input
+                    className="field font-mono uppercase"
+                    value={vehicleNo}
                     onChange={(event) => setVehicleNo(event.target.value.toUpperCase())}
-                    placeholder="MH12AB1234" />
+                    placeholder="MH12AB1234"
+                  />
                 </Field>
                 <Field label="Distance (km)" hint="Decides how long the e-Way Bill stays valid">
-                  <input type="number" min="0" className="field" value={distanceKm}
-                    onChange={(event) => setDistanceKm(event.target.value)} placeholder="0" />
+                  <input
+                    type="number"
+                    min="0"
+                    className="field"
+                    value={distanceKm}
+                    onChange={(event) => setDistanceKm(event.target.value)}
+                    placeholder="0"
+                  />
                 </Field>
                 <Field label="LR / transport document no">
-                  <input className="field" value={transportDocNo}
-                    onChange={(event) => setTransportDocNo(event.target.value)} />
+                  <input
+                    className="field"
+                    value={transportDocNo}
+                    onChange={(event) => setTransportDocNo(event.target.value)}
+                  />
                 </Field>
                 <Field label="Mode">
-                  <select className="field" value={transportMode}
-                    onChange={(event) => setTransportMode(event.target.value)}>
+                  <select
+                    className="field"
+                    value={transportMode}
+                    onChange={(event) => setTransportMode(event.target.value)}
+                  >
                     <option value="1">Road</option>
                     <option value="2">Rail</option>
                     <option value="3">Air</option>
@@ -471,16 +556,25 @@ export function InvoiceEditorPage() {
             <Section title="Reference and notes" badge={poNumber || notes ? "Set" : null}>
               <div className="grid gap-4">
                 <Field label="Purchase order number">
-                  <input className="field" value={poNumber}
-                    onChange={(event) => setPoNumber(event.target.value)} />
+                  <input
+                    className="field"
+                    value={poNumber}
+                    onChange={(event) => setPoNumber(event.target.value)}
+                  />
                 </Field>
                 <Field label="Notes on the invoice">
-                  <textarea className="field min-h-20" value={notes}
-                    onChange={(event) => setNotes(event.target.value)} />
+                  <textarea
+                    className="field min-h-20"
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                  />
                 </Field>
                 <Field label="Terms">
-                  <textarea className="field min-h-20" value={terms}
-                    onChange={(event) => setTerms(event.target.value)} />
+                  <textarea
+                    className="field min-h-20"
+                    value={terms}
+                    onChange={(event) => setTerms(event.target.value)}
+                  />
                 </Field>
               </div>
             </Section>
@@ -516,24 +610,33 @@ export function InvoiceEditorPage() {
               </dl>
 
               {ewb && (
-                <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${
-                  ewb.required ? "bg-amber-50 text-amber-900" : "bg-slate-50 text-muted"}`}>
-                  {ewb.required
-                    ? "An e-Way Bill will be needed for this consignment."
-                    : ewb.reason}
+                <div
+                  className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+                    ewb.required ? "bg-amber-50 text-amber-900" : "bg-slate-50 text-muted"
+                  }`}
+                >
+                  {ewb.required ? "An e-Way Bill will be needed for this consignment." : ewb.reason}
                 </div>
               )}
 
               <ErrorNote error={save.error} />
 
               <div className="mt-4 space-y-2">
-                <button type="button" className="btn-primary w-full" disabled={!canSave || save.isPending}
-                  onClick={() => submit("open")}>
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  disabled={!canSave || save.isPending}
+                  onClick={() => submit("open")}
+                >
                   {save.isPending && <Spinner />}
                   Save and review
                 </button>
-                <button type="button" className="btn-secondary w-full" disabled={!canSave || save.isPending}
-                  onClick={() => submit("stay")}>
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  disabled={!canSave || save.isPending}
+                  onClick={() => submit("stay")}
+                >
                   Save draft
                 </button>
               </div>
@@ -572,7 +675,9 @@ function Row({ label, value }: { label: string; value: string }) {
 /* ------------------------------ line items ------------------------------ */
 
 function LineItems({
-  lines, setLines, totals,
+  lines,
+  setLines,
+  totals,
 }: {
   lines: LineDraft[];
   setLines: React.Dispatch<React.SetStateAction<LineDraft[]>>;
@@ -603,8 +708,11 @@ function LineItems({
     <section className="card overflow-hidden">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-sm font-medium">Items</h2>
-        <button type="button" className="btn-ghost text-xs"
-          onClick={() => setLines((current) => [...current, emptyLine()])}>
+        <button
+          type="button"
+          className="btn-ghost text-xs"
+          onClick={() => setLines((current) => [...current, emptyLine()])}
+        >
           + Add item
         </button>
       </div>
@@ -629,10 +737,18 @@ function LineItems({
                         )}
                       </div>
                       {lines.length > 1 && (
-                        <button type="button" aria-label="Remove item"
+                        <button
+                          type="button"
+                          aria-label="Remove item"
                           className="btn-ghost -mt-1 px-1.5 text-muted hover:text-red-600"
-                          onClick={() => setLines((c) => c.filter((l) => l.key !== line.key))}>
-                          <svg className="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          onClick={() => setLines((c) => c.filter((l) => l.key !== line.key))}
+                        >
+                          <svg
+                            className="size-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden
+                          >
                             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
                           </svg>
                         </button>
@@ -662,40 +778,73 @@ function LineItems({
                   <>
                     <div className="sm:col-span-2">
                       <label className="label">HSN/SAC</label>
-                      <input className="field" value={line.hsnSac}
-                        onChange={(event) => update(line.key, { hsnSac: event.target.value })} />
+                      <input
+                        className="field"
+                        value={line.hsnSac}
+                        onChange={(event) => update(line.key, { hsnSac: event.target.value })}
+                      />
                     </div>
                     <div className="sm:col-span-2">
                       <label className="label">Qty</label>
-                      <input type="number" step="0.001" min="0" className="field" value={line.quantity}
-                        onChange={(event) => update(line.key, { quantity: event.target.value })} />
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        className="field"
+                        value={line.quantity}
+                        onChange={(event) => update(line.key, { quantity: event.target.value })}
+                      />
                     </div>
                     <div className="sm:col-span-2">
                       <label className="label">Unit</label>
-                      <select className="field" value={line.unit}
-                        onChange={(event) => update(line.key, { unit: event.target.value })}>
+                      <select
+                        className="field"
+                        value={line.unit}
+                        onChange={(event) => update(line.key, { unit: event.target.value })}
+                      >
                         {UQC_UNITS.map((unit) => (
-                          <option key={unit.code} value={unit.code}>{unit.code}</option>
+                          <option key={unit.code} value={unit.code}>
+                            {unit.code}
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div className="sm:col-span-2">
                       <label className="label">Rate ₹</label>
-                      <input type="number" step="0.01" min="0" className="field" value={line.unitPrice}
-                        onChange={(event) => update(line.key, { unitPrice: event.target.value })} />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="field"
+                        value={line.unitPrice}
+                        onChange={(event) => update(line.key, { unitPrice: event.target.value })}
+                      />
                     </div>
                     <div className="sm:col-span-2">
                       <label className="label">Disc %</label>
-                      <input type="number" step="0.01" min="0" max="100" className="field"
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        className="field"
                         value={line.discountPercent}
-                        onChange={(event) => update(line.key, { discountPercent: event.target.value })} />
+                        onChange={(event) =>
+                          update(line.key, { discountPercent: event.target.value })
+                        }
+                      />
                     </div>
                     <div className="sm:col-span-2">
                       <label className="label">GST %</label>
-                      <select className="field" value={line.gstRate}
-                        onChange={(event) => update(line.key, { gstRate: event.target.value })}>
+                      <select
+                        className="field"
+                        value={line.gstRate}
+                        onChange={(event) => update(line.key, { gstRate: event.target.value })}
+                      >
                         {["0", "0.25", "3", "5", "12", "18", "28"].map((rate) => (
-                          <option key={rate} value={rate}>{rate}%</option>
+                          <option key={rate} value={rate}>
+                            {rate}%
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -704,7 +853,9 @@ function LineItems({
                         <span>
                           Taxable {money(computed.taxableValue)} · Tax {money(computed.totalTax)}
                         </span>
-                        <span className="text-sm font-medium text-ink">{money(computed.lineTotal)}</span>
+                        <span className="text-sm font-medium text-ink">
+                          {money(computed.lineTotal)}
+                        </span>
                       </div>
                     )}
                   </>
@@ -728,7 +879,8 @@ function LineItems({
 }
 
 function ChargeRows({
-  charges, setCharges,
+  charges,
+  setCharges,
 }: {
   charges: ChargeDraft[];
   setCharges: React.Dispatch<React.SetStateAction<ChargeDraft[]>>;
@@ -738,37 +890,77 @@ function ChargeRows({
       {charges.map((charge) => (
         <div key={charge.key} className="grid gap-2 sm:grid-cols-12">
           <div className="sm:col-span-5">
-            <input className="field" placeholder="Freight, packing…" value={charge.label}
-              onChange={(event) => setCharges((c) => c.map((x) =>
-                x.key === charge.key ? { ...x, label: event.target.value } : x))} />
+            <input
+              className="field"
+              placeholder="Freight, packing…"
+              value={charge.label}
+              onChange={(event) =>
+                setCharges((c) =>
+                  c.map((x) => (x.key === charge.key ? { ...x, label: event.target.value } : x)),
+                )
+              }
+            />
           </div>
           <div className="sm:col-span-3">
-            <input type="number" step="0.01" className="field" placeholder="Amount ₹" value={charge.amount}
-              onChange={(event) => setCharges((c) => c.map((x) =>
-                x.key === charge.key ? { ...x, amount: event.target.value } : x))} />
+            <input
+              type="number"
+              step="0.01"
+              className="field"
+              placeholder="Amount ₹"
+              value={charge.amount}
+              onChange={(event) =>
+                setCharges((c) =>
+                  c.map((x) => (x.key === charge.key ? { ...x, amount: event.target.value } : x)),
+                )
+              }
+            />
           </div>
           <div className="sm:col-span-3">
-            <select className="field" value={charge.gstRate}
-              onChange={(event) => setCharges((c) => c.map((x) =>
-                x.key === charge.key ? { ...x, gstRate: event.target.value } : x))}>
+            <select
+              className="field"
+              value={charge.gstRate}
+              onChange={(event) =>
+                setCharges((c) =>
+                  c.map((x) => (x.key === charge.key ? { ...x, gstRate: event.target.value } : x)),
+                )
+              }
+            >
               {["0", "5", "12", "18", "28"].map((rate) => (
-                <option key={rate} value={rate}>GST {rate}%</option>
+                <option key={rate} value={rate}>
+                  GST {rate}%
+                </option>
               ))}
             </select>
           </div>
           <div className="sm:col-span-1">
-            <button type="button" className="btn-ghost w-full px-2 text-muted hover:text-red-600"
+            <button
+              type="button"
+              className="btn-ghost w-full px-2 text-muted hover:text-red-600"
               aria-label="Remove charge"
-              onClick={() => setCharges((c) => c.filter((x) => x.key !== charge.key))}>
+              onClick={() => setCharges((c) => c.filter((x) => x.key !== charge.key))}
+            >
               ×
             </button>
           </div>
         </div>
       ))}
-      <button type="button" className="btn-secondary"
-        onClick={() => setCharges((c) => [...c, {
-          key: newKey(), label: "", kind: "freight", hsnSac: "", amount: "", gstRate: "18",
-        }])}>
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={() =>
+          setCharges((c) => [
+            ...c,
+            {
+              key: newKey(),
+              label: "",
+              kind: "freight",
+              hsnSac: "",
+              amount: "",
+              gstRate: "18",
+            },
+          ])
+        }
+      >
         + Add charge
       </button>
     </div>
@@ -778,29 +970,42 @@ function ChargeRows({
 /* --------------------------- inline creation ---------------------------- */
 
 function NewCustomerDrawer({
-  name, onClose, onCreated,
-}: { name: string | null; onClose: () => void; onCreated: (party: Party) => void }) {
+  name,
+  onClose,
+  onCreated,
+}: {
+  name: string | null;
+  onClose: () => void;
+  onCreated: (party: Party) => void;
+}) {
   const save = useSaveParty();
   return (
-    <Drawer open={name !== null} onClose={onClose} title="Add customer"
-      description="Only the essentials — you can fill in the rest later.">
+    <Drawer
+      open={name !== null}
+      onClose={onClose}
+      title="Add customer"
+      description="Only the essentials — you can fill in the rest later."
+    >
       <form
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          save.mutate({
-            name: field(data, "name"),
-            gstin: field(data, "gstin"),
-            registrationType: data.get("gstin") ? "regular" : "unregistered",
-            phone: field(data, "phone"),
-            addressLine1: field(data, "addressLine1"),
-            city: field(data, "city"),
-            stateCode: field(data, "stateCode"),
-            pincode: field(data, "pincode"),
-            country: "IN",
-            partyType: "customer",
-          }, { onSuccess: (party) => onCreated(party) });
+          save.mutate(
+            {
+              name: field(data, "name"),
+              gstin: field(data, "gstin"),
+              registrationType: data.get("gstin") ? "regular" : "unregistered",
+              phone: field(data, "phone"),
+              addressLine1: field(data, "addressLine1"),
+              city: field(data, "city"),
+              stateCode: field(data, "stateCode"),
+              pincode: field(data, "pincode"),
+              country: "IN",
+              partyType: "customer",
+            },
+            { onSuccess: (party) => onCreated(party) },
+          );
         }}
       >
         <Field label="Business name" required>
@@ -811,18 +1016,30 @@ function NewCustomerDrawer({
         </Field>
         <Field label="State" required>
           <select name="stateCode" className="field" required defaultValue="">
-            <option value="" disabled>Select…</option>
+            <option value="" disabled>
+              Select…
+            </option>
             {Object.entries(GST_STATE_CODES).map(([code, label]) => (
-              <option key={code} value={code}>{code} — {label}</option>
+              <option key={code} value={code}>
+                {code} — {label}
+              </option>
             ))}
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="City"><input name="city" className="field" /></Field>
-          <Field label="PIN code"><input name="pincode" className="field" maxLength={6} /></Field>
+          <Field label="City">
+            <input name="city" className="field" />
+          </Field>
+          <Field label="PIN code">
+            <input name="pincode" className="field" maxLength={6} />
+          </Field>
         </div>
-        <Field label="Address"><input name="addressLine1" className="field" /></Field>
-        <Field label="Phone"><input name="phone" className="field" /></Field>
+        <Field label="Address">
+          <input name="addressLine1" className="field" />
+        </Field>
+        <Field label="Phone">
+          <input name="phone" className="field" />
+        </Field>
         <ErrorNote error={save.error} />
         <button type="submit" className="btn-primary w-full" disabled={save.isPending}>
           {save.isPending && <Spinner />} Add customer
@@ -833,7 +1050,9 @@ function NewCustomerDrawer({
 }
 
 function NewProductDrawer({
-  request, onClose, onCreated,
+  request,
+  onClose,
+  onCreated,
 }: {
   request: { key: string; name: string } | null;
   onClose: () => void;
@@ -841,29 +1060,38 @@ function NewProductDrawer({
 }) {
   const save = useSaveProduct();
   return (
-    <Drawer open={request !== null} onClose={onClose} title="Add item"
-      description="Saved for next time, so you never type it twice.">
+    <Drawer
+      open={request !== null}
+      onClose={onClose}
+      title="Add item"
+      description="Saved for next time, so you never type it twice."
+    >
       <form
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           if (!request) return;
           const data = new FormData(event.currentTarget);
-          save.mutate({
-            name: field(data, "name"),
-            hsnSac: field(data, "hsnSac"),
-            unit: field(data, "unit"),
-            unitPrice: numberField(data, "unitPrice"),
-            gstRate: numberField(data, "gstRate"),
-            isService: checked(data, "isService"),
-            description: field(data, "description"),
-          }, { onSuccess: (product) => onCreated(product, request.key) });
+          save.mutate(
+            {
+              name: field(data, "name"),
+              hsnSac: field(data, "hsnSac"),
+              unit: field(data, "unit"),
+              unitPrice: numberField(data, "unitPrice"),
+              gstRate: numberField(data, "gstRate"),
+              isService: checked(data, "isService"),
+              description: field(data, "description"),
+            },
+            { onSuccess: (product) => onCreated(product, request.key) },
+          );
         }}
       >
         <Field label="Item name" required>
           <input name="name" className="field" required defaultValue={request?.name ?? ""} />
         </Field>
-        <Field label="Description"><input name="description" className="field" /></Field>
+        <Field label="Description">
+          <input name="description" className="field" />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="HSN / SAC" required hint="4, 6 or 8 digits">
             <input name="hsnSac" className="field font-mono" required maxLength={8} />
@@ -871,7 +1099,9 @@ function NewProductDrawer({
           <Field label="GST rate" required>
             <select name="gstRate" className="field" defaultValue="18">
               {["0", "0.25", "3", "5", "12", "18", "28"].map((rate) => (
-                <option key={rate} value={rate}>{rate}%</option>
+                <option key={rate} value={rate}>
+                  {rate}%
+                </option>
               ))}
             </select>
           </Field>
@@ -880,7 +1110,9 @@ function NewProductDrawer({
           <Field label="Unit">
             <select name="unit" className="field" defaultValue="NOS">
               {UQC_UNITS.map((unit) => (
-                <option key={unit.code} value={unit.code}>{unit.code} — {unit.description}</option>
+                <option key={unit.code} value={unit.code}>
+                  {unit.code} — {unit.description}
+                </option>
               ))}
             </select>
           </Field>
