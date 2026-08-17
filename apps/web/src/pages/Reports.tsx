@@ -89,10 +89,15 @@ export function ReportsPage() {
         {monthly.length > 0 && (
           <section className="card mt-4 p-4">
             <h2 className="text-sm font-medium">Billed by month</h2>
-            <div className="mt-4 flex h-40 items-end gap-1.5">
+            {/*
+              * `items-stretch` matters: with `items-end` the columns collapse
+              * to their content height, leaving the bars nothing to fill and
+              * rendering an empty chart.
+              */}
+            <div className="mt-4 flex h-40 items-stretch gap-1.5">
               {monthly.map((month) => (
-                <div key={month.month} className="group flex flex-1 flex-col items-center gap-1.5">
-                  <div className="relative flex w-full flex-1 items-end">
+                <div key={month.month} className="group flex h-full flex-1 flex-col items-center gap-1.5">
+                  <div className="relative flex w-full max-w-24 flex-1 items-end self-center">
                     <div
                       className="w-full rounded-t bg-brand-500 transition-colors group-hover:bg-brand-600"
                       style={{ height: `${Math.max(2, (month.grandTotal / peak) * 100)}%` }}

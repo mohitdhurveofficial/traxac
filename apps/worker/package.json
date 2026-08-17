@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./src/worker.ts",
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/worker.ts",
+    "dev": "tsx watch --clear-screen=false --env-file=../../.env src/worker.ts",
     "start": "tsx src/worker.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit"

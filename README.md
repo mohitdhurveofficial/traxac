@@ -57,20 +57,28 @@ fail loudly with `CREDENTIALS_MISSING` rather than returning fake data.
 ## Local development
 
 ```bash
-pnpm install
 createdb traxac_dev
-cp .env.example .env && pnpm gen:env   # generates the master encryption key
-pnpm db:migrate
-pnpm db:seed                           # reference data + a worked example
-pnpm dev                               # API :3000, worker, web :5173
+pnpm setup     # install, generate the master key, migrate, seed
+pnpm dev       # web on :5173, API on :3000, worker in the background
 ```
 
-Sign in with `owner@demo.traxac.in` / `TraxacDemo2026!`.
+Open <http://localhost:5173> and sign in with `owner@demo.traxac.in` /
+`TraxacDemo2026!`.
 
-The seed creates the transaction that exercises the hard parts of the model:
+The seed builds a business with enough history that every screen has something
+to show — four customers across three states, a seven-item catalogue, a
+transporter with vehicles, and seven invoices spread across the lifecycle:
+draft, issued, part-paid, paid, cancelled, one with an e-Way Bill expiring in
+nine hours and one already expired.
+
+The centrepiece is the transaction that exercises the hard parts of the model:
 billed to Bengaluru, shipped to a site in Hosur, dispatched from a plant in
-Chakan (e-Way Bill transaction type 4), three HSN codes, freight at 5% and
-packing at 18%.
+Chakan — e-Way Bill transaction type 4 — with three HSN codes, freight at 5%
+and packing at 18%.
+
+Seeded compliance rows are stamped `environment: "seed"` and carry visibly
+non-real IRNs, so nothing in the demo data can be mistaken for a document a
+government portal actually issued.
 
 ## Tests
 
