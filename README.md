@@ -80,12 +80,17 @@ Seeded compliance rows are stamped `environment: "seed"` and carry visibly
 non-real IRNs, so nothing in the demo data can be mistaken for a document a
 government portal actually issued.
 
-## Tests
+## Checks
 
 ```bash
-pnpm test        # unit tests
-pnpm typecheck   # every package and app
+pnpm lint          # ESLint, type-aware
+pnpm format:check  # Prettier
+pnpm typecheck     # every package and app
+pnpm test          # unit + integration
+pnpm build         # web bundle + packages
 ```
+
+All five run in CI.
 
 70 tests. Unit coverage for the tax engine (discounts, cess, charges,
 IGST-on-intra, zero-rated exports, exact CGST/SGST halving, round-off), the

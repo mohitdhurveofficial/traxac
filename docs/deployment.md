@@ -12,11 +12,23 @@ Two services and one database.
 
 Running the UI and the API on one origin keeps the session cookie first-party.
 No CORS to configure, no `SameSite=None`, and a deploy cannot leave the UI on a
-different version from the API it is calling. In development Vite serves the UI
-and proxies `/api` to the same endpoints, so both setups behave identically.
+different version from the API it is calling.
+
+**Every API route is mounted under `/api`**, and the browser requests exactly
+that path in development and in production. The Vite dev server proxies `/api`
+straight through without rewriting it. This matters: an earlier version served
+the API at `/v1` while the client called `/api/v1`, so in production every call
+fell through to the SPA fallback and returned `200 text/html`. The client
+treated the HTML as a response body and the app failed silently with nothing in
+the console. `apps/api/test/production-routing.test.ts` now asserts that an API
+path can never answer with HTML.
+
+`pnpm build` builds the web bundle **and** the packages, so the app service has
+something to serve. `vite preview` is not used anywhere — it is a development
+convenience, not a production server.
 
 If you later want to scale them separately, set `CORS_ORIGINS` to the web
-origin and deploy `apps/web` as its own static service — nothing in the code
+origin and serve `apps/web/dist` from a static host; nothing in the code
 assumes co-location.
 
 ## First deploy
@@ -51,9 +63,16 @@ Required on the **app** service:
 PORT=${{PORT}}
 APP_URL=https://<your-domain>
 API_URL=https://<your-domain>
-COOKIE_SECURE=true
 CORS_ORIGINS=https://<your-domain>
 ```
+
+`COOKIE_SECURE` is **not** in that list on purpose: the Secure flag is derived
+from `NODE_ENV=production` and cannot be switched off by forgetting a variable.
+
+Storage paths are resolved against the repository root rather than the process
+working directory. pnpm starts each service from its own package folder, so a
+relative `STORAGE_LOCAL_DIR` previously meant a different directory in the API
+and the worker, and generated PDFs were written where the API never looked.
 
 Object storage (production refuses to start on the local driver):
 
@@ -66,7 +85,9 @@ S3_ACCESS_KEY_ID=…
 S3_SECRET_ACCESS_KEY=…
 ```
 
-Government gateway — keep on `sandbox` until you have tested against it:
+Government gateway — keep on `sandbox` until you have tested against it. Every
+one of these is declared in the validated config schema, so a typo fails at
+boot rather than at the first portal call:
 
 ```
 GST_ENVIRONMENT=sandbox

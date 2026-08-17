@@ -2,7 +2,7 @@
   "name": "traxac",
   "private": true,
   "version": "0.1.0",
-  "description": "Traxac — Multi-tenant Indian GST billing SaaS with e-Invoice & e-Way Bill",
+  "description": "Traxac \u2014 Multi-tenant Indian GST billing SaaS with e-Invoice & e-Way Bill",
   "packageManager": "pnpm@9.7.0",
   "engines": {
     "node": ">=20.19"
@@ -15,7 +15,7 @@
     "build": "pnpm --filter @traxac/web build && pnpm -r --filter '!@traxac/web' build",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @traxac/database generate",
-    "db:migrate": "pnpm --filter @traxac/database exec tsx --env-file=../../.env src/migrate.ts",
+    "db:migrate": "pnpm --filter @traxac/database exec tsx src/migrate.ts",
     "db:studio": "pnpm --filter @traxac/database studio",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "gen:env": "node scripts/generate-env.mjs",
