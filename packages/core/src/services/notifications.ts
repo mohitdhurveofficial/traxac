@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { Database, Notification } from "@traxac/database";
 import { notifications } from "@traxac/database";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
@@ -38,7 +38,9 @@ export class NotificationService {
           eq(notifications.tenantId, input.tenantId),
           eq(notifications.kind, input.kind),
           eq(notifications.entityId, input.entityId),
-          sql`${notifications.createdAt} > ${since}`,
+          // Use the column operator, not a raw template: it applies the
+          // column's type mapping so the Date is serialised correctly.
+          gt(notifications.createdAt, since),
         )).limit(1);
       if (existing) return null;
     }

@@ -16,6 +16,9 @@ import type { JobQueue } from "../infra/queue.js";
 import type { CredentialService } from "./credentials.js";
 import { buildEwbPayload, buildIrpPayload, withEwbDetails } from "./payload-builder.js";
 
+/** What `CredentialService.resolve` hands back, named so it can be declared. */
+type ResolvedCredential = Awaited<ReturnType<CredentialService["resolve"]>>;
+
 export interface ComplianceDeps {
   database: Database;
   registry: GatewayRegistry;
@@ -127,31 +130,46 @@ export class ComplianceService {
     if (!gstin) throw new AppError("NOT_FOUND", "Billing GSTIN not found");
 
     const environment = this.deps.defaultEnvironment;
-    const { credential, credentials } = await this.deps.credentials.resolve(ctx, {
-      gstin: gstin.gstin, service: "einvoice", environment,
-    });
 
-    let payload = buildIrpPayload(bundle);
-    if (withEwayBill && invoice.ewbRequired) {
-      const transporterName = await this.transporterName(ctx, invoice.transporterId);
-      payload = withEwbDetails(payload, {
-        transporterId: null,
-        transporterName,
-        distanceKm: invoice.distanceKm ?? 0,
-        transportDocNo: invoice.transportDocNo,
-        transportDocDate: invoice.transportDocDate,
-        vehicleNo: invoice.vehicleNo,
-        vehicleType: invoice.vehicleType,
-        transportMode: invoice.transportMode,
-      });
-    }
-
+    // Create the tracking row first. Anything that throws after this point —
+    // missing credentials included — is recorded against the invoice, so a
+    // permanently failed job never leaves the UI stuck on "generating".
     const record = await this.upsertEinvoice(ctx, invoiceId, {
       gstin: gstin.gstin,
       environment,
       status: "processing",
-      requestPayload: payload,
+      requestPayload: null,
     });
+
+    let payload: ReturnType<typeof buildIrpPayload>;
+    let credential: ResolvedCredential["credential"];
+    let credentials: ResolvedCredential["credentials"];
+    try {
+      ({ credential, credentials } = await this.deps.credentials.resolve(ctx, {
+        gstin: gstin.gstin, service: "einvoice", environment,
+      }));
+
+      payload = buildIrpPayload(bundle);
+      if (withEwayBill && invoice.ewbRequired) {
+        const transporterName = await this.transporterName(ctx, invoice.transporterId);
+        payload = withEwbDetails(payload, {
+          transporterId: null,
+          transporterName,
+          distanceKm: invoice.distanceKm ?? 0,
+          transportDocNo: invoice.transportDocNo,
+          transportDocDate: invoice.transportDocDate,
+          vehicleNo: invoice.vehicleNo,
+          vehicleType: invoice.vehicleType,
+          transportMode: invoice.transportMode,
+        });
+      }
+      await this.db.update(einvoices)
+        .set({ requestPayload: payload as never, updatedAt: new Date() })
+        .where(eq(einvoices.id, record.id));
+    } catch (err) {
+      await this.markEinvoiceFailed(ctx, invoiceId, record.id, err);
+      throw err;
+    }
 
     const gatewayCtx = this.gatewayContext(ctx, gstin.gstin, environment, credentials,
       `einvoice:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`);
@@ -346,9 +364,6 @@ export class ComplianceService {
       : undefined;
 
     const environment = this.deps.defaultEnvironment;
-    const { credential, credentials } = await this.deps.credentials.resolve(ctx, {
-      gstin: gstin.gstin, service: "ewb", environment,
-    });
 
     const payload = buildEwbPayload({
       ...bundle,
@@ -366,6 +381,19 @@ export class ComplianceService {
       transporterId: transporterRow?.transporterId ?? null,
       transporterName: transporterRow?.name ?? null,
     });
+
+    // Resolve credentials after the tracking row exists, so a missing
+    // credential is reported on the invoice rather than vanishing.
+    let credential: ResolvedCredential["credential"];
+    let credentials: ResolvedCredential["credentials"];
+    try {
+      ({ credential, credentials } = await this.deps.credentials.resolve(ctx, {
+        gstin: gstin.gstin, service: "ewb", environment,
+      }));
+    } catch (err) {
+      await this.markEwbFailed(ctx, invoiceId, record.id, err);
+      throw err;
+    }
 
     const gatewayCtx = this.gatewayContext(ctx, gstin.gstin, environment, credentials,
       `ewb:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`);
@@ -709,6 +737,53 @@ export class ComplianceService {
 
   /* --------------------------- Internal helpers ------------------------ */
 
+  /** Record a pre-flight failure against the e-Invoice row and the invoice. */
+  private async markEinvoiceFailed(
+    ctx: AuthContext,
+    invoiceId: string,
+    einvoiceId: string,
+    err: unknown,
+  ): Promise<void> {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = err instanceof AppError ? err.code : "INTERNAL";
+    await this.db.update(einvoices).set({
+      status: "failed",
+      errorCode: code,
+      lastError: message.slice(0, 500),
+      attempts: sql`${einvoices.attempts} + 1`,
+      updatedAt: new Date(),
+    }).where(eq(einvoices.id, einvoiceId));
+    await this.db.update(invoices)
+      .set({ einvoiceStatus: "failed", status: "failed", updatedAt: new Date() })
+      .where(eq(invoices.id, invoiceId));
+    await this.deps.audit.record(ctx, {
+      action: "einvoice.failed", entityType: "invoice", entityId: invoiceId,
+      summary: message, metadata: { code },
+    });
+  }
+
+  /** Record a pre-flight failure against the e-Way Bill row and the invoice. */
+  private async markEwbFailed(
+    ctx: AuthContext,
+    invoiceId: string,
+    ewayBillId: string,
+    err: unknown,
+  ): Promise<void> {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = err instanceof AppError ? err.code : "INTERNAL";
+    await this.db.update(ewayBills).set({
+      status: "failed",
+      errorCode: code,
+      lastError: message.slice(0, 500),
+      attempts: sql`${ewayBills.attempts} + 1`,
+      updatedAt: new Date(),
+    }).where(eq(ewayBills.id, ewayBillId));
+    await this.db.update(invoices)
+      .set({ ewbStatus: "failed", updatedAt: new Date() })
+      .where(eq(invoices.id, invoiceId));
+    await this.recordEwbEvent(ctx, ewayBillId, "failed", null, null, message);
+  }
+
   private gatewayContext(
     ctx: AuthContext,
     gstin: string,
@@ -781,7 +856,7 @@ export class ComplianceService {
     gstin: string;
     environment: string;
     status: string;
-    requestPayload: unknown;
+    requestPayload: unknown | null;
   }): Promise<Einvoice> {
     const [row] = await this.db.insert(einvoices).values({
       tenantId: ctx.tenantId,
