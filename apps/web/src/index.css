@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/*
+ * Traxac visual language.
+ *
+ * The brief is a billing tool a trader understands in ten seconds, so the
+ * palette is deliberately narrow: one blue for actions, neutral greys for
+ * structure, and status colours used only for status. Nothing decorative.
+ */
+@theme {
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-canvas: #f8fafc;
+
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: var(--font-sans);
+    /* Tabular figures keep money columns aligned as values change. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Only show focus rings for keyboard users. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+
+  /* Number inputs: hide the spinners, they are useless for money. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm
+           placeholder:text-slate-400
+           focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none
+           disabled:bg-slate-50 disabled:text-slate-500;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium text-muted;
+  }
+
+  /*
+   * Tailwind v4 cannot @apply one custom class from another, so the shared
+   * button base is declared once against every variant rather than nested.
+   */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2
+           text-sm font-medium transition-colors
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply border border-line bg-white text-ink hover:bg-slate-50;
+  }
+
+  .btn-ghost {
+    @apply text-muted hover:bg-slate-100 hover:text-ink;
+  }
+
+  .btn-danger {
+    @apply border border-red-200 bg-white text-red-700 hover:bg-red-50;
+  }
+
+  .card {
+    @apply rounded-xl border border-line bg-white;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5
+           text-xs font-medium whitespace-nowrap;
+  }
+}
+
+/* Print: the browser-printed invoice should not carry app chrome. */
+@media print {
+  .no-print { display: none !important; }
+}
