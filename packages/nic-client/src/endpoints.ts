@@ -1,58 +1,54 @@
-import type { GatewayRequestContext } from "@traxac/gst-gateway";
+import type { GatewayEnvironment } from "@traxac/gst-gateway";
 
 /**
- * Credentials resolved (decrypted) for one government API session.
- * `appKey` is the per-session AES key NIC requires (ECB-encrypted password).
+ * NIC endpoints.
+ *
+ * Sandbox and production share the same path structure; only the host differs.
+ * Base URLs are overridable per credential so a GSP-hosted proxy can be
+ * pointed at without a code change.
  */
-export interface NicSessionCredentials {
-  username: string;
-  password: string;
-  gstin: string;
-  appKey: string; // base64 32-byte key generated per session
-}
-
-/** A live NIC session token with expiry. */
-export interface NicToken {
-  token: string;
-  expiresAt: number; // epoch ms
-}
-
-export interface NicEndpoints {
-  auth: string;
-  irnGenerate: string;
-  irnCancel: string;
-  irnByIrn: string;
-  ewbGenerate: string;
-  ewbCancel: string;
-  ewbExtend: string;
-  ewbUpdateTransporter: string;
-  base: string;
-}
-
-/** NIC e-Invoice sandbox endpoints (einvoice1.gst.gov.in). */
-export const IRP_ENDPOINTS: NicEndpoints = {
-  base: "https://einvoice1.gst.gov.in",
-  auth: "/irp/v1.04/auth",
-  irnGenerate: "/irp/candidate/v1.04/Invoice",
-  irnCancel: "/irp/candidate/v1.04/Invoice/Cancel",
-  irnByIrn: "/irp/candidate/v1.04/Invoice/irnbyirn",
-  ewbGenerate: "", // EWB on IRP: /irp/candidate/v1.04/ewayapi
-  ewbCancel: "",
-  ewbExtend: "",
-  ewbUpdateTransporter: "",
+export const NIC_HOSTS: Record<GatewayEnvironment, { irp: string; ewb: string }> = {
+  sandbox: {
+    irp: "https://einv-apisandbox.nic.in",
+    ewb: "https://einv-apisandbox.nic.in",
+  },
+  production: {
+    irp: "https://einvoice1.gst.gov.in",
+    ewb: "https://ewaybillgst.gov.in",
+  },
 };
 
-/** NIC e-Way Bill endpoints (ewaybillgst.gov.in). */
-export const EWB_ENDPOINTS: NicEndpoints = {
-  base: "https://ewaybillgst.gov.in",
-  auth: "/ewb/authenticate",
-  irnGenerate: "",
-  irnCancel: "",
-  irnByIrn: "",
-  ewbGenerate: "/ewb/GENEWAYBILL",
-  ewbCancel: "/ewb/CANEWB",
-  ewbExtend: "/ewb/EXTENDVALIDITY",
-  ewbUpdateTransporter: "/ewb/UPDATETRANSPORTER",
-};
+/** e-Invoice (IRP) paths — `eivital` for auth, `eicore` for documents. */
+export const IRP_PATHS = {
+  auth: "/eivital/v1.04/auth",
+  generateIrn: "/eicore/v1.03/Invoice",
+  cancelIrn: "/eicore/v1.03/Invoice/Cancel",
+  getIrn: (irn: string) => `/eicore/v1.03/Invoice/irn/${encodeURIComponent(irn)}`,
+  getIrnByDoc: "/eicore/v1.03/Invoice/irnbydocdetails",
+  /** e-Way Bill generated from an existing IRN. */
+  ewbByIrn: "/eiewb/v1.03/ewaybill",
+} as const;
 
-export type { GatewayRequestContext };
+/** e-Way Bill portal paths. Actions are selected by query string. */
+export const EWB_PATHS = {
+  auth: "/ewaybillapi/v1.03/auth",
+  ewbApi: "/ewaybillapi/v1.03/ewayapi",
+  getEwb: "/ewaybillapi/v1.03/ewayapi/GetEwayBill",
+} as const;
+
+export const EWB_ACTIONS = {
+  generate: "GENEWAYBILL",
+  updatePartB: "VEHEWB",
+  updateTransporter: "UPDATETRANSPORTER",
+  extend: "EXTENDVALIDITY",
+  cancel: "CANEWB",
+} as const;
+
+export function resolveBaseUrl(
+  gateway: "irp" | "ewb",
+  environment: GatewayEnvironment,
+  override?: string | undefined,
+): string {
+  const base = override?.trim() || NIC_HOSTS[environment][gateway];
+  return base.replace(/\/+$/, "");
+}

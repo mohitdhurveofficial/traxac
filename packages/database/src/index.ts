@@ -5,6 +5,14 @@ import * as schema from "./schema/index.js";
 export type Schema = typeof schema;
 export type DrizzleClient = ReturnType<typeof drizzle<Schema>>;
 
+/**
+ * Anything that can run a query: the pool-backed client or an open
+ * transaction. Services accept this so a helper works inside or outside a
+ * transaction without duplicating the code.
+ */
+export type Transaction = Parameters<Parameters<DrizzleClient["transaction"]>[0]>[0];
+export type DbExecutor = DrizzleClient | Transaction;
+
 export interface Database {
   db: DrizzleClient;
   client: postgres.Sql;

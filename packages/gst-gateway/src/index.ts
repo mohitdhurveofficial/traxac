@@ -1,4 +1,4 @@
 export * from "./types.js";
-export * from "./einvoice-provider.js";
+export * from "./einvoice-types.js";
 export * from "./ewb-types.js";
-export * from "./ewb-provider.js";
+export * from "./providers.js";
