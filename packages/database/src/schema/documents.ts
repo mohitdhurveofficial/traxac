@@ -1,6 +1,6 @@
-import { pgTable, text, uuid, bigint, index } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, bigint, integer, index } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
-import { createdAt } from "./_shared.js";
+import { createdAt, tsCol } from "./_shared.js";
 
 /**
  * Every stored binary: invoice PDFs, signed e-Invoice JSON, EWB PDFs, QR
@@ -25,6 +25,18 @@ export const documents = pgTable(
     storageKey: text("storage_key").notNull(),
     storageProvider: text("storage_provider").notNull().default("s3"),
     checksumSha256: text("checksum_sha256"),
+    /**
+     * What the file is, in the user's words: "Purchase order", "Lorry
+     * receipt", "Insurance certificate". Free text because the list of things
+     * a trader attaches is longer than any enum we would guess.
+     */
+    label: text("label"),
+    notes: text("notes"),
+    /** Set when the document was produced by the system rather than uploaded. */
+    generatedBy: text("generated_by"),
+    /** Counted so a download can be audited without scanning the audit log. */
+    downloadCount: integer("download_count").notNull().default(0),
+    lastDownloadedAt: tsCol("last_downloaded_at"),
     uploadedByUserId: uuid("uploaded_by_user_id"),
     createdAt: createdAt(),
   },

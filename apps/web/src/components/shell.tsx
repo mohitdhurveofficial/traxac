@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useState, type ReactNode } from "react";
 import { useLogout, useMarkNotificationsRead, useNotifications } from "../api/hooks.js";
 import { formatDateTime, initials } from "../lib/format.js";
-import type { SessionUser } from "../api/types.js";
+import type { SessionResponse } from "../api/types.js";
+import { GstinSwitcher } from "./gstin-switcher.js";
 import { Drawer } from "./ui.js";
 
 /**
@@ -13,14 +14,22 @@ import { Drawer } from "./ui.js";
  * transporters, team — lives behind Settings, because a trader touches those
  * once and then never again.
  */
+/**
+ * Mobile shows four destinations around the primary action; Overview is the
+ * one that drops, because on a phone the invoice list is the overview.
+ */
 const NAV = [
+  { to: "/overview", label: "Overview", icon: OverviewIcon },
   { to: "/invoices", label: "Invoices", icon: InvoiceIcon },
   { to: "/customers", label: "Customers", icon: CustomerIcon },
   { to: "/items", label: "Items", icon: ItemIcon },
   { to: "/reports", label: "Reports", icon: ReportIcon },
 ];
 
-export function Shell({ user, children }: { user: SessionUser; children: ReactNode }) {
+const MOBILE_NAV = NAV.filter((item) => item.to !== "/overview");
+
+export function Shell({ session, children }: { session: SessionResponse; children: ReactNode }) {
+  const user = session.user;
   const navigate = useNavigate();
   const [alertsOpen, setAlertsOpen] = useState(false);
   const notifications = useNotifications();
@@ -37,7 +46,11 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
           <span className="text-sm font-semibold tracking-tight">Traxac</span>
         </div>
 
-        <div className="px-3">
+        {/* Which books am I in? Shown before the primary action, because
+            billing from the wrong registration is expensive to unwind. */}
+        <GstinSwitcher session={session} />
+
+        <div className="mt-3 px-3">
           <button
             type="button"
             className="btn-primary w-full"
@@ -122,7 +135,7 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
 
       {/* Mobile bottom navigation with the primary action in the middle */}
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white/95 backdrop-blur lg:hidden">
-        {NAV.slice(0, 2).map((item) => (
+        {MOBILE_NAV.slice(0, 2).map((item) => (
           <NavLink key={item.to} to={item.to} className={mobileNavClass}>
             <item.icon /> <span className="text-[10px]">{item.label}</span>
           </NavLink>
@@ -137,7 +150,7 @@ export function Shell({ user, children }: { user: SessionUser; children: ReactNo
             <PlusIcon />
           </span>
         </button>
-        {NAV.slice(2).map((item) => (
+        {MOBILE_NAV.slice(2).map((item) => (
           <NavLink key={item.to} to={item.to} className={mobileNavClass}>
             <item.icon /> <span className="text-[10px]">{item.label}</span>
           </NavLink>
@@ -262,6 +275,13 @@ function PlusIcon() {
   return (
     <svg className="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
       <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
+    </svg>
+  );
+}
+function OverviewIcon() {
+  return (
+    <svg className="size-4.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+      <path d="M3 3h6v6H3V3zm8 0h6v4h-6V3zM3 11h6v6H3v-6zm8 2h6v4h-6v-4z" />
     </svg>
   );
 }

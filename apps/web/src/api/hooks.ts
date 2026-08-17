@@ -8,10 +8,16 @@ import type {
   InvoiceDetail,
   InvoiceSummary,
   Notification,
+  CustomerLedger,
+  Gstr1Summary,
   Paginated,
   Party,
   PartyDetail,
+  PaymentTerm,
   Product,
+  ProductHistory,
+  Receivables,
+  SessionResponse,
   SessionUser,
   StateRef,
   TaxTotals,
@@ -47,10 +53,10 @@ export const keys = {
 
 /* --------------------------------- Auth --------------------------------- */
 
-export function useSession(options?: Partial<UseQueryOptions<{ user: SessionUser }>>) {
+export function useSession(options?: Partial<UseQueryOptions<SessionResponse>>) {
   return useQuery({
     queryKey: keys.me,
-    queryFn: () => get<{ user: SessionUser }>("/v1/auth/me"),
+    queryFn: () => get<SessionResponse>("/v1/auth/me"),
     retry: false,
     staleTime: 5 * 60_000,
     ...options,
@@ -80,6 +86,16 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => post<{ ok: true }>("/v1/auth/logout"),
     onSuccess: () => qc.clear(),
+  });
+}
+
+/** Switch the registration the session works in. */
+export function useSetActiveGstin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (gstinId: string | null) => post("/v1/auth/active-gstin", { gstinId }),
+    // Everything is scoped by registration, so the whole cache is stale.
+    onSuccess: () => void qc.invalidateQueries(),
   });
 }
 
@@ -461,5 +477,91 @@ export function useDeleteCredential() {
   return useMutation({
     mutationFn: (id: string) => del(`/v1/credentials/${id}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.credentials }),
+  });
+}
+
+/* --------------------------- Ledgers & history -------------------------- */
+
+export function useCustomerLedger(partyId: string | undefined) {
+  return useQuery({
+    queryKey: ["ledger", partyId],
+    queryFn: () => get<CustomerLedger>(`/v1/parties/${partyId}/ledger`),
+    enabled: Boolean(partyId),
+  });
+}
+
+export function useProductHistory(productId: string | undefined) {
+  return useQuery({
+    queryKey: ["product-history", productId],
+    queryFn: () => get<ProductHistory>(`/v1/products/${productId}/history`),
+    enabled: Boolean(productId),
+  });
+}
+
+export function useTransporterHistory(id: string | undefined) {
+  return useQuery({
+    queryKey: ["transporter-history", id],
+    queryFn: () => get<Record<string, unknown>>(`/v1/transporters/${id}/history`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useVehicleHistory(id: string | undefined) {
+  return useQuery({
+    queryKey: ["vehicle-history", id],
+    queryFn: () => get<Record<string, unknown>>(`/v1/vehicles/${id}/history`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useReceivables(gstinId?: string) {
+  return useQuery({
+    queryKey: ["receivables", gstinId ?? "all"],
+    queryFn: () => get<Receivables>("/v1/receivables", gstinId ? { gstinId } : undefined),
+  });
+}
+
+/* ----------------------------- Payment terms ---------------------------- */
+
+export function usePaymentTerms() {
+  return useQuery({
+    queryKey: ["payment-terms"],
+    queryFn: () => get<{ items: PaymentTerm[] }>("/v1/payment-terms"),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSavePaymentTerm(id?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: unknown) =>
+      id ? patch(`/v1/payment-terms/${id}`, input) : post("/v1/payment-terms", input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["payment-terms"] }),
+  });
+}
+
+/* -------------------------------- GSTR-1 -------------------------------- */
+
+export function useGstr1Preview(gstinId: string | undefined, period: string) {
+  return useMutation({
+    mutationFn: () => post<Gstr1Summary>("/v1/gstr1/preview", { gstinId, period }),
+  });
+}
+
+/* -------------------------------- Import -------------------------------- */
+
+export function useImport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { kind: string; rows: Array<Record<string, string>>; dryRun: boolean }) =>
+      post<{
+        total: number;
+        created: number;
+        updated: number;
+        skipped: number;
+        failed: number;
+        results: Array<{ row: number; status: string; name?: string; message?: string }>;
+      }>("/v1/import", input),
+    onSuccess: () => void qc.invalidateQueries(),
   });
 }

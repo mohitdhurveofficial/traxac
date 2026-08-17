@@ -8,6 +8,34 @@
       "when": 1786922635136,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786962589346,
+      "tag": "0001_product_expansion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786963136836,
+      "tag": "0002_password_resets",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786963355953,
+      "tag": "0003_active_gstin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786963356953,
+      "tag": "0004_row_level_security",
+      "breakpoints": true
     }
   ]
 }

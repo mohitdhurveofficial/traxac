@@ -14,6 +14,12 @@ import { InvoiceService } from "./services/invoices.js";
 import { DocumentService } from "./services/documents.js";
 import { NotificationService } from "./services/notifications.js";
 import { ReportService } from "./services/reports.js";
+import { CommercialService } from "./services/commercial.js";
+import { LedgerService } from "./services/ledgers.js";
+import { Gstr1Service } from "./services/gstr1.js";
+import { ReconciliationService } from "./services/reconciliation.js";
+import { ImportService } from "./services/imports.js";
+import { LogMailer, type Mailer } from "./infra/mailer.js";
 import { CredentialService, DatabaseSessionStore } from "./compliance/credentials.js";
 import { DatabaseGatewayTelemetry } from "./compliance/telemetry.js";
 import { ComplianceService } from "./compliance/service.js";
@@ -39,6 +45,12 @@ export interface Container {
   documents: DocumentService;
   notifications: NotificationService;
   reports: ReportService;
+  commercial: CommercialService;
+  ledgers: LedgerService;
+  gstr1: Gstr1Service;
+  reconciliation: ReconciliationService;
+  imports: ImportService;
+  mailer: Mailer;
   credentials: CredentialService;
   compliance: ComplianceService;
   shutdown(): Promise<void>;
@@ -49,6 +61,8 @@ export interface ContainerOptions {
   logger?: Logger;
   /** Injected in tests to avoid touching the network. */
   registry?: GatewayRegistry;
+  /** Swap in a real transport once email credentials exist. */
+  mailer?: Mailer;
   processName?: string;
 }
 
@@ -110,6 +124,14 @@ export function createContainer(options: ContainerOptions = {}): Container {
   const documents = new DocumentService(database, storage, audit);
   const notifications = new NotificationService(database);
   const reports = new ReportService(database);
+  const commercial = new CommercialService(database, audit);
+  const ledgers = new LedgerService(database);
+  const gstr1 = new Gstr1Service(database, audit);
+  const reconciliation = new ReconciliationService(database, audit);
+  const imports = new ImportService(database, audit);
+  // No transport configured yet: the log mailer records what would be sent
+  // and reports honestly that it was not delivered.
+  const mailer: Mailer = options.mailer ?? new LogMailer(logger);
   const auth = new AuthService(database, { sessionTtlDays: config.SESSION_TTL_DAYS });
 
   const compliance = new ComplianceService({
@@ -138,6 +160,12 @@ export function createContainer(options: ContainerOptions = {}): Container {
     documents,
     notifications,
     reports,
+    commercial,
+    ledgers,
+    gstr1,
+    reconciliation,
+    imports,
+    mailer,
     credentials,
     compliance,
     async shutdown() {

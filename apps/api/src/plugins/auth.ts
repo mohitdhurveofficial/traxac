@@ -32,6 +32,9 @@ const PUBLIC_PATHS = new Set([`${API_PREFIX}/v1/auth/login`, `${API_PREFIX}/v1/a
  */
 function requiresAuth(pathname: string): boolean {
   if (!pathname.startsWith(`${API_PREFIX}/`)) return false;
+  // The specification describes the API; it contains no data and no secrets.
+  if (pathname.startsWith(`${API_PREFIX}/docs`)) return false;
+  if (pathname === `${API_PREFIX}/openapi.json`) return false;
   return !PUBLIC_PATHS.has(pathname);
 }
 

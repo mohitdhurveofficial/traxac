@@ -50,6 +50,7 @@ export async function testContainer(
     TRAXAC_MASTER_KEY_VERSION: 1,
     TRAXAC_MASTER_KEY_PREVIOUS: undefined,
     SESSION_TTL_DAYS: 7,
+    RATE_LIMIT_MAX: undefined,
     CORS_ORIGINS: "",
     COOKIE_DOMAIN: undefined,
     COOKIE_SECURE: false,

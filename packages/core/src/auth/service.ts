@@ -1,11 +1,23 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Database } from "@traxac/database";
-import { apiKeys, memberships, sessions, tenants, tenantSettings, users } from "@traxac/database";
+import {
+  apiKeys,
+  gstins,
+  memberships,
+  passwordResets,
+  sessions,
+  tenants,
+  tenantSettings,
+  users,
+} from "@traxac/database";
 import { AppError, ROLE_PERMISSIONS, type Role } from "@traxac/shared";
 import type { SessionUser } from "@traxac/shared/contracts";
 import { hashPassword, needsRehash, verifyPassword } from "../infra/password.js";
 import { randomToken, sha256 } from "../infra/crypto.js";
 import type { AuthContext } from "./context.js";
+
+/** Short enough to limit exposure, long enough for the user to find the email. */
+const PASSWORD_RESET_TTL_MINUTES = 60;
 
 export interface AuthServiceOptions {
   sessionTtlDays: number;
@@ -149,6 +161,11 @@ export class AuthService {
     return this.issueSession(user, chosen.id, chosen.role, meta);
   }
 
+  /** Businesses this account can switch into. */
+  async listTenants(userId: string) {
+    return this.listMemberships(userId);
+  }
+
   private async listMemberships(userId: string) {
     const rows = await this.db
       .select({
@@ -211,6 +228,7 @@ export class AuthService {
         userId: sessions.userId,
         tenantId: sessions.tenantId,
         role: sessions.role,
+        activeGstinId: sessions.activeGstinId,
         email: users.email,
         name: users.name,
       })
@@ -246,6 +264,9 @@ export class AuthService {
       role: row.role as Role,
       actor: "session",
       sessionId: row.sessionId,
+      // Without this the session's chosen registration never reaches any
+      // query, and every GSTIN filter silently does nothing.
+      activeGstinId: row.activeGstinId,
       ip: meta.ip,
       userAgent: meta.userAgent,
     };
@@ -315,6 +336,30 @@ export class AuthService {
       role: target.role,
       permissions: [...(ROLE_PERMISSIONS[target.role] ?? [])],
     };
+  }
+
+  /**
+   * Choose which registration the session works in.
+   *
+   * Verified against the tenant's own registrations, so a crafted id cannot
+   * point the session at another business's books.
+   */
+  async setActiveGstin(ctx: AuthContext, gstinId: string | null): Promise<void> {
+    // Ownership first: a caller without a session must still be told the
+    // registration is not theirs, rather than quietly doing nothing.
+    if (gstinId) {
+      const [owned] = await this.db
+        .select({ id: gstins.id })
+        .from(gstins)
+        .where(and(eq(gstins.id, gstinId), eq(gstins.tenantId, ctx.tenantId)))
+        .limit(1);
+      if (!owned) throw new AppError("NOT_FOUND", "That GSTIN registration was not found");
+    }
+    if (!ctx.sessionId) return;
+    await this.db
+      .update(sessions)
+      .set({ activeGstinId: gstinId })
+      .where(eq(sessions.id, ctx.sessionId));
   }
 
   async changePassword(ctx: AuthContext, current: string, next: string): Promise<void> {
@@ -464,6 +509,79 @@ export class AuthService {
       .update(apiKeys)
       .set({ revokedAt: new Date() })
       .where(and(eq(apiKeys.id, id), eq(apiKeys.tenantId, ctx.tenantId)));
+  }
+
+  /* --------------------------- Password reset -------------------------- */
+
+  /**
+   * Begin a password reset.
+   *
+   * Always reports success, whether or not the account exists — telling an
+   * anonymous caller which email addresses are registered is an account
+   * enumeration hole. The token is returned to the caller only so the API can
+   * hand it to the mailer; it is never put in an HTTP response.
+   */
+  async requestPasswordReset(
+    email: string,
+    meta: RequestMeta = {},
+  ): Promise<{ token: string; user: { id: string; name: string; email: string } } | null> {
+    const [user] = await this.db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.email, email.toLowerCase().trim()))
+      .limit(1);
+    if (!user) return null;
+
+    // Any earlier outstanding request is invalidated, so a stolen old link
+    // cannot be used after the user asks again.
+    await this.db
+      .update(passwordResets)
+      .set({ usedAt: new Date() })
+      .where(and(eq(passwordResets.userId, user.id), isNull(passwordResets.usedAt)));
+
+    const token = randomToken(32);
+    await this.db.insert(passwordResets).values({
+      userId: user.id,
+      tokenHash: sha256(token),
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60_000),
+      requestedIp: meta.ip ?? null,
+    });
+
+    return { token, user };
+  }
+
+  /** Complete a reset. The token is single-use and every session is dropped. */
+  async completePasswordReset(token: string, newPassword: string): Promise<void> {
+    const [row] = await this.db
+      .select()
+      .from(passwordResets)
+      .where(
+        and(
+          eq(passwordResets.tokenHash, sha256(token)),
+          isNull(passwordResets.usedAt),
+          gt(passwordResets.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw new AppError("UNAUTHENTICATED", "This reset link has expired or has already been used");
+    }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ passwordHash: await hashPassword(newPassword), updatedAt: new Date() })
+        .where(eq(users.id, row.userId));
+      await tx
+        .update(passwordResets)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResets.id, row.id));
+      // Anyone holding a session for this account loses it.
+      await tx
+        .update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(sessions.userId, row.userId), isNull(sessions.revokedAt)));
+    });
   }
 
   /** Housekeeping: drop expired and long-revoked sessions. */

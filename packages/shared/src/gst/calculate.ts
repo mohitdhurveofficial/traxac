@@ -83,6 +83,12 @@ export interface TaxTotals {
   totalTax: Paise;
   /** Charge amounts excluding their tax. */
   otherCharges: Paise;
+  /** Insurance amount excluding its tax; also counted in otherCharges. */
+  insurance: Paise;
+  /** Invoice value before TCS and round-off. */
+  valueBeforeTcs: Paise;
+  tcsRate: number;
+  tcsAmount: Paise;
   roundOff: Paise;
   grandTotal: Paise;
 }
@@ -97,6 +103,16 @@ export interface CalcInvoiceInput {
   zeroRated?: boolean;
   lines: TaxLineInput[];
   charges?: ChargeInput[];
+  /** Insurance recovered from the buyer, in paise. Taxed like a charge. */
+  insurance?: { amount: Paise; gstRate?: number };
+  /**
+   * Tax Collected at Source under 206C(1H).
+   *
+   * TCS is an income-tax collection, not GST: it is charged on the invoice
+   * value *including* GST and never appears in the tax breakup. Modelled
+   * separately for exactly that reason.
+   */
+  tcsRate?: number;
   /** Disable the nearest-rupee round-off (some buyers require exact paise). */
   disableRoundOff?: boolean;
 }
@@ -175,7 +191,18 @@ export function calculateInvoiceTax(input: CalcInvoiceInput): TaxTotals {
   const zeroRated = input.zeroRated ?? false;
 
   const lines = input.lines.map((l) => computeLine(l, supplyType, zeroRated));
-  const charges = (input.charges ?? []).map((c) => computeCharge(c, supplyType, zeroRated));
+
+  // Insurance behaves exactly like an additional charge, so it is folded into
+  // the same list rather than given a parallel code path that could drift.
+  const chargeInputs = [...(input.charges ?? [])];
+  if (input.insurance && input.insurance.amount > 0) {
+    chargeInputs.push({
+      label: "Insurance",
+      amount: input.insurance.amount,
+      gstRate: input.insurance.gstRate ?? 18,
+    });
+  }
+  const charges = chargeInputs.map((c) => computeCharge(c, supplyType, zeroRated));
 
   const sum = <T>(items: T[], pick: (item: T) => number): number =>
     items.reduce((acc, item) => acc + pick(item), 0);
@@ -192,7 +219,13 @@ export function calculateInvoiceTax(input: CalcInvoiceInput): TaxTotals {
   const otherCharges = sum(charges, (c) => c.amount);
   const totalTax = cgst + sgst + igst + cess + cessNonAdvol + stateCess;
 
-  const preRounding = taxableValue + totalTax + otherCharges;
+  const valueBeforeTcs = taxableValue + totalTax + otherCharges;
+
+  // 206C(1H): collected on the total including GST.
+  const tcsRate = input.tcsRate ?? 0;
+  const tcsAmount = tcsRate > 0 ? roundPaise((valueBeforeTcs * tcsRate) / 100) : 0;
+
+  const preRounding = valueBeforeTcs + tcsAmount;
   const grandTotal = input.disableRoundOff ? preRounding : roundToRupee(preRounding);
 
   return {
@@ -210,6 +243,10 @@ export function calculateInvoiceTax(input: CalcInvoiceInput): TaxTotals {
     stateCess,
     totalTax,
     otherCharges,
+    insurance: input.insurance?.amount ?? 0,
+    valueBeforeTcs,
+    tcsRate,
+    tcsAmount,
     roundOff: grandTotal - preRounding,
     grandTotal,
   };

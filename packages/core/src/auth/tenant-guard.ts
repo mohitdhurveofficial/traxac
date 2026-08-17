@@ -1,4 +1,4 @@
-import { and, eq, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, eq, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { AuthContext } from "./context.js";
 
@@ -22,6 +22,19 @@ export function scoped(
 /** `WHERE tenant_id = <ctx.tenantId> AND id = <id>`. */
 export function scopedById(ctx: AuthContext, table: TenantRowTable, id: string): SQL {
   return and(eq(table.tenantId, ctx.tenantId), eq(table.id, id)) as SQL;
+}
+
+/**
+ * Restrict master data to the active registration.
+ *
+ * Rows with a null `gstinId` are shared across registrations and always
+ * visible; that is what a single-GSTIN business has, and what existing rows
+ * migrated to. Returns undefined when no registration is active, so the
+ * predicate simply drops out of the query.
+ */
+export function scopedToGstin(ctx: AuthContext, column: PgColumn): SQL | undefined {
+  if (!ctx.activeGstinId) return undefined;
+  return sql`(${column} = ${ctx.activeGstinId} OR ${column} IS NULL)`;
 }
 
 /** Stamp the caller's tenant onto an insert, rejecting a foreign tenantId. */

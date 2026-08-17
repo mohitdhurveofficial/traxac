@@ -18,6 +18,14 @@ export interface AuthContext {
   requestId?: string;
   ip?: string;
   userAgent?: string;
+  /**
+   * Registration the caller is working in, when they have chosen one.
+   *
+   * Master data with a matching `gstinId`, plus anything shared (null), is in
+   * scope. Undefined means no filter — a single-registration business, or a
+   * user looking across all of them.
+   */
+  activeGstinId?: string | null;
 }
 
 /** Context used by background workers, which act on behalf of a tenant. */

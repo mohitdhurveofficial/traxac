@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { field } from "../lib/format.js";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { GST_STATE_CODES } from "@traxac/shared";
 import { useAddPartyAddress, useParties, useParty, useSaveParty } from "../api/hooks.js";
 import type { Party } from "../api/types.js";
@@ -72,10 +72,9 @@ export function CustomersPage() {
           <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {parties.data?.items.map((party) => (
               <li key={party.id}>
-                <button
-                  type="button"
-                  onClick={() => setViewing(party.id)}
-                  className="card w-full p-4 text-left hover:border-brand-500 hover:shadow-sm"
+                <Link
+                  to={`/customers/${party.id}`}
+                  className="card block w-full p-4 text-left hover:border-brand-500 hover:shadow-sm"
                 >
                   <p className="truncate font-medium">{party.name}</p>
                   {party.gstin && (
@@ -87,7 +86,7 @@ export function CustomersPage() {
                       .join(", ") || "No address"}
                   </p>
                   {party.phone && <p className="text-xs text-muted">{party.phone}</p>}
-                </button>
+                </Link>
               </li>
             ))}
           </ul>

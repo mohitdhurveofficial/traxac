@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { z } from "zod";
 import {
   changePasswordSchema,
   inviteUserSchema,
@@ -7,6 +8,7 @@ import {
   switchTenantSchema,
 } from "@traxac/shared/contracts";
 import { ROLE_PERMISSIONS, ROLES, AppError } from "@traxac/shared";
+import { EMAIL_TEMPLATES } from "@traxac/core";
 import { requireAuth } from "../context.js";
 import { SESSION_COOKIE } from "../plugins/auth.js";
 
@@ -102,6 +104,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   /** Who am I — the call the web app makes on boot. */
   app.get("/me", async (request) => {
     const ctx = requireAuth(request);
+    const [gstinList, teams] = await Promise.all([
+      request.container.masters.listGstins(ctx),
+      request.container.auth.listTenants(ctx.userId),
+    ]);
     return {
       user: {
         userId: ctx.userId,
@@ -110,8 +116,32 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         tenantId: ctx.tenantId,
         role: ctx.role,
         permissions: ROLE_PERMISSIONS[ctx.role] ?? [],
+        activeGstinId: ctx.activeGstinId ?? null,
       },
+      // The switcher needs both lists on boot; two extra indexed reads.
+      gstins: gstinList.map((g) => ({
+        id: g.id,
+        gstin: g.gstin,
+        tradeName: g.tradeName,
+        stateCode: g.stateCode,
+        isPrimary: g.isPrimary,
+        isActive: g.isActive,
+      })),
+      tenants: teams,
     };
+  });
+
+  /**
+   * Choose the registration to work in.
+   *
+   * Stored on the session so every subsequent request is scoped the same way,
+   * including one posted from a tab the user left open.
+   */
+  app.post("/active-gstin", async (request) => {
+    const ctx = requireAuth(request);
+    const { gstinId } = z.object({ gstinId: z.string().uuid().nullable() }).parse(request.body);
+    await request.container.auth.setActiveGstin(ctx, gstinId);
+    return { activeGstinId: gstinId };
   });
 
   app.post("/switch-tenant", async (request) => {
@@ -124,6 +154,59 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const ctx = requireAuth(request);
     const input = changePasswordSchema.parse(request.body);
     await request.container.auth.changePassword(ctx, input.currentPassword, input.newPassword);
+    return { ok: true };
+  });
+
+  /* -------------------------- Password reset --------------------------- */
+
+  /**
+   * Always answers the same way, whether or not the account exists — telling
+   * an anonymous caller which addresses are registered is an enumeration hole.
+   */
+  app.post("/forgot-password", CREDENTIAL_RATE_LIMIT, async (request) => {
+    const { email } = z
+      .object({ email: z.string().trim().toLowerCase().email() })
+      .parse(request.body);
+    const { auth, mailer, config, logger } = request.container;
+
+    const reset = await auth.requestPasswordReset(email, { ip: request.ip });
+    if (reset) {
+      const message = EMAIL_TEMPLATES.passwordReset({
+        name: reset.user.name,
+        resetUrl: `${config.APP_URL}/reset-password?token=${reset.token}`,
+        expiresInMinutes: 60,
+      });
+      const delivery = await mailer.send({ ...message, to: reset.user.email });
+      if (!delivery.delivered) {
+        // Visible to the operator, never to the caller.
+        logger.warn(
+          { userId: reset.user.id, reason: delivery.reason },
+          "password reset email could not be delivered",
+        );
+      }
+    }
+    return {
+      ok: true,
+      message: "If that email is registered, a reset link is on its way.",
+      // So the UI can warn an operator during setup that nothing was sent.
+      emailConfigured: request.container.mailer.deliverable,
+    };
+  });
+
+  app.post("/reset-password", CREDENTIAL_RATE_LIMIT, async (request) => {
+    const { token, password } = z
+      .object({
+        token: z.string().min(10),
+        password: z
+          .string()
+          .min(10, "Use at least 10 characters")
+          .max(200)
+          .regex(/[a-z]/, "Add a lowercase letter")
+          .regex(/[A-Z]/, "Add an uppercase letter")
+          .regex(/[0-9]/, "Add a number"),
+      })
+      .parse(request.body);
+    await request.container.auth.completePasswordReset(token, password);
     return { ok: true };
   });
 

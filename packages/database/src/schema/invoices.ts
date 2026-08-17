@@ -136,6 +136,17 @@ export const invoices = pgTable(
     stateCess: money("state_cess"),
     totalTax: money("total_tax"),
     otherCharges: money("other_charges"),
+    /** Insurance recovered from the buyer, taxed like any other charge. */
+    insuranceAmount: money("insurance_amount"),
+    /**
+     * Tax Collected at Source under 206C(1H).
+     * Charged on the invoice total including GST, not on the taxable value,
+     * and it is not a GST component — it is an income-tax collection that
+     * sits outside the tax breakup.
+     */
+    tcsRate: numeric("tcs_rate", { precision: 5, scale: 3 }).notNull().default("0"),
+    tcsAmount: money("tcs_amount"),
+    tcsSection: text("tcs_section"),
     roundOff: money("round_off"),
     grandTotal: money("grand_total"),
     amountPaid: money("amount_paid"),
@@ -166,6 +177,13 @@ export const invoices = pgTable(
 
     poNumber: text("po_number"),
     poDate: tsCol("po_date"),
+    /** Delivery note / challan reference accompanying the consignment. */
+    deliveryNoteNumber: text("delivery_note_number"),
+    deliveryNoteDate: tsCol("delivery_note_date"),
+    /** Chosen payment terms; the due date is derived from its credit days. */
+    paymentTermsId: uuid("payment_terms_id"),
+    paymentTermsLabel: text("payment_terms_label"),
+    creditDays: integer("credit_days"),
     notes: text("notes"),
     terms: text("terms"),
 
@@ -193,6 +211,12 @@ export const invoices = pgTable(
     index("invoices_tenant_buyer_idx").on(t.tenantId, t.buyerPartyId),
     index("invoices_tenant_einvoice_status_idx").on(t.tenantId, t.einvoiceStatus),
     index("invoices_tenant_ewb_status_idx").on(t.tenantId, t.ewbStatus),
+    // Billing history is filtered by registration far more often than not.
+    index("invoices_tenant_gstin_date_idx").on(t.tenantId, t.gstinId, t.invoiceDate),
+    // Receivables ageing scans unpaid invoices by due date.
+    index("invoices_tenant_due_idx").on(t.tenantId, t.dueDate),
+    index("invoices_tenant_number_idx").on(t.tenantId, t.invoiceNumber),
+    index("invoices_reference_idx").on(t.referenceInvoiceId),
   ],
 );
 

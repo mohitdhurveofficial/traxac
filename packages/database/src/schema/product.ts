@@ -9,6 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
+import { gstins } from "./party.js";
 import { createdAt, money, updatedAt } from "./_shared.js";
 
 /** Products / services with default HSN & GST rate for fast repeat billing. */
@@ -19,6 +20,8 @@ export const products = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
+    /** Null means the item is available to every registration. */
+    gstinId: uuid("gstin_id").references(() => gstins.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     sku: text("sku"),
@@ -35,6 +38,7 @@ export const products = pgTable(
   },
   (t) => [
     index("products_tenant_idx").on(t.tenantId),
+    index("products_tenant_gstin_idx").on(t.tenantId, t.gstinId),
     index("products_tenant_hsn_idx").on(t.tenantId, t.hsnSac),
     uniqueIndex("products_tenant_name_uq").on(t.tenantId, t.name),
   ],

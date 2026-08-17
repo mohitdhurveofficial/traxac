@@ -9,6 +9,10 @@ import { InvoiceDetailPage } from "./pages/InvoiceDetail.js";
 import { CustomersPage } from "./pages/Customers.js";
 import { ItemsPage } from "./pages/Items.js";
 import { ReportsPage } from "./pages/Reports.js";
+import { DashboardPage } from "./pages/Dashboard.js";
+import { CustomerDetailPage } from "./pages/CustomerDetail.js";
+import { ProductDetailPage } from "./pages/ProductDetail.js";
+import { ReceivablesPage } from "./pages/Receivables.js";
 import { SettingsPage } from "./pages/Settings.js";
 
 /**
@@ -29,9 +33,9 @@ export function App() {
     );
   }
 
-  const user = session.data?.user;
+  const data = session.data;
 
-  if (!user) {
+  if (!data?.user) {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -41,17 +45,21 @@ export function App() {
   }
 
   return (
-    <Shell user={user}>
+    <Shell session={data}>
       <Routes>
         <Route path="/" element={<Navigate to="/invoices" replace />} />
         <Route path="/login" element={<Navigate to="/invoices" replace />} />
+        <Route path="/overview" element={<DashboardPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/invoices/new" element={<InvoiceEditorPage />} />
         <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="/invoices/:id/edit" element={<InvoiceEditorPage />} />
         <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/customers/:id" element={<CustomerDetailPage />} />
         <Route path="/items" element={<ItemsPage />} />
+        <Route path="/items/:id" element={<ProductDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reports/receivables" element={<ReceivablesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/invoices" replace />} />
       </Routes>

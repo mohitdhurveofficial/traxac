@@ -10,4 +10,6 @@ export * from "./eway-bills.js";
 export * from "./credentials.js";
 export * from "./documents.js";
 export * from "./jobs.js";
+export * from "./commercial.js";
+export * from "./reconciliation.js";
 export * from "./audit.js";

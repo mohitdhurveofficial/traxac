@@ -200,3 +200,66 @@ describe("money formatting", () => {
     expect(formatINR(1_23_456_89)).toContain("1,23,456.89");
   });
 });
+
+describe("insurance and TCS", () => {
+  const base = {
+    supplierStateCode: "27",
+    placeOfSupplyStateCode: "24",
+    lines: [line({ quantity: 10, unitPrice: toPaise(10_000), gstRate: 18 })],
+  };
+
+  it("taxes insurance like any other charge", () => {
+    const r = calculateInvoiceTax({ ...base, insurance: { amount: toPaise(2000), gstRate: 18 } });
+    // 1,00,000 taxable + 2,000 insurance; IGST on both.
+    expect(r.taxableValue).toBe(10_000_000);
+    expect(r.insurance).toBe(200_000);
+    expect(r.otherCharges).toBe(200_000);
+    expect(r.igst).toBe(18_000_00 + 360_00);
+  });
+
+  it("keeps insurance out of the taxable value", () => {
+    const withIns = calculateInvoiceTax({ ...base, insurance: { amount: toPaise(5000) } });
+    const without = calculateInvoiceTax(base);
+    expect(withIns.taxableValue).toBe(without.taxableValue);
+  });
+
+  it("collects TCS on the value including GST, not the taxable value", () => {
+    const r = calculateInvoiceTax({ ...base, tcsRate: 0.1 });
+    // taxable 1,00,000 + IGST 18,000 = 1,18,000; 0.1% = 118.
+    expect(r.valueBeforeTcs).toBe(11_800_000);
+    expect(r.tcsAmount).toBe(11_800);
+    expect(r.grandTotal).toBe(11_811_800);
+  });
+
+  it("keeps TCS out of the GST breakup", () => {
+    const r = calculateInvoiceTax({ ...base, tcsRate: 1 });
+    // TCS is an income-tax collection, never a GST component: the tax total
+    // is exactly the GST parts, and TCS sits outside valueBeforeTcs.
+    expect(r.totalTax).toBe(r.cgst + r.sgst + r.igst + r.cess + r.cessNonAdvol + r.stateCess);
+    expect(r.taxableValue + r.totalTax + r.otherCharges).toBe(r.valueBeforeTcs);
+    expect(r.tcsAmount).toBeGreaterThan(0);
+  });
+
+  it("charges no TCS when the rate is zero or absent", () => {
+    expect(calculateInvoiceTax(base).tcsAmount).toBe(0);
+    expect(calculateInvoiceTax({ ...base, tcsRate: 0 }).tcsAmount).toBe(0);
+  });
+
+  it("keeps the totals identity with insurance, charges and TCS together", () => {
+    const r = calculateInvoiceTax({
+      ...base,
+      charges: [{ label: "Freight", amount: toPaise(3500), gstRate: 5 }],
+      insurance: { amount: toPaise(1200), gstRate: 18 },
+      tcsRate: 0.1,
+    });
+    expect(r.taxableValue + r.totalTax + r.otherCharges).toBe(r.valueBeforeTcs);
+    expect(r.valueBeforeTcs + r.tcsAmount + r.roundOff).toBe(r.grandTotal);
+    expect(r.grandTotal % 100).toBe(0);
+  });
+
+  it("rounds the total after TCS, not before", () => {
+    const r = calculateInvoiceTax({ ...base, tcsRate: 0.037 });
+    expect(r.grandTotal % 100).toBe(0);
+    expect(r.valueBeforeTcs + r.tcsAmount + r.roundOff).toBe(r.grandTotal);
+  });
+});

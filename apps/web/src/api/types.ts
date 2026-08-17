@@ -8,6 +8,115 @@ export interface SessionUser {
   tenantName?: string;
   role: "owner" | "admin" | "member" | "viewer";
   permissions: string[];
+  /** Registration the session is working in; null means all of them. */
+  activeGstinId: string | null;
+}
+
+export interface SessionResponse {
+  user: SessionUser;
+  gstins: Array<{
+    id: string;
+    gstin: string;
+    tradeName: string;
+    stateCode: string;
+    isPrimary: boolean;
+    isActive: boolean;
+  }>;
+  tenants: Array<{ id: string; name: string; slug: string; role: string }>;
+}
+
+export interface PaymentTerm {
+  id: string;
+  name: string;
+  creditDays: number;
+  description?: string | null;
+  isDefault: boolean;
+}
+
+export interface CustomerLedger {
+  party: Party;
+  totals: {
+    invoiceCount: number;
+    totalSales: number;
+    totalPaid: number;
+    outstanding: number;
+    overdue: number;
+    firstInvoice: string | null;
+    lastInvoice: string | null;
+  };
+  recentInvoices: InvoiceSummary[];
+  topProducts: Array<{
+    name: string;
+    hsnSac: string;
+    unit: string;
+    quantity: number;
+    value: number;
+    lastPrice: number;
+    lastSoldOn: string;
+  }>;
+  payments: Array<{
+    id: string;
+    amount: number;
+    paidAt: string;
+    method: string;
+    reference?: string | null;
+    invoiceNumber: string;
+  }>;
+}
+
+export interface ProductHistory {
+  product: Product;
+  totals: {
+    invoiceCount: number;
+    quantity: number;
+    value: number;
+    averagePrice: number;
+    minPrice: number;
+    maxPrice: number;
+  };
+  customers: Array<{
+    partyId: string | null;
+    customer: string;
+    quantity: number;
+    value: number;
+    lastPrice: number;
+    lastSoldOn: string;
+  }>;
+  recentSales: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    customer: string;
+    quantity: string;
+    unit: string;
+    unitPrice: number;
+    lineTotal: number;
+  }>;
+}
+
+export interface Receivables {
+  buckets: Array<{ label: string; amount: number; count: number }>;
+  total: number;
+  byParty: Array<{
+    partyId: string | null;
+    name: string;
+    outstanding: number;
+    invoiceCount: number;
+    oldestDue: string | null;
+    overdueDays: number;
+  }>;
+}
+
+export interface Gstr1Summary {
+  gstin: string;
+  period: string;
+  invoiceCount: number;
+  totalTaxableValue: number;
+  totalTax: number;
+  errors: Array<{ invoiceNumber?: string; field: string; message: string }>;
+  ready: boolean;
+  filingStatus: "not_connected";
+  sections?: string[];
 }
 
 export interface Paginated<T> {

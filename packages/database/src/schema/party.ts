@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, boolean, bigint, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { createdAt, updatedAt } from "./_shared.js";
 
@@ -76,6 +76,15 @@ export const parties = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
+    /**
+     * The registration this party belongs to.
+     *
+     * A business operating several GSTINs keeps separate books per
+     * registration, so customers and suppliers are scoped to one. Null means
+     * "shared across every registration", which is what a single-GSTIN
+     * business gets and what an existing row migrates to.
+     */
+    gstinId: uuid("gstin_id").references(() => gstins.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     legalName: text("legal_name"),
     /** customer | supplier | both */
@@ -95,6 +104,10 @@ export const parties = pgTable(
     /** Default place of supply (state code) used when billing this party. */
     defaultPlaceOfSupply: text("default_place_of_supply"),
     creditDays: text("credit_days"),
+    /** Default payment terms applied when billing this party. */
+    paymentTermsId: uuid("payment_terms_id"),
+    /** Opening balance carried in from a previous system, in paise. */
+    openingBalance: bigint("opening_balance", { mode: "number" }).notNull().default(0),
     notes: text("notes"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
@@ -102,6 +115,7 @@ export const parties = pgTable(
   },
   (t) => [
     index("parties_tenant_idx").on(t.tenantId),
+    index("parties_tenant_registration_idx").on(t.tenantId, t.gstinId),
     index("parties_tenant_name_idx").on(t.tenantId, t.name),
     index("parties_tenant_gstin_idx").on(t.tenantId, t.gstin),
   ],

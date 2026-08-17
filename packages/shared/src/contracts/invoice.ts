@@ -104,6 +104,11 @@ export const createInvoiceSchema = z
 
     lines: z.array(invoiceLineSchema).min(1, "Add at least one item"),
     charges: z.array(invoiceChargeSchema).default([]),
+    /** Insurance recovered from the buyer, in rupees. */
+    insuranceAmount: rupeesSchema.default(0),
+    insuranceGstRate: gstRateSchema.default(18),
+    /** TCS under 206C(1H); 0 disables it. */
+    tcsRate: z.coerce.number().min(0).max(10).default(0),
 
     transport: transportDetailsSchema.optional(),
     ewbRequired: z.boolean().optional(),
@@ -112,6 +117,9 @@ export const createInvoiceSchema = z
     reason: optionalText(200),
     poNumber: optionalText(40),
     poDate: z.coerce.date().optional().nullable(),
+    deliveryNoteNumber: optionalText(40),
+    deliveryNoteDate: z.coerce.date().optional().nullable(),
+    paymentTermsId: z.string().uuid().optional().nullable(),
     notes: optionalText(2000),
     terms: optionalText(2000),
   })
@@ -175,6 +183,10 @@ export const invoiceListQuerySchema = z.object({
   irn: z.string().trim().optional(),
   ewbNumber: z.string().trim().optional(),
   vehicleNo: z.string().trim().optional(),
+  transporterId: z.string().uuid().optional(),
+  productId: z.string().uuid().optional(),
+  hsnSac: z.string().trim().optional(),
+  paymentStatus: z.enum(["unpaid", "partial", "paid", "overdue"]).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(25),
   page: z.coerce.number().int().min(1).default(1),
   sort: z.enum(["invoiceDate", "grandTotal", "createdAt", "invoiceNumber"]).default("invoiceDate"),
@@ -191,5 +203,8 @@ export const previewInvoiceSchema = z.object({
   igstOnIntra: z.boolean().default(false),
   lines: z.array(invoiceLineSchema).min(1),
   charges: z.array(invoiceChargeSchema).default([]),
+  insuranceAmount: rupeesSchema.default(0),
+  insuranceGstRate: gstRateSchema.default(18),
+  tcsRate: z.coerce.number().min(0).max(10).default(0),
 });
 export type PreviewInvoiceInput = z.infer<typeof previewInvoiceSchema>;

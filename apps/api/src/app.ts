@@ -11,6 +11,7 @@ import { resolve, sep } from "node:path";
 import type { Container } from "@traxac/core";
 import { API_PREFIX, isApiPath, registerAuth } from "./plugins/auth.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
+import { registerOpenApi } from "./plugins/openapi.js";
 import { authRoutes } from "./routes/auth.js";
 import { complianceRoutes } from "./routes/compliance.js";
 import { healthRoutes } from "./routes/health.js";
@@ -18,6 +19,7 @@ import { invoiceRoutes } from "./routes/invoices.js";
 import { masterRoutes } from "./routes/masters.js";
 import { miscRoutes } from "./routes/misc.js";
 import { reportRoutes } from "./routes/reports.js";
+import { commercialRoutes } from "./routes/commercial.js";
 
 /**
  * Builds the HTTP application.
@@ -53,7 +55,7 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     // Global ceiling. Credential endpoints declare a much tighter per-route
     // budget of their own — see CREDENTIAL_RATE_LIMIT in routes/auth.ts.
-    max: config.isProduction ? 300 : 2000,
+    max: config.RATE_LIMIT_MAX ?? (config.isProduction ? 300 : 2000),
     timeWindow: "1 minute",
     // Per tenant when authenticated, per IP otherwise.
     keyGenerator: (request) => request.auth?.tenantId ?? request.ip,
@@ -62,6 +64,9 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
 
   registerErrorHandler(app);
   registerAuth(app, container);
+
+  // Registered before the routes so every one of them is captured.
+  await registerOpenApi(app, container);
 
   // Health lives outside the API prefix: the platform probe hits it directly
   // and it must never require a session or a version negotiation.
@@ -83,6 +88,7 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
       await api.register(complianceRoutes, { prefix: "/v1" });
       await api.register(reportRoutes, { prefix: "/v1/reports" });
       await api.register(miscRoutes, { prefix: "/v1" });
+      await api.register(commercialRoutes, { prefix: "/v1" });
 
       /** Machine-readable route list — a stand-in until OpenAPI is generated. */
       api.get("/v1", async () => ({

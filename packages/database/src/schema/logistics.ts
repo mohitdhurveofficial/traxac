@@ -1,5 +1,6 @@
 import { pgTable, text, uuid, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
+import { gstins } from "./party.js";
 import { createdAt, updatedAt } from "./_shared.js";
 
 /** Transporters remembered per tenant for fast e-Way Bill entry. */
@@ -10,6 +11,8 @@ export const transporters = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
+    /** Null means shared across every registration. */
+    gstinId: uuid("gstin_id").references(() => gstins.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     /** GSTIN or 15-char TRANSIN issued by the EWB portal. */
     transporterId: text("transporter_id"),
@@ -37,6 +40,8 @@ export const vehicles = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
+    /** Null means shared across every registration. */
+    gstinId: uuid("gstin_id").references(() => gstins.id, { onDelete: "cascade" }),
     vehicleNo: text("vehicle_no").notNull(),
     /** R = Regular, O = Over Dimensional Cargo. */
     vehicleType: text("vehicle_type").notNull().default("R"),

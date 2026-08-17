@@ -90,6 +90,14 @@ export const sessions = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
+    /**
+     * The registration the user is currently working in.
+     *
+     * Held on the session rather than in the URL or a client cookie so every
+     * request — including a form posted from a stale tab — is scoped to the
+     * same books the user last chose. Null means "all registrations".
+     */
+    activeGstinId: uuid("active_gstin_id"),
     userAgent: text("user_agent"),
     ip: text("ip"),
     lastSeenAt: tsCol("last_seen_at").notNull().defaultNow(),
@@ -101,6 +109,31 @@ export const sessions = pgTable(
     uniqueIndex("sessions_token_hash_uq").on(t.tokenHash),
     index("sessions_user_idx").on(t.userId),
     index("sessions_expires_idx").on(t.expiresAt),
+  ],
+);
+
+/**
+ * Single-use password reset tokens.
+ *
+ * Only a hash is stored, exactly as for sessions: a leaked table must not let
+ * anyone take over an account. Tokens are short-lived and consumed on use.
+ */
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: tsCol("expires_at").notNull(),
+    usedAt: tsCol("used_at"),
+    requestedIp: text("requested_ip"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("password_resets_token_uq").on(t.tokenHash),
+    index("password_resets_user_idx").on(t.userId),
   ],
 );
 

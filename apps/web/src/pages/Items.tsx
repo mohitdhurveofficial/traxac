@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { UQC_UNITS } from "@traxac/shared";
 import { useArchiveProduct, useProducts, useSaveProduct } from "../api/hooks.js";
 import type { Product } from "../api/types.js";
@@ -82,8 +82,10 @@ export function ItemsPage() {
               <tbody className="divide-y divide-line">
                 {products.data?.items.map((product) => (
                   <tr key={product.id} className="hover:bg-slate-50">
-                    <td className="cursor-pointer px-4 py-3" onClick={() => setEditing(product)}>
-                      <p className="font-medium">{product.name}</p>
+                    <td className="px-4 py-3">
+                      <Link to={`/items/${product.id}`} className="font-medium hover:underline">
+                        {product.name}
+                      </Link>
                       {product.sku && <p className="text-xs text-muted">SKU {product.sku}</p>}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{product.hsnSac}</td>

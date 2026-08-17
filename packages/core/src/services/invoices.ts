@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@traxac/database";
 import {
   branches,
@@ -12,6 +12,8 @@ import {
   invoices,
   parties,
   partyAddresses,
+  paymentTerms,
+  taxSettings,
   tenantSettings,
   transporters,
 } from "@traxac/database";
@@ -120,6 +122,14 @@ export class InvoiceService {
       zeroRated: isZeroRated(input.supplyCategory),
       lines: input.lines.map(toTaxLine),
       charges: input.charges.map(toTaxCharge),
+      insurance:
+        toPaise(input.insuranceAmount) > 0
+          ? {
+              amount: toPaise(input.insuranceAmount),
+              gstRate: input.insuranceGstRate,
+            }
+          : undefined,
+      tcsRate: input.tcsRate,
     });
   }
 
@@ -134,7 +144,12 @@ export class InvoiceService {
       query.einvoiceStatus ? eq(invoices.einvoiceStatus, query.einvoiceStatus) : undefined,
       query.ewbStatus ? eq(invoices.ewbStatus, query.ewbStatus) : undefined,
       query.docType ? eq(invoices.docType, query.docType) : undefined,
-      query.gstinId ? eq(invoices.gstinId, query.gstinId) : undefined,
+      // An explicit filter wins; otherwise the session's active registration.
+      query.gstinId
+        ? eq(invoices.gstinId, query.gstinId)
+        : ctx.activeGstinId
+          ? eq(invoices.gstinId, ctx.activeGstinId)
+          : undefined,
       query.buyerPartyId ? eq(invoices.buyerPartyId, query.buyerPartyId) : undefined,
       query.from ? gte(invoices.invoiceDate, query.from) : undefined,
       query.to ? lte(invoices.invoiceDate, query.to) : undefined,
@@ -145,6 +160,16 @@ export class InvoiceService {
         ? lte(invoices.grandTotal, toPaise(query.maxAmount))
         : undefined,
       query.vehicleNo ? eq(invoices.vehicleNo, normaliseVehicleNo(query.vehicleNo)) : undefined,
+      query.transporterId ? eq(invoices.transporterId, query.transporterId) : undefined,
+      // Product and HSN filters look inside the lines rather than joining, so
+      // one invoice is returned once however many matching lines it has.
+      query.productId
+        ? sql`EXISTS (SELECT 1 FROM invoice_lines l WHERE l.invoice_id = ${invoices.id} AND l.product_id = ${query.productId})`
+        : undefined,
+      query.hsnSac
+        ? sql`EXISTS (SELECT 1 FROM invoice_lines l WHERE l.invoice_id = ${invoices.id} AND l.hsn_sac = ${query.hsnSac})`
+        : undefined,
+      paymentStatusPredicate(query.paymentStatus),
       // Search spans the number, the buyer's name and their GSTIN.
       query.q
         ? sql`(${invoices.invoiceNumber} ILIKE ${`%${query.q}%`}
@@ -607,8 +632,14 @@ export class InvoiceService {
 
     const addresses = await this.resolveAddresses(ctx, input, gstin, branch);
     const reference = await this.resolveReference(ctx, input);
+    const terms = await this.resolvePaymentTerms(ctx, input);
+    const taxSetup = await this.taxSettingsFor(ctx, gstin.id);
 
     const supplyCategory = input.supplyCategory;
+    // TCS is only charged when the registration has it switched on; an
+    // invoice cannot opt into collecting a tax the business does not collect.
+    const tcsRate = taxSetup.tcsEnabled ? input.tcsRate || taxSetup.tcsRate : 0;
+
     const totals = calculateInvoiceTax({
       supplierStateCode: gstin.stateCode,
       placeOfSupplyStateCode: input.placeOfSupply,
@@ -617,6 +648,15 @@ export class InvoiceService {
       zeroRated: isZeroRated(supplyCategory),
       lines: input.lines.map(toTaxLine),
       charges: input.charges.map(toTaxCharge),
+      insurance:
+        toPaise(input.insuranceAmount) > 0
+          ? {
+              amount: toPaise(input.insuranceAmount),
+              gstRate: input.insuranceGstRate,
+            }
+          : undefined,
+      tcsRate,
+      disableRoundOff: !taxSetup.roundOffEnabled,
     });
 
     const goodsInvolved = input.lines.some((l) => !l.isService);
@@ -654,7 +694,10 @@ export class InvoiceService {
         financialYear: financialYear(input.invoiceDate),
         supplyCategory,
         invoiceDate: input.invoiceDate,
-        dueDate: input.dueDate ?? null,
+        dueDate: input.dueDate ?? terms.dueDate,
+        paymentTermsId: terms.id,
+        paymentTermsLabel: terms.label,
+        creditDays: terms.creditDays,
         buyerPartyId: input.buyerPartyId ?? null,
         billFrom: addresses.billFrom,
         billTo: addresses.billTo,
@@ -683,6 +726,10 @@ export class InvoiceService {
         stateCess: totals.stateCess,
         totalTax: totals.totalTax,
         otherCharges: totals.otherCharges,
+        insuranceAmount: totals.insurance,
+        tcsRate: String(totals.tcsRate),
+        tcsAmount: totals.tcsAmount,
+        tcsSection: totals.tcsAmount > 0 ? taxSetup.tcsSection : null,
         roundOff: totals.roundOff,
         grandTotal: totals.grandTotal,
         ewbRequired,
@@ -704,6 +751,8 @@ export class InvoiceService {
         reason: input.reason || null,
         poNumber: input.poNumber || null,
         poDate: input.poDate ?? null,
+        deliveryNoteNumber: input.deliveryNoteNumber || null,
+        deliveryNoteDate: input.deliveryNoteDate ?? null,
         notes: input.notes || null,
         terms: input.terms || settings.defaultTerms,
       },
@@ -786,6 +835,67 @@ export class InvoiceService {
    * IRP requires in `PrecDocDtls`; without them the portal rejects the note.
    * The original must be a real, issued invoice belonging to this tenant.
    */
+  /**
+   * Work out the payment terms and the due date they imply.
+   *
+   * Precedence: the terms named on the invoice, then the customer's default,
+   * then the tenant default. An explicit due date on the input always wins
+   * over the derived one.
+   */
+  private async resolvePaymentTerms(
+    ctx: AuthContext,
+    input: CreateInvoiceInput,
+  ): Promise<{
+    id: string | null;
+    label: string | null;
+    creditDays: number | null;
+    dueDate: Date | null;
+  }> {
+    let termId = input.paymentTermsId ?? null;
+
+    if (!termId && input.buyerPartyId) {
+      const [party] = await this.db
+        .select({ paymentTermsId: parties.paymentTermsId })
+        .from(parties)
+        .where(scopedById(ctx, parties, input.buyerPartyId))
+        .limit(1);
+      termId = party?.paymentTermsId ?? null;
+    }
+
+    const [term] = termId
+      ? await this.db
+          .select()
+          .from(paymentTerms)
+          .where(scopedById(ctx, paymentTerms, termId))
+          .limit(1)
+      : await this.db
+          .select()
+          .from(paymentTerms)
+          .where(scoped(ctx, paymentTerms, eq(paymentTerms.isDefault, true)))
+          .limit(1);
+
+    if (!term) return { id: null, label: null, creditDays: null, dueDate: null };
+
+    const dueDate = new Date(input.invoiceDate.getTime() + term.creditDays * 86_400_000);
+    return { id: term.id, label: term.name, creditDays: term.creditDays, dueDate };
+  }
+
+  /** Per-registration tax configuration, with safe defaults when unset. */
+  private async taxSettingsFor(ctx: AuthContext, gstinId: string) {
+    const [row] = await this.db
+      .select()
+      .from(taxSettings)
+      .where(and(eq(taxSettings.tenantId, ctx.tenantId), eq(taxSettings.gstinId, gstinId)))
+      .limit(1);
+    return {
+      tcsEnabled: row?.tcsEnabled ?? false,
+      tcsRate: row ? Number(row.tcsRate) : 0,
+      tcsSection: row?.tcsSection ?? "206C(1H)",
+      roundOffEnabled: row?.roundOffEnabled ?? true,
+      igstOnIntraDefault: row?.igstOnIntraDefault ?? false,
+    };
+  }
+
   private async resolveReference(
     ctx: AuthContext,
     input: CreateInvoiceInput,
@@ -929,6 +1039,30 @@ function toTaxCharge(charge: CreateInvoiceInput["charges"][number]): ChargeInput
  */
 function draftNumber(invoiceId: string): string {
   return `DRAFT-${invoiceId.replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+}
+
+/**
+ * Translate a payment status into SQL.
+ *
+ * Payment state is derived rather than stored: a status column would need
+ * updating whenever a due date passes, and would drift the moment one update
+ * was missed.
+ */
+function paymentStatusPredicate(status: string | undefined): SQL | undefined {
+  switch (status) {
+    case "unpaid":
+      return sql`${invoices.amountPaid} = 0 AND ${invoices.status} NOT IN ('draft', 'cancelled')`;
+    case "partial":
+      return sql`${invoices.amountPaid} > 0 AND ${invoices.amountPaid} < ${invoices.grandTotal}`;
+    case "paid":
+      return sql`${invoices.amountPaid} >= ${invoices.grandTotal} AND ${invoices.status} != 'cancelled'`;
+    case "overdue":
+      return sql`${invoices.amountPaid} < ${invoices.grandTotal}
+        AND ${invoices.dueDate} IS NOT NULL AND ${invoices.dueDate} < now()
+        AND ${invoices.status} NOT IN ('draft', 'cancelled')`;
+    default:
+      return undefined;
+  }
 }
 
 /** Strip primary keys and timestamps so a row can be re-inserted as a copy. */

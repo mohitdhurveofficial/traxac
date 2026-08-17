@@ -55,6 +55,13 @@ const configSchema = z.object({
   TRAXAC_MASTER_KEY_PREVIOUS: z.string().optional(),
 
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+  /**
+   * Global request ceiling per tenant (or per IP when unauthenticated), per
+   * minute. Configurable because a load test needs it raised and a small
+   * deployment behind a WAF may want it lowered. Credential endpoints keep
+   * their own much tighter budget regardless of this value.
+   */
+  RATE_LIMIT_MAX: z.coerce.number().int().min(10).max(1_000_000).optional(),
   /** Comma-separated list of allowed browser origins. */
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
   COOKIE_DOMAIN: z.string().optional(),

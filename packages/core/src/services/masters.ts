@@ -22,7 +22,7 @@ import type {
   CreateVehicleInput,
 } from "@traxac/shared/contracts";
 import { requirePermission, type AuthContext } from "../auth/context.js";
-import { scoped, scopedById } from "../auth/tenant-guard.js";
+import { scoped, scopedById, scopedToGstin } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";
 import { diffRecords } from "../infra/audit.js";
 import { compact, countExpr, paginate, searchAcross } from "./query.js";
@@ -243,6 +243,7 @@ export class MastersService {
     const where = scoped(
       ctx,
       parties,
+      scopedToGstin(ctx, parties.gstinId),
       options.includeInactive ? undefined : eq(parties.isActive, true),
       options.partyType && options.partyType !== "both"
         ? sql`(${parties.partyType} = ${options.partyType} OR ${parties.partyType} = 'both')`
@@ -308,6 +309,9 @@ export class MastersService {
       .insert(parties)
       .values({
         tenantId: ctx.tenantId,
+        // Belongs to the registration the user is working in; null means
+        // shared across all of them.
+        gstinId: ctx.activeGstinId ?? null,
         name: input.name,
         legalName: blankToNull(input.legalName),
         partyType: input.partyType,
@@ -419,6 +423,7 @@ export class MastersService {
     const where = scoped(
       ctx,
       products,
+      scopedToGstin(ctx, products.gstinId),
       options.includeInactive ? undefined : eq(products.isActive, true),
       searchAcross([products.name, products.sku, products.hsnSac, products.description], options.q),
     );
@@ -457,6 +462,7 @@ export class MastersService {
       .insert(products)
       .values({
         tenantId: ctx.tenantId,
+        gstinId: ctx.activeGstinId ?? null,
         name: input.name,
         description: blankToNull(input.description),
         sku: blankToNull(input.sku),
@@ -526,6 +532,7 @@ export class MastersService {
     const where = scoped(
       ctx,
       transporters,
+      scopedToGstin(ctx, transporters.gstinId),
       options.includeInactive ? undefined : eq(transporters.isActive, true),
       searchAcross([transporters.name, transporters.transporterId, transporters.phone], options.q),
     );
@@ -558,6 +565,7 @@ export class MastersService {
       .insert(transporters)
       .values({
         tenantId: ctx.tenantId,
+        gstinId: ctx.activeGstinId ?? null,
         name: input.name,
         transporterId: blankToNull(input.transporterId),
         phone: blankToNull(input.phone),
@@ -605,6 +613,7 @@ export class MastersService {
     const where = scoped(
       ctx,
       vehicles,
+      scopedToGstin(ctx, vehicles.gstinId),
       options.includeInactive ? undefined : eq(vehicles.isActive, true),
       searchAcross([vehicles.vehicleNo, vehicles.driverName, vehicles.driverPhone], options.q),
     );
@@ -634,6 +643,7 @@ export class MastersService {
       .insert(vehicles)
       .values({
         tenantId: ctx.tenantId,
+        gstinId: ctx.activeGstinId ?? null,
         vehicleNo,
         vehicleType: input.vehicleType,
         transporterId: input.transporterId ?? null,
@@ -654,7 +664,12 @@ export class MastersService {
     if (!normalised) return;
     await this.db
       .insert(vehicles)
-      .values({ tenantId: ctx.tenantId, vehicleNo: normalised, vehicleType })
+      .values({
+        tenantId: ctx.tenantId,
+        gstinId: ctx.activeGstinId ?? null,
+        vehicleNo: normalised,
+        vehicleType,
+      })
       .onConflictDoNothing()
       .catch(() => undefined);
   }
