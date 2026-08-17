@@ -7,6 +7,7 @@ import {
   type IrnDetails,
   type IrnResult,
   type IrpInvoicePayload,
+  type GstinDetails,
 } from "@traxac/gst-gateway";
 import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
@@ -27,6 +28,7 @@ import {
 } from "./errors.js";
 import { MissingBaseUrlError } from "./endpoints.js";
 import { verifyJws } from "./signed.js";
+import { mapIrpGstinDetails } from "./registry-mapping.js";
 
 /**
  * e-Invoice provider speaking the NIC IRP protocol directly.
@@ -160,6 +162,25 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
         mapIrnDetails(body.data, String(body.data["Irn"] ?? ""), this.signingCert(ctx)),
         body.raw,
       );
+    } catch (err) {
+      return gatewayFail(this.mapError(err));
+    }
+  }
+
+  /**
+   * Resolve a taxpayer from the IRP master register.
+   *
+   * A read, so it is retried like any other GET. The portal's own field names
+   * are mapped rather than reshaped, and anything it omitted stays null.
+   */
+  async getGstinDetails(
+    ctx: GatewayRequestContext,
+    gstin: string,
+  ): Promise<GatewayResult<GstinDetails>> {
+    try {
+      const body = await this.call(ctx, "getGstinDetails", "GET", IRP_PATHS.getGstin(gstin));
+      if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
+      return gatewayOk(mapIrpGstinDetails(body.data, gstin), body.raw);
     } catch (err) {
       return gatewayFail(this.mapError(err));
     }

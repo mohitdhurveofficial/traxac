@@ -12,3 +12,4 @@ export * from "./gstr1.js";
 export * from "./reconciliation.js";
 export * from "./imports.js";
 export * from "./reports.js";
+export * from "./gstin-lookup.js";

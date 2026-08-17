@@ -1,5 +1,6 @@
 import type { GatewayRequestContext, GatewayResult } from "./types.js";
 import type { IrnDetails, IrnResult, IrpInvoicePayload } from "./einvoice-types.js";
+import type { GstinDetails, TransporterDetails } from "./registry-types.js";
 import type {
   EwbCancelPayload,
   EwbDetails,
@@ -36,6 +37,14 @@ export interface EinvoiceProvider {
     ctx: GatewayRequestContext,
     input: { docType: string; docNo: string; docDate: string },
   ): Promise<GatewayResult<IrnDetails>>;
+
+  /**
+   * Resolve a taxpayer from the IRP master register.
+   *
+   * Used to fill in a customer or supplier from their GSTIN. Returns only
+   * what the portal actually sent — a field the portal omitted stays absent.
+   */
+  getGstinDetails(ctx: GatewayRequestContext, gstin: string): Promise<GatewayResult<GstinDetails>>;
 }
 
 /** e-Way Bill portal capabilities. */
@@ -43,6 +52,22 @@ export interface EwbProvider {
   readonly id: "ewb";
 
   verify(ctx: GatewayRequestContext): Promise<GatewayResult<{ verifiedAt: Date }>>;
+
+  /** Resolve a taxpayer from the e-Way Bill master register. */
+  getGstinDetails(ctx: GatewayRequestContext, gstin: string): Promise<GatewayResult<GstinDetails>>;
+
+  /**
+   * Resolve an *enrolled* transporter by TRANSIN.
+   *
+   * A separate register from GSTIN with a separate endpoint. The portal also
+   * accepts a registered transporter's GSTIN here, but the response carries
+   * no registration status either way, so the result is never treated as
+   * proof that a GSTIN is active.
+   */
+  getTransporterDetails(
+    ctx: GatewayRequestContext,
+    transin: string,
+  ): Promise<GatewayResult<TransporterDetails>>;
 
   generate(
     ctx: GatewayRequestContext,

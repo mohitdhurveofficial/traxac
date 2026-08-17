@@ -1,8 +1,10 @@
 import {
   createCipheriv,
   createDecipheriv,
+  createHmac,
   publicEncrypt,
   randomBytes,
+  timingSafeEqual,
   constants,
 } from "node:crypto";
 
@@ -118,6 +120,64 @@ function assertRsaCapacity(base64Json: string): void {
 /** Fresh 32-byte session AppKey, base64. */
 export function generateAppKey(): string {
   return randomBytes(32).toString("base64");
+}
+
+/**
+ * The e-Way Bill master APIs wrap their response twice.
+ *
+ * `GetGSTINDetails` and `GetTransporterDetails` do not encrypt with the
+ * session key directly. Each response carries a fresh random key:
+ *
+ *   data = Encrypt(Base64(json), rek)
+ *   rek  = Encrypt(rek, sek)
+ *   hmac = HMAC-SHA256(Base64(json)) keyed with rek
+ *
+ * so the session key only ever unwraps `rek`, and `rek` unwraps the payload.
+ * Decrypting `data` with the SEK — which is what the ordinary e-Way Bill
+ * endpoints need — produces garbage here.
+ *
+ * The HMAC is verified when present: it is the only integrity check on a
+ * response that will be written into a customer record.
+ *
+ * @see https://docs.ewaybillgst.gov.in/apidocs/version1.03/get-gstin-details.html
+ */
+export function decryptRekEnvelope(
+  sekBase64: string,
+  envelope: { data: string; rek: string; hmac?: string | undefined },
+): Record<string, unknown> {
+  const rek = aesDecryptToBase64(sekBase64, envelope.rek);
+  // The inner payload decrypts to base64 text, not to JSON directly.
+  const base64Json = aesDecrypt(rek, envelope.data);
+
+  if (envelope.hmac) {
+    const expected = createHmac("sha256", Buffer.from(rek, "base64"))
+      .update(base64Json, "utf8")
+      .digest("base64");
+    if (!timingSafeEqualBase64(expected, envelope.hmac)) {
+      throw new Error("The e-Way Bill response failed its HMAC integrity check");
+    }
+  }
+
+  const json = Buffer.from(base64Json, "base64").toString("utf8");
+  const parsed: unknown = JSON.parse(json);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("The e-Way Bill response did not contain a JSON object");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+/** True when an envelope carries the REK wrapping rather than plain SEK. */
+export function isRekEnvelope(
+  body: Record<string, unknown>,
+): body is { data: string; rek: string; hmac?: string } {
+  return typeof body["data"] === "string" && typeof body["rek"] === "string";
+}
+
+function timingSafeEqualBase64(a: string, b: string): boolean {
+  const left = Buffer.from(a, "base64");
+  const right = Buffer.from(b, "base64");
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
 }
 
 /** Normalise a bare base64 key body into a PEM block. */

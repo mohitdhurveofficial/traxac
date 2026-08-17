@@ -56,6 +56,14 @@ export const IRP_PATHS = {
   getIrnByDoc: "/eicore/v1.03/Invoice/irnbydocdetails",
   /** e-Way Bill generated from an existing IRN. */
   ewbByIrn: "/eiewb/v1.03/ewaybill",
+  /**
+   * Taxpayer master lookup. The specification page documents this one at
+   * v1.03 even though the portal index lists "Get GSTIN Details (v1.04)";
+   * kept as written on the page it is specified on.
+   *
+   * @see https://einv-apisandbox.nic.in/version1.03/get-gstin-details.html
+   */
+  getGstin: (gstin: string) => `/eivital/v1.03/Master/gstin/${encodeURIComponent(gstin)}`,
 } as const;
 
 /** e-Way Bill portal paths. Actions are selected by query string. */
@@ -63,6 +71,17 @@ export const EWB_PATHS = {
   auth: "/ewaybillapi/v1.03/auth",
   ewbApi: "/ewaybillapi/v1.03/ewayapi",
   getEwb: "/ewaybillapi/v1.03/ewayapi/GetEwayBill",
+  /**
+   * Master registers. Both answer with the REK envelope rather than plain
+   * SEK encryption, and TRANSIN is a different register from GSTIN.
+   *
+   * @see https://docs.ewaybillgst.gov.in/apidocs/version1.03/get-gstin-details.html
+   * @see https://docs.ewaybillgst.gov.in/apidocs/version1.03/get-transin-details.html
+   */
+  getGstin: (gstin: string) =>
+    `/ewaybillapi/v1.03/Master/GetGSTINDetails?gstin=${encodeURIComponent(gstin)}`,
+  getTransporter: (transin: string) =>
+    `/ewaybillapi/v1.03/Master/GetTransporterDetails?trn_no=${encodeURIComponent(transin)}`,
 } as const;
 
 export const EWB_ACTIONS = {

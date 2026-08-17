@@ -1,3 +1,14 @@
+/*
+ * GSTR-1 — FROZEN, GRANDFATHERED, OUT OF SCOPE.
+ *
+ * This module predates the product scope lock, which places GST return
+ * preparation and filing permanently out of scope. It is retained so existing
+ * `gst_returns` data stays readable, and it is not surfaced anywhere in the
+ * product UI.
+ *
+ * Do not extend it. Do not add GSTR-3B, ITC, or GSTR-2A/2B reconciliation.
+ * Any change here requires an explicit scope unlock.
+ */
 import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { Database } from "@traxac/database";
 import { einvoices, gstins, gstReturns, invoiceLines, invoices } from "@traxac/database";

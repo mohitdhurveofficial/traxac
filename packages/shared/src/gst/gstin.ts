@@ -63,3 +63,28 @@ export function parseGstin(gstin: string): GstinInfo | null {
 export function gstinStateCode(gstin: string): string {
   return gstin.trim().toUpperCase().slice(0, 2);
 }
+
+/** Upper-case and strip spacing so a pasted GSTIN compares consistently. */
+export function normaliseGstin(value: string | null | undefined): string {
+  return (value ?? "").replace(/\s+/g, "").toUpperCase();
+}
+
+/**
+ * A TRANSIN — the 15-character enrolment id issued to a transporter who is
+ * not GST-registered.
+ *
+ * Deliberately *not* the GSTIN checksum. TRANSIN is allocated from a separate
+ * register and NIC does not publish a check-digit rule for it, so asserting
+ * one would reject valid ids. What can be checked is the shape: fifteen
+ * upper-case alphanumerics beginning with a real state code.
+ *
+ * A registered transporter's GSTIN is also accepted here, because the e-Way
+ * Bill lookup takes either.
+ *
+ * @see https://docs.ewaybillgst.gov.in/apidocs/version1.03/get-transin-details.html
+ */
+export function isValidTransin(value: string): boolean {
+  const v = normaliseGstin(value);
+  if (!/^[0-9]{2}[0-9A-Z]{13}$/.test(v)) return false;
+  return isValidStateCode(v.slice(0, 2));
+}

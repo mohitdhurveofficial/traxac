@@ -543,7 +543,17 @@ export function useSavePaymentTerm(id?: string) {
   });
 }
 
-/* -------------------------------- GSTR-1 -------------------------------- */
+/* -------------------------------- GSTR-1 --------------------------------
+ *
+ * FROZEN AND OUT OF SCOPE. GSTR-1 preparation predates the product scope
+ * lock, which places return preparation and filing permanently out of scope.
+ * The backend service, routes and `gst_returns` data are retained
+ * deliberately, but nothing here is wired to a screen and no navigation
+ * exposes it — Traxac does not present GSTR-1 as a capability.
+ *
+ * Do not extend this, and do not surface it, without an explicit scope
+ * unlock. See the scope-lock decision of 2026-08-18.
+ */
 
 export function useGstr1Preview(gstinId: string | undefined, period: string) {
   return useMutation({

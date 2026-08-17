@@ -150,7 +150,7 @@ export function ReportsPage() {
         {tab === "hsn" && (
           <ReportTable
             title="HSN summary"
-            description="Grouped by HSN and rate — the shape GSTR-1 Table 12 needs."
+            description="Your sales grouped by HSN code and tax rate."
             endpoint="hsn-summary"
             fy={fy}
             exportName="hsn-summary"

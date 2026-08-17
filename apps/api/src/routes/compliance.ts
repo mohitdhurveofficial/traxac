@@ -16,6 +16,29 @@ import { requireAuth } from "../context.js";
 const idParam = z.object({ id: z.string().uuid() });
 
 /**
+ * A GSTIN or TRANSIN from the path.
+ *
+ * Bounded and character-restricted before it reaches a service, so a hostile
+ * value can never be interpolated into a portal URL or a database predicate.
+ */
+const identifierParam = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(15)
+    .max(15)
+    .regex(/^[0-9A-Za-z]{15}$/, "Enter a 15-character GSTIN or transporter ID"),
+});
+
+const lookupKind = z.object({ kind: z.enum(["gstin", "transin"]).optional() });
+const lookupQuery = lookupKind.extend({
+  refresh: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .optional()
+    .transform((v) => v === true || v === "true"),
+});
+
+/**
  * Compliance endpoints.
  *
  * Generation is queued so the UI stays responsive when the portal is slow;
@@ -182,6 +205,59 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
       vehicleType: query.vehicleType,
     });
     return { days, validUntil };
+  });
+
+  /* --------------------------- GSTIN auto-fill -------------------------- */
+
+  /**
+   * Taxpayer and transporter lookups.
+   *
+   * These exist so the browser never speaks to NIC. The government portals
+   * require the tenant's decrypted API credentials and a session token; both
+   * stay on the server, and the client only ever sees the resolved details.
+   *
+   * Validation is separate from lookup on purpose: checking a checksum needs
+   * no credentials, so a business with no GST integration still gets instant
+   * feedback on a mistyped GSTIN.
+   */
+  app.get("/gstin/:identifier/validate", async (request) => {
+    requireAuth(request);
+    const { identifier } = identifierParam.parse(request.params);
+    const kind = lookupKind.parse(request.query).kind ?? "gstin";
+    return { ...request.container.gstinLookup.validate(identifier, kind), kind };
+  });
+
+  /** Cached-first lookup. `refresh=true` forces a fresh call to the portal. */
+  app.get("/gstin/:identifier", async (request) => {
+    const ctx = requireAuth(request);
+    const { identifier } = identifierParam.parse(request.params);
+    const { kind = "gstin", refresh } = lookupQuery.parse(request.query);
+    const force = refresh === true;
+    return kind === "transin"
+      ? request.container.gstinLookup.lookupTransporter(ctx, identifier, { force })
+      : request.container.gstinLookup.lookupGstin(ctx, identifier, { force });
+  });
+
+  /**
+   * The explicit "Fetch details" / "Refresh" action.
+   *
+   * A POST because it spends the tenant's portal quota and writes a record —
+   * it is not a safe, cacheable read even though it reads from the portal.
+   */
+  app.post("/gstin/:identifier/fetch", async (request) => {
+    const ctx = requireAuth(request);
+    const { identifier } = identifierParam.parse(request.params);
+    const kind = lookupKind.parse(request.body ?? {}).kind ?? "gstin";
+    return kind === "transin"
+      ? request.container.gstinLookup.lookupTransporter(ctx, identifier, { force: true })
+      : request.container.gstinLookup.lookupGstin(ctx, identifier, { force: true });
+  });
+
+  /** Everything this tenant has previously resolved. */
+  app.get("/gstin", async (request) => {
+    const ctx = requireAuth(request);
+    const kind = lookupKind.parse(request.query).kind;
+    return { items: await request.container.gstinLookup.list(ctx, kind) };
   });
 
   /* ----------------------------- Credentials --------------------------- */

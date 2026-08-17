@@ -11,8 +11,11 @@ import {
   type EwbUpdateTransporterPayload,
   type GatewayRequestContext,
   type GatewayResult,
+  type GstinDetails,
+  type TransporterDetails,
 } from "@traxac/gst-gateway";
-import { aesDecrypt, aesEncrypt } from "./crypto.js";
+import { aesDecrypt, aesEncrypt, decryptRekEnvelope, isRekEnvelope } from "./crypto.js";
+import { mapEwbGstinDetails, mapTransporterDetails } from "./registry-mapping.js";
 import { EWB_ACTIONS, EWB_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";
 import {
@@ -231,6 +234,50 @@ export class NicEwbProvider implements EwbProvider {
     return this.request(ctx, operation, "POST", EWB_PATHS.ewbApi, { action, payload });
   }
 
+  /**
+   * Resolve a taxpayer from the e-Way Bill master register.
+   *
+   * The master endpoints answer with the REK envelope, which `request`
+   * unwraps; the ordinary e-Way Bill endpoints do not.
+   */
+  async getGstinDetails(
+    ctx: GatewayRequestContext,
+    gstin: string,
+  ): Promise<GatewayResult<GstinDetails>> {
+    try {
+      const body = await this.request(ctx, "getGstinDetails", "GET", EWB_PATHS.getGstin(gstin));
+      if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
+      return gatewayOk(mapEwbGstinDetails(body.data, gstin), body.raw);
+    } catch (err) {
+      return gatewayFail(this.mapError(err));
+    }
+  }
+
+  /**
+   * Resolve an enrolled transporter by TRANSIN.
+   *
+   * A distinct register: the response carries no registration status and no
+   * taxpayer type, because an enrolled transporter has neither. Nothing here
+   * may be read as evidence that a GSTIN is active.
+   */
+  async getTransporterDetails(
+    ctx: GatewayRequestContext,
+    transin: string,
+  ): Promise<GatewayResult<TransporterDetails>> {
+    try {
+      const body = await this.request(
+        ctx,
+        "getTransporterDetails",
+        "GET",
+        EWB_PATHS.getTransporter(transin),
+      );
+      if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
+      return gatewayOk(mapTransporterDetails(body.data, transin), body.raw);
+    } catch (err) {
+      return gatewayFail(this.mapError(err));
+    }
+  }
+
   private async request(
     ctx: GatewayRequestContext,
     operation: string,
@@ -279,9 +326,12 @@ export class NicEwbProvider implements EwbProvider {
 
     const body = response.json ?? {};
     if (isSuccess(body)) {
+      // The master registers wrap their payload in a per-response key; the
+      // transactional endpoints encrypt with the session key directly.
       const encrypted = body["data"] ?? body["Data"];
-      const decoded =
-        typeof encrypted === "string" && encrypted
+      const decoded = isRekEnvelope(body)
+        ? decryptRekEnvelope(session.sek, body)
+        : typeof encrypted === "string" && encrypted
           ? (JSON.parse(aesDecrypt(session.sek, encrypted)) as Record<string, unknown>)
           : body;
       return { ok: true, data: decoded, raw: redactRaw(body) };

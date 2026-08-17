@@ -126,7 +126,11 @@ export async function commercialRoutes(app: FastifyInstance): Promise<void> {
     return request.container.ledgers.paymentHistory(ctx, paymentFilterSchema.parse(request.query));
   });
 
-  /* -------------------------------- GSTR-1 ----------------------------- */
+  /* -------------------------------- GSTR-1 -----------------------------
+   *
+   * FROZEN AND OUT OF SCOPE — retained so existing data stays reachable, not
+   * presented as a product capability. No UI calls these. Do not extend.
+   */
 
   app.get("/gstr1", async (request) => {
     const ctx = requireAuth(request);

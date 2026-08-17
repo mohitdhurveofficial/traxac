@@ -14,6 +14,7 @@ import { InvoiceService } from "./services/invoices.js";
 import { DocumentService } from "./services/documents.js";
 import { NotificationService } from "./services/notifications.js";
 import { ReportService } from "./services/reports.js";
+import { GstinLookupService } from "./services/gstin-lookup.js";
 import { CommercialService } from "./services/commercial.js";
 import { LedgerService } from "./services/ledgers.js";
 import { Gstr1Service } from "./services/gstr1.js";
@@ -45,6 +46,7 @@ export interface Container {
   documents: DocumentService;
   notifications: NotificationService;
   reports: ReportService;
+  gstinLookup: GstinLookupService;
   commercial: CommercialService;
   ledgers: LedgerService;
   gstr1: Gstr1Service;
@@ -128,6 +130,13 @@ export function createContainer(options: ContainerOptions = {}): Container {
   const documents = new DocumentService(database, storage, audit);
   const notifications = new NotificationService(database);
   const reports = new ReportService(database);
+  const gstinLookup = new GstinLookupService({
+    database,
+    registry,
+    credentials,
+    audit,
+    environment: config.GST_ENVIRONMENT,
+  });
   const commercial = new CommercialService(database, audit);
   const ledgers = new LedgerService(database);
   const gstr1 = new Gstr1Service(database, audit);
@@ -164,6 +173,7 @@ export function createContainer(options: ContainerOptions = {}): Container {
     documents,
     notifications,
     reports,
+    gstinLookup,
     commercial,
     ledgers,
     gstr1,

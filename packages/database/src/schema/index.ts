@@ -13,3 +13,4 @@ export * from "./jobs.js";
 export * from "./commercial.js";
 export * from "./reconciliation.js";
 export * from "./audit.js";
+export * from "./registry.js";
