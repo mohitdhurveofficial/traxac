@@ -50,17 +50,24 @@ export class Runner {
     if (reclaimed > 0) log.warn({ reclaimed }, "reclaimed stale jobs from a previous run");
 
     for (const task of this.options.schedule ?? []) {
-      const timer = setInterval(() => {
-        void task.run(this.container).catch((err) => {
-          log.error({ err, task: task.name }, "scheduled task failed");
-        });
-      }, task.everyMs);
+      /*
+       * Scheduled housekeeping — expiring e-Way Bills, purging sessions —
+       * spans every tenant by design, so it runs in a named system scope.
+       * Without one it reaches the database with no tenant context and fails
+       * closed, which is the correct behaviour but stops the worker booting.
+       */
+      const run = (): Promise<void> =>
+        this.container.database
+          .withSystemScope(`schedule:${task.name}`, () => task.run(this.container))
+          .catch((err: unknown) => {
+            log.error({ err, task: task.name }, "scheduled task failed");
+          });
+
+      const timer = setInterval(() => void run(), task.everyMs);
       // A pending interval must not hold the process open during shutdown.
       timer.unref();
       this.timers.push(timer);
-      void task.run(this.container).catch((err) => {
-        log.error({ err, task: task.name }, "scheduled task failed on startup");
-      });
+      void run();
     }
 
     await this.loop();

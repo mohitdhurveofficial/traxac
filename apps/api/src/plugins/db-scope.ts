@@ -29,11 +29,21 @@ import type { Container } from "@traxac/core";
  * duration. That is a deliberate trade: correctness of tenant isolation over
  * connection efficiency. Long-running external calls belong on the worker.
  */
+/** Everything the application serves under this prefix talks to the database. */
+const API_PREFIX = "/api";
+
 export function registerDbScope(app: FastifyInstance, container: Container): void {
   app.addHook("onRoute", (route: RouteOptions) => {
-    // Health checks must answer even when the database is unreachable, so
-    // they are deliberately left outside any transaction.
-    if (typeof route.url === "string" && route.url.startsWith("/health")) return;
+    /*
+     * Only API routes get a database scope.
+     *
+     * Health must answer even when the database is unreachable. The static
+     * file and SPA-fallback routes never touch the database, and wrapping
+     * them broke them outright: their handlers stream a reply rather than
+     * returning a payload, so resolving a wrapper promise around them sent an
+     * empty body — every page loaded as 200 with zero bytes.
+     */
+    if (typeof route.url !== "string" || !route.url.startsWith(API_PREFIX)) return;
 
     const original = route.handler;
     if (typeof original !== "function") return;
