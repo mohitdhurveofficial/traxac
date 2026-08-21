@@ -207,7 +207,9 @@ export class ComplianceService {
       `einvoice:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`,
     );
 
-    const provider = this.deps.registry.einvoice(environment);
+    // Routed by the connection's own provider: a GSP credential must never
+    // be handed to the NIC client.
+    const provider = this.deps.registry.einvoice(credential.provider, environment);
 
     /*
      * Retry safety.
@@ -427,7 +429,7 @@ export class ComplianceService {
     );
 
     const result = await this.deps.registry
-      .einvoice(record.environment as "sandbox" | "production")
+      .einvoice(credential.provider, record.environment as "sandbox" | "production")
       .cancelIrn(gatewayCtx, {
         irn: record.irn,
         reasonCode: input.reasonCode,
@@ -604,7 +606,7 @@ export class ComplianceService {
       `ewb:${invoiceId}:${payloadFingerprint(payload).slice(0, 16)}`,
     );
 
-    const ewbProvider = this.deps.registry.ewb(environment);
+    const ewbProvider = this.deps.registry.ewb(credential.provider, environment);
 
     // Same rule as the IRN: on a retry, confirm with the portal before
     // sending anything that could produce a second e-Way Bill.
@@ -769,7 +771,7 @@ export class ComplianceService {
     };
 
     const result = await this.deps.registry
-      .ewb(record.environment as "sandbox" | "production")
+      .ewb(credential.provider, record.environment as "sandbox" | "production")
       .updatePartB(
         this.gatewayContext(
           ctx,
@@ -833,7 +835,7 @@ export class ComplianceService {
   ): Promise<EwayBill> {
     requirePermission(ctx, "compliance:generate");
     const record = await this.requireLiveEwb(ctx, invoiceId);
-    const { credentials } = await this.deps.credentials.resolve(ctx, {
+    const { credential, credentials } = await this.deps.credentials.resolve(ctx, {
       gstin: record.gstin,
       service: "ewb",
       environment: record.environment as "sandbox" | "production",
@@ -841,7 +843,7 @@ export class ComplianceService {
     const payload = { ewbNo: Number(record.ewbNumber), transporterId: transporterGstin };
 
     const result = await this.deps.registry
-      .ewb(record.environment as "sandbox" | "production")
+      .ewb(credential.provider, record.environment as "sandbox" | "production")
       .updateTransporter(
         this.gatewayContext(
           ctx,
@@ -911,7 +913,7 @@ export class ComplianceService {
       );
     }
 
-    const { credentials } = await this.deps.credentials.resolve(ctx, {
+    const { credential, credentials } = await this.deps.credentials.resolve(ctx, {
       gstin: record.gstin,
       service: "ewb",
       environment: record.environment as "sandbox" | "production",
@@ -937,7 +939,7 @@ export class ComplianceService {
     };
 
     const result = await this.deps.registry
-      .ewb(record.environment as "sandbox" | "production")
+      .ewb(credential.provider, record.environment as "sandbox" | "production")
       .extend(
         this.gatewayContext(
           ctx,
@@ -1008,7 +1010,7 @@ export class ComplianceService {
       );
     }
 
-    const { credentials } = await this.deps.credentials.resolve(ctx, {
+    const { credential, credentials } = await this.deps.credentials.resolve(ctx, {
       gstin: record.gstin,
       service: "ewb",
       environment: record.environment as "sandbox" | "production",
@@ -1020,7 +1022,7 @@ export class ComplianceService {
     };
 
     const result = await this.deps.registry
-      .ewb(record.environment as "sandbox" | "production")
+      .ewb(credential.provider, record.environment as "sandbox" | "production")
       .cancel(
         this.gatewayContext(
           ctx,

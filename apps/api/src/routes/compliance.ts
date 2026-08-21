@@ -312,8 +312,8 @@ export async function complianceRoutes(app: FastifyInstance): Promise<void> {
 
     const provider =
       summary.service === "einvoice"
-        ? registry.einvoice(summary.environment as "sandbox" | "production")
-        : registry.ewb(summary.environment as "sandbox" | "production");
+        ? registry.einvoice(summary.provider, summary.environment as "sandbox" | "production")
+        : registry.ewb(summary.provider, summary.environment as "sandbox" | "production");
 
     const result = await provider.verify({
       tenantId: ctx.tenantId,

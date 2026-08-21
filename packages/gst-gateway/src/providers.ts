@@ -130,7 +130,58 @@ export interface EwbProvider {
 }
 
 /** Resolves the provider pair to use for a given environment. */
+/**
+ * How a GSTIN reaches the government.
+ *
+ * Not every taxpayer is eligible for direct NIC API access — it requires
+ * separate onboarding and IP whitelisting. The rest integrate through an
+ * authorised GSP, which speaks its own protocol with its own credentials.
+ * The two are not interchangeable, so the connection records which it is.
+ */
+export type ConnectivityModel =
+  /** Onboarded with NIC for direct API access. */
+  | "direct"
+  /** Routed through an authorised GST Suvidha Provider. */
+  | "gsp";
+
+/**
+ * Resolves the implementation for a connection.
+ *
+ * Keyed by **provider as well as environment**. The provider is recorded on
+ * every credential and is part of its unique key, so routing on environment
+ * alone would send a GSP's credentials to NIC — an authentication failure at
+ * best, and at worst a request to the wrong system carrying someone's real
+ * credentials.
+ *
+ * An unknown provider must raise `UnknownProviderError`, never fall back to a
+ * default. Silently substituting NIC is precisely the bug this signature
+ * exists to prevent.
+ */
 export interface GatewayRegistry {
-  einvoice(environment: "sandbox" | "production"): EinvoiceProvider;
-  ewb(environment: "sandbox" | "production"): EwbProvider;
+  einvoice(provider: string, environment: "sandbox" | "production"): EinvoiceProvider;
+  ewb(provider: string, environment: "sandbox" | "production"): EwbProvider;
+  /** Providers this deployment can actually route to. */
+  available(): ProviderDescriptor[];
+}
+
+export interface ProviderDescriptor {
+  /** Stored on the credential, e.g. "nic". */
+  id: string;
+  /** Shown to the customer, e.g. "Direct NIC API". */
+  label: string;
+  connectivity: ConnectivityModel;
+  services: Array<"einvoice" | "ewb">;
+}
+
+/** Raised when a credential names a provider this deployment cannot route to. */
+export class UnknownProviderError extends Error {
+  readonly code = "PROVIDER_NOT_CONFIGURED";
+  constructor(provider: string, service: string) {
+    super(
+      `No ${service} integration is configured for provider "${provider}". ` +
+        "The connection names a provider this deployment cannot reach — reconnect " +
+        "the GSTIN choosing a provider that is available.",
+    );
+    this.name = "UnknownProviderError";
+  }
 }

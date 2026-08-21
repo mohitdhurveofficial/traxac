@@ -228,7 +228,7 @@ export class GstinLookupService {
       return (await this.cached(ctx, normalised, "transin")) ?? notConnected(normalised, "transin");
     }
 
-    const provider = this.deps.registry.ewb(this.deps.environment);
+    const provider = this.deps.registry.ewb(credentials.provider, this.deps.environment);
     const result = await provider.getTransporterDetails(credentials, normalised);
     if (!result.ok) {
       const fallback = await this.cached(ctx, normalised, "transin");
@@ -266,7 +266,7 @@ export class GstinLookupService {
   } | null> {
     const irp = await this.resolve(ctx, "einvoice");
     if (irp) {
-      const provider = this.deps.registry.einvoice(this.deps.environment);
+      const provider = this.deps.registry.einvoice(irp.provider, this.deps.environment);
       return {
         source: "irp",
         call: (gstin) => provider.getGstinDetails(irp, gstin),
@@ -277,7 +277,7 @@ export class GstinLookupService {
     }
     const ewb = await this.resolve(ctx, "ewb");
     if (ewb) {
-      const provider = this.deps.registry.ewb(this.deps.environment);
+      const provider = this.deps.registry.ewb(ewb.provider, this.deps.environment);
       return { source: "ewb", call: (gstin) => provider.getGstinDetails(ewb, gstin) };
     }
     return null;
@@ -292,7 +292,7 @@ export class GstinLookupService {
   private async resolve(
     ctx: AuthContext,
     service: "einvoice" | "ewb",
-  ): Promise<GatewayRequestContext | null> {
+  ): Promise<(GatewayRequestContext & { provider: string }) | null> {
     const list = await this.deps.credentials.list(ctx);
     const usable = list.find(
       (c) => c.service === service && c.environment === this.deps.environment,
@@ -305,6 +305,7 @@ export class GstinLookupService {
         environment: this.deps.environment,
       });
       return {
+        provider: usable.provider,
         tenantId: ctx.tenantId,
         gstin: usable.gstin,
         environment: this.deps.environment,
