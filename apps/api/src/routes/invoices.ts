@@ -8,9 +8,9 @@ import {
   previewInvoiceSchema,
   recordPaymentSchema,
   updateInvoiceSchema,
-} from "@traxac/shared/contracts";
-import { AppError, financialYear } from "@traxac/shared";
-import { readTimeline } from "@traxac/core";
+} from "@ewayvo/shared/contracts";
+import { AppError, financialYear } from "@ewayvo/shared";
+import { readTimeline } from "@ewayvo/core";
 import { requireAuth } from "../context.js";
 
 const idParam = z.object({ id: z.string().uuid() });

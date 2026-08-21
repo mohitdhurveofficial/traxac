@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 import { buildApp } from "../src/app.js";
 import { testContainer } from "../../../packages/core/test/helpers.js";
 

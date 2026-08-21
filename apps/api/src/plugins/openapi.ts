@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 import { API_PREFIX } from "./auth.js";
 
 /**
- * OpenAPI specification for Traxac's own API.
+ * OpenAPI specification for Ewayvo's own API.
  *
  * Generated from the live route table rather than hand-maintained, so it
  * cannot drift from what the server actually serves. The document is served
@@ -19,7 +19,7 @@ export async function registerOpenApi(app: FastifyInstance, container: Container
     openapi: {
       openapi: "3.1.0",
       info: {
-        title: "Traxac API",
+        title: "Ewayvo API",
         version: "1.0.0",
         description: [
           "Multi-tenant Indian GST billing API.",
@@ -49,7 +49,7 @@ export async function registerOpenApi(app: FastifyInstance, container: Container
           sessionCookie: {
             type: "apiKey",
             in: "cookie",
-            name: "traxac_session",
+            name: "ewayvo_session",
             description: "Set by POST /api/v1/auth/login. httpOnly.",
           },
           bearerToken: {

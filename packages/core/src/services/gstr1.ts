@@ -10,7 +10,7 @@
  * Any change here requires an explicit scope unlock.
  */
 import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   einvoices,
   gstins,
@@ -18,8 +18,8 @@ import {
   invoiceLines,
   invoices,
   requireScope,
-} from "@traxac/database";
-import { AppError, isValidGstin, rupeeNumber, toIsoDate } from "@traxac/shared";
+} from "@ewayvo/database";
+import { AppError, isValidGstin, rupeeNumber, toIsoDate } from "@ewayvo/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

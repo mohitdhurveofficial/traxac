@@ -1,5 +1,5 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   apiKeys,
   gstins,
@@ -10,9 +10,9 @@ import {
   tenantSettings,
   tenants,
   users,
-} from "@traxac/database";
-import { AppError, ROLE_PERMISSIONS, type Role } from "@traxac/shared";
-import type { SessionUser } from "@traxac/shared/contracts";
+} from "@ewayvo/database";
+import { AppError, ROLE_PERMISSIONS, type Role } from "@ewayvo/shared";
+import type { SessionUser } from "@ewayvo/shared/contracts";
 import { hashPassword, needsRehash, verifyPassword } from "../infra/password.js";
 import { randomToken, sha256 } from "../infra/crypto.js";
 import type { AuthContext } from "./context.js";

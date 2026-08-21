@@ -1,4 +1,4 @@
-import type { GatewayEnvironment } from "@traxac/gst-gateway";
+import type { GatewayEnvironment } from "@ewayvo/gst-gateway";
 
 /**
  * NIC endpoints.

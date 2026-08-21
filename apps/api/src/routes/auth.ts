@@ -6,9 +6,9 @@ import {
   loginSchema,
   registerSchema,
   switchTenantSchema,
-} from "@traxac/shared/contracts";
-import { ROLE_PERMISSIONS, ROLES, AppError } from "@traxac/shared";
-import { EMAIL_TEMPLATES } from "@traxac/core";
+} from "@ewayvo/shared/contracts";
+import { ROLE_PERMISSIONS, ROLES, AppError } from "@ewayvo/shared";
+import { EMAIL_TEMPLATES } from "@ewayvo/core";
 import { requireAuth } from "../context.js";
 import { SESSION_COOKIE } from "../plugins/auth.js";
 

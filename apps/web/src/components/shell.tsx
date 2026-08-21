@@ -43,7 +43,7 @@ export function Shell({ session, children }: { session: SessionResponse; childre
       <aside className="no-print hidden w-56 shrink-0 border-r border-line bg-white lg:flex lg:flex-col">
         <div className="flex h-14 items-center gap-2 px-5">
           <Logo />
-          <span className="text-sm font-semibold tracking-tight">Traxac</span>
+          <span className="text-sm font-semibold tracking-tight">Ewayvo</span>
         </div>
 
         {/* Which books am I in? Shown before the primary action, because
@@ -118,7 +118,7 @@ export function Shell({ session, children }: { session: SessionResponse; childre
       {/* Mobile header */}
       <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
         <Logo />
-        <span className="text-sm font-semibold">Traxac</span>
+        <span className="text-sm font-semibold">Ewayvo</span>
         <div className="ml-auto flex items-center gap-1">
           <button
             type="button"

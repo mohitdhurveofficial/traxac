@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { invoices } from "@traxac/database";
+import { invoices } from "@ewayvo/database";
 import type { Container } from "../src/index.js";
 import { buildIrpPayload } from "../src/compliance/payload-builder.js";
 import {

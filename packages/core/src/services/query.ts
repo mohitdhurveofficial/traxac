@@ -1,6 +1,6 @@
 import { asc, desc, ilike, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
-import type { Paginated } from "@traxac/shared/contracts";
+import type { Paginated } from "@ewayvo/shared/contracts";
 
 /** Build a case-insensitive OR search across several text columns. */
 export function searchAcross(columns: PgColumn[], term?: string): SQL | undefined {

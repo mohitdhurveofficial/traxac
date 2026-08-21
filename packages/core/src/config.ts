@@ -57,10 +57,10 @@ const configSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(20),
 
   /** 32-byte base64 key that wraps every tenant secret. Rotate via KEY_VERSION. */
-  TRAXAC_MASTER_KEY: z.string().min(32, "TRAXAC_MASTER_KEY must be at least 32 chars"),
-  TRAXAC_MASTER_KEY_VERSION: z.coerce.number().int().min(1).default(1),
+  EWAYVO_MASTER_KEY: z.string().min(32, "EWAYVO_MASTER_KEY must be at least 32 chars"),
+  EWAYVO_MASTER_KEY_VERSION: z.coerce.number().int().min(1).default(1),
   /** Previous key, kept during a rotation so old ciphertext still decrypts. */
-  TRAXAC_MASTER_KEY_PREVIOUS: z.string().optional(),
+  EWAYVO_MASTER_KEY_PREVIOUS: z.string().optional(),
 
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
   /**
@@ -158,9 +158,42 @@ export interface AppConfig extends RawConfig {
 
 let cached: AppConfig | null = null;
 
+/**
+ * Accept the pre-rename variable names.
+ *
+ * The product was called Traxac, and its secrets are named accordingly in
+ * every deployment that already exists. Renaming the variables without a
+ * fallback would mean the application refuses to boot the moment this ships,
+ * and — worse for the master key — a deployment that booted against a
+ * *different* key could not decrypt a single stored GST credential.
+ *
+ * So the old names keep working. The new ones win where both are present.
+ * Remove this once every environment has been migrated.
+ */
+const RENAMED_ENV: ReadonlyArray<readonly [current: string, legacy: string]> = [
+  ["EWAYVO_MASTER_KEY", "TRAXAC_MASTER_KEY"],
+  ["EWAYVO_MASTER_KEY_VERSION", "TRAXAC_MASTER_KEY_VERSION"],
+  ["EWAYVO_MASTER_KEY_PREVIOUS", "TRAXAC_MASTER_KEY_PREVIOUS"],
+];
+
+function withLegacyNames(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const merged = { ...env };
+  for (const [current, legacy] of RENAMED_ENV) {
+    if (!merged[current] && merged[legacy]) merged[current] = merged[legacy];
+  }
+  return merged;
+}
+
+/** Legacy variable names still in use, for a one-line startup warning. */
+export function legacyEnvNamesInUse(env: NodeJS.ProcessEnv = process.env): string[] {
+  return RENAMED_ENV.filter(([current, legacy]) => !env[current] && env[legacy]).map(
+    ([, legacy]) => legacy,
+  );
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (cached) return cached;
-  const parsed = configSchema.safeParse(env);
+  const parsed = configSchema.safeParse(withLegacyNames(env));
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)

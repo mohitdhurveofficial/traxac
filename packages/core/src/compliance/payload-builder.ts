@@ -4,7 +4,7 @@ import type {
   Invoice,
   InvoiceCharge,
   InvoiceLine,
-} from "@traxac/database";
+} from "@ewayvo/database";
 import {
   IRP_DOC_TYPE,
   IRP_SUPPLY_TYPE,
@@ -13,11 +13,11 @@ import {
   toNicDate,
   type DocType,
   type SupplyCategory,
-} from "@traxac/shared";
-import type { EwbGeneratePayload, EwbItem, IrpInvoicePayload, IrpItem } from "@traxac/gst-gateway";
+} from "@ewayvo/shared";
+import type { EwbGeneratePayload, EwbItem, IrpInvoicePayload, IrpItem } from "@ewayvo/gst-gateway";
 
 /**
- * Maps the Traxac domain model onto the government payload schemas.
+ * Maps the Ewayvo domain model onto the government payload schemas.
  *
  * This is the only place where portal field names appear alongside our own, so
  * a schema change from NIC is a single-file edit. Amounts are converted from

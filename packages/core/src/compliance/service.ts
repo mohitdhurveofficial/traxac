@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
-import type { Database, EwayBill, Einvoice } from "@traxac/database";
+import type { Database, EwayBill, Einvoice } from "@ewayvo/database";
 import {
   einvoices,
   ewayBills,
@@ -10,7 +10,7 @@ import {
   invoices,
   transporters,
   requireScope,
-} from "@traxac/database";
+} from "@ewayvo/database";
 import {
   AppError,
   canCancel,
@@ -18,8 +18,8 @@ import {
   canExtend,
   computeValidity,
   toNicDate,
-} from "@traxac/shared";
-import type { GatewayRegistry, GatewayRequestContext } from "@traxac/gst-gateway";
+} from "@ewayvo/shared";
+import type { GatewayRegistry, GatewayRequestContext } from "@ewayvo/gst-gateway";
 import { actorLabel, requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

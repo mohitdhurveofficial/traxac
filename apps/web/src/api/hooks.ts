@@ -549,7 +549,7 @@ export function useSavePaymentTerm(id?: string) {
  * lock, which places return preparation and filing permanently out of scope.
  * The backend service, routes and `gst_returns` data are retained
  * deliberately, but nothing here is wired to a screen and no navigation
- * exposes it — Traxac does not present GSTR-1 as a capability.
+ * exposes it — Ewayvo does not present GSTR-1 as a capability.
  *
  * Do not extend this, and do not surface it, without an explicit scope
  * unlock. See the scope-lock decision of 2026-08-18.

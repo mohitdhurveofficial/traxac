@@ -1,4 +1,4 @@
-import type { GatewayError, GatewayTelemetry } from "@traxac/gst-gateway";
+import type { GatewayError, GatewayTelemetry } from "@ewayvo/gst-gateway";
 
 export class NicHttpError extends Error {
   constructor(

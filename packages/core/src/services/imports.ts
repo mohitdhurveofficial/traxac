@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import type { Database } from "@traxac/database";
-import { parties, products, transporters, vehicles, requireScope } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
+import { parties, products, transporters, vehicles, requireScope } from "@ewayvo/database";
 import {
   AppError,
   isValidGstin,
@@ -12,8 +12,8 @@ import {
   toPaise,
   isValidStateCode,
   gstinStateCode,
-} from "@traxac/shared";
-import type { ImportKind, ImportResult, ImportRowResult } from "@traxac/shared/contracts";
+} from "@ewayvo/shared";
+import type { ImportKind, ImportResult, ImportRowResult } from "@ewayvo/shared/contracts";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

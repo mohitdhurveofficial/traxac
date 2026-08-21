@@ -8,7 +8,7 @@ import { createdAt, money, tsCol, updatedAt } from "./_shared.js";
  * Reconciliation between our records and the government's.
  *
  * The portal is the system of record for filed documents, and the two can
- * drift: a document filed outside Traxac, one cancelled on the portal
+ * drift: a document filed outside Ewayvo, one cancelled on the portal
  * directly, or an amount that no longer matches. This table holds the
  * comparison so a future portal sync has somewhere to write, and so a human
  * can see what disagrees today.

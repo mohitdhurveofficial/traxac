@@ -51,7 +51,7 @@ export const EMAIL_TEMPLATES = {
   passwordReset(input: { name: string; resetUrl: string; expiresInMinutes: number }): EmailMessage {
     return {
       to: "",
-      subject: "Reset your Traxac password",
+      subject: "Reset your Ewayvo password",
       text: [
         `Hello ${input.name},`,
         "",
@@ -68,11 +68,11 @@ export const EMAIL_TEMPLATES = {
   teamInvitation(input: { name: string; businessName: string; inviteUrl: string }): EmailMessage {
     return {
       to: "",
-      subject: `You have been added to ${input.businessName} on Traxac`,
+      subject: `You have been added to ${input.businessName} on Ewayvo`,
       text: [
         `Hello ${input.name},`,
         "",
-        `You now have access to ${input.businessName} on Traxac.`,
+        `You now have access to ${input.businessName} on Ewayvo.`,
         "",
         `Set your password here: ${input.inviteUrl}`,
       ].join("\n"),

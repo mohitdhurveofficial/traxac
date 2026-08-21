@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { Database, Job } from "@traxac/database";
-import { jobs, requireScope } from "@traxac/database";
-import type { JobKind } from "@traxac/shared";
+import type { Database, Job } from "@ewayvo/database";
+import { jobs, requireScope } from "@ewayvo/database";
+import type { JobKind } from "@ewayvo/shared";
 
 /**
  * Durable job queue backed by Postgres.

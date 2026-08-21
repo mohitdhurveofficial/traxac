@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { Database, DbExecutor } from "@traxac/database";
-import { invoiceSequences } from "@traxac/database";
-import { AppError, financialYear, type DocType } from "@traxac/shared";
+import type { Database, DbExecutor } from "@ewayvo/database";
+import { invoiceSequences } from "@ewayvo/database";
+import { AppError, financialYear, type DocType } from "@ewayvo/shared";
 import type { AuthContext } from "../auth/context.js";
 
 /**

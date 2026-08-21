@@ -1,5 +1,5 @@
 import type { FastifyInstance, RouteHandlerMethod, RouteOptions } from "fastify";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 
 /**
  * Establishes the database scope every request runs inside.

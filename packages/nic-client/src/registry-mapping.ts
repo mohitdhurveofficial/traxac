@@ -3,7 +3,7 @@ import type {
   GstinDetails,
   GstinRegistrationStatus,
   TransporterDetails,
-} from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
 
 /**
  * Normalising two portals that describe the same taxpayer differently.

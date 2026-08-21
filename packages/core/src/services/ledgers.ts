@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   ewayBills,
   invoiceLines,
@@ -10,8 +10,8 @@ import {
   transporters,
   vehicles,
   requireScope,
-} from "@traxac/database";
-import { AppError } from "@traxac/shared";
+} from "@ewayvo/database";
+import { AppError } from "@ewayvo/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import { countExpr } from "./query.js";

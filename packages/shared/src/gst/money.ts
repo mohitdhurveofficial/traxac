@@ -1,5 +1,5 @@
 /**
- * Every monetary amount in Traxac is an integer number of **paise**.
+ * Every monetary amount in Ewayvo is an integer number of **paise**.
  * Floating-point rupees are never persisted or summed.
  */
 export type Paise = number;

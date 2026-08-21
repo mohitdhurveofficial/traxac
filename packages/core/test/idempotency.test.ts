@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { einvoices, ewayBills } from "@traxac/database";
+import { einvoices, ewayBills } from "@ewayvo/database";
 import type {
   EinvoiceProvider,
   EwbProvider,
@@ -8,7 +8,7 @@ import type {
   GatewayResult,
   IrnDetails,
   IrnResult,
-} from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
 import type { Container } from "../src/index.js";
 import {
   createBusiness,

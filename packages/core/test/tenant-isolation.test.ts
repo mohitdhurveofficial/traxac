@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Container } from "../src/index.js";
-import { AppError } from "@traxac/shared";
+import { AppError } from "@ewayvo/shared";
 import {
   createBusiness,
   invoiceInput,

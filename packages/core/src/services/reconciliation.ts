@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   einvoices,
   ewayBills,
@@ -8,8 +8,8 @@ import {
   reconciliationItems,
   reconciliationRuns,
   requireScope,
-} from "@traxac/database";
-import { AppError } from "@traxac/shared";
+} from "@ewayvo/database";
+import { AppError } from "@ewayvo/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";
@@ -18,7 +18,7 @@ import type { AuditWriter } from "../infra/audit.js";
  * Reconciliation between our books and the government's records.
  *
  * The portal is the system of record for filed documents. Ours and theirs can
- * diverge — a document filed outside Traxac, one cancelled directly on the
+ * diverge — a document filed outside Ewayvo, one cancelled directly on the
  * portal, an amount amended. This service holds the comparison.
  *
  * **No live portal fetch exists yet.** `ExternalDocumentSource` is the seam a

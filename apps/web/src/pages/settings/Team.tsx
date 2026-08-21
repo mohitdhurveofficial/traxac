@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ROLES } from "@traxac/shared";
+import { ROLES } from "@ewayvo/shared";
 import {
   useApiKeys,
   useCreateApiKey,
@@ -166,7 +166,7 @@ export function TeamSettings({ show }: { show: (message: string) => void }) {
             keyOf={(k) => k.id}
             empty={{
               title: "No API keys",
-              description: "Only needed if another system will call Traxac directly.",
+              description: "Only needed if another system will call Ewayvo directly.",
             }}
             renderItem={(key) => (
               <div className="flex flex-wrap items-center gap-3 px-4 py-3">

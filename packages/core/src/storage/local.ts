@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import type { Readable } from "node:stream";
-import { AppError } from "@traxac/shared";
+import { AppError } from "@ewayvo/shared";
 import type { ObjectStorage, PutObjectInput, StoredObject } from "./types.js";
 
 /**

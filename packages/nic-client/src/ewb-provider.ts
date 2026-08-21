@@ -13,7 +13,7 @@ import {
   type GatewayResult,
   type GstinDetails,
   type TransporterDetails,
-} from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
 import { aesDecrypt, aesEncrypt, decryptRekEnvelope, isRekEnvelope } from "./crypto.js";
 import { mapEwbGstinDetails, mapTransporterDetails } from "./registry-mapping.js";
 import { EWB_ACTIONS, EWB_PATHS, resolveBaseUrl } from "./endpoints.js";

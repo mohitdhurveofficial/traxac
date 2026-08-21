@@ -9,9 +9,9 @@ import {
   receivablesFilterSchema,
   reconciliationRequestSchema,
   taxSettingsSchema,
-} from "@traxac/shared/contracts";
-import { AppError } from "@traxac/shared";
-import { UploadedDocumentSource } from "@traxac/core";
+} from "@ewayvo/shared/contracts";
+import { AppError } from "@ewayvo/shared";
+import { UploadedDocumentSource } from "@ewayvo/core";
 import { requireAuth } from "../context.js";
 
 const idParam = z.object({ id: z.string().uuid() });

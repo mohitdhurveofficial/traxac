@@ -95,7 +95,7 @@ export function GstConnectionSettings({ show }: { show: (message: string) => voi
     <div className="max-w-3xl space-y-4">
       {!anyConnected && (
         <div className="rounded-xl border border-line bg-slate-50 p-4">
-          <p className="text-sm font-medium">You do not need this to use Traxac.</p>
+          <p className="text-sm font-medium">You do not need this to use Ewayvo.</p>
           <p className="mt-1 text-sm text-muted">
             Invoicing, PDFs, customers, payments and reports all work without it. Connect a service
             only when you need an IRN or an e-Way Bill from the Government portal — which is
@@ -191,7 +191,7 @@ export function GstConnectionSettings({ show }: { show: (message: string) => voi
                             onClick={() =>
                               confirm(
                                 `Disconnect ${service.label} for ${registration.gstin}? ` +
-                                  "Invoicing continues to work, but Traxac will stop requesting " +
+                                  "Invoicing continues to work, but Ewayvo will stop requesting " +
                                   "documents from the Government portal for this registration.",
                                 () =>
                                   remove.mutate(credential.id, {

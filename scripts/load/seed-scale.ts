@@ -8,7 +8,7 @@
  *
  *   pnpm load:seed -- --tenants 50 --invoices 200
  */
-import { createContainer, type AuthContext, type Container } from "@traxac/core";
+import { createContainer, type AuthContext, type Container } from "@ewayvo/core";
 
 interface Options {
   tenants: number;
@@ -37,7 +37,7 @@ const ITEMS = [
 
 async function main(): Promise<void> {
   const options = parseArgs();
-  const container = createContainer({ processName: "traxac-load-seed" });
+  const container = createContainer({ processName: "ewayvo-load-seed" });
   const startedAt = Date.now();
 
   console.log(

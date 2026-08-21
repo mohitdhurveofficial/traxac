@@ -34,7 +34,7 @@ describe("storage root resolution", () => {
   });
 
   it("leaves an absolute path untouched", () => {
-    expect(resolveFromRepoRoot("/var/data/traxac")).toBe("/var/data/traxac");
+    expect(resolveFromRepoRoot("/var/data/ewayvo")).toBe("/var/data/ewayvo");
   });
 
   it("refuses a key that escapes the storage root", async () => {

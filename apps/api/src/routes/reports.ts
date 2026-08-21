@@ -6,8 +6,8 @@ import {
   financialYearStart,
   toIsoDate,
   toRupees,
-} from "@traxac/shared";
-import { readActivity } from "@traxac/core";
+} from "@ewayvo/shared";
+import { readActivity } from "@ewayvo/core";
 import { requireAuth } from "../context.js";
 
 const windowQuery = z.object({

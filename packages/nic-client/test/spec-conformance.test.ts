@@ -5,7 +5,7 @@ import { parseIrpError } from "../src/errors.js";
 import { IRP_PATHS } from "../src/endpoints.js";
 import { verifyJws } from "../src/signed.js";
 import { integratorHeaders, gstinHeader } from "../src/session.js";
-import type { GatewayRequestContext } from "@traxac/gst-gateway";
+import type { GatewayRequestContext } from "@ewayvo/gst-gateway";
 
 /**
  * Conformance with the current NIC e-Invoice sandbox specification.

@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import type { Database, GstCredential } from "@traxac/database";
-import { gatewayTokens, gstCredentials, gstins, requireScope } from "@traxac/database";
-import { AppError } from "@traxac/shared";
-import type { GatewayCredentials, GatewayEnvironment } from "@traxac/gst-gateway";
-import type { NicSession, SessionStore } from "@traxac/nic-client";
+import type { Database, GstCredential } from "@ewayvo/database";
+import { gatewayTokens, gstCredentials, gstins, requireScope } from "@ewayvo/database";
+import { AppError } from "@ewayvo/shared";
+import type { GatewayCredentials, GatewayEnvironment } from "@ewayvo/gst-gateway";
+import type { NicSession, SessionStore } from "@ewayvo/nic-client";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { SecretBox } from "../infra/crypto.js";

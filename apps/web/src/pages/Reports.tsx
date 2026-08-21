@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { financialYear } from "@traxac/shared";
+import { financialYear } from "@ewayvo/shared";
 import { useDashboard, useReport } from "../api/hooks.js";
 import { get } from "../api/client.js";
 import { Page, PageHeader } from "../components/shell.js";

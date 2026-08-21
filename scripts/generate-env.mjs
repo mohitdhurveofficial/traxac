@@ -17,7 +17,7 @@ if (!existsSync(envPath)) {
   console.log("[env] created .env from .env.example");
 }
 
-const GENERATED = { TRAXAC_MASTER_KEY: () => randomBytes(32).toString("base64") };
+const GENERATED = { EWAYVO_MASTER_KEY: () => randomBytes(32).toString("base64") };
 
 let contents = readFileSync(envPath, "utf8");
 let changed = false;

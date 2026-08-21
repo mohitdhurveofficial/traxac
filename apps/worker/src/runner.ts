@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { Job } from "@traxac/database";
-import type { Container } from "@traxac/core";
-import { AppError, type JobKind } from "@traxac/shared";
+import type { Job } from "@ewayvo/database";
+import type { Container } from "@ewayvo/core";
+import { AppError, type JobKind } from "@ewayvo/shared";
 
 /**
  * Job runner.

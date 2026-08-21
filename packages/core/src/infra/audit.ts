@@ -1,6 +1,6 @@
 import { and, desc, eq, lt, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
-import { auditLogs } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
+import { auditLogs } from "@ewayvo/database";
 import { actorLabel, type AuthContext } from "../auth/context.js";
 
 /**

@@ -1,4 +1,4 @@
-import type { EinvoiceProvider, EwbProvider, GatewayRequestContext } from "@traxac/gst-gateway";
+import type { EinvoiceProvider, EwbProvider, GatewayRequestContext } from "@ewayvo/gst-gateway";
 import type { Logger } from "../infra/logger.js";
 
 /**

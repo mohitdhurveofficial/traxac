@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { field } from "../lib/format.js";
 import { Link, useSearchParams } from "react-router-dom";
-import { GST_STATE_CODES } from "@traxac/shared";
+import { GST_STATE_CODES } from "@ewayvo/shared";
 import { useAddPartyAddress, useParties, useParty, useSaveParty } from "../api/hooks.js";
 import type { Party } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";

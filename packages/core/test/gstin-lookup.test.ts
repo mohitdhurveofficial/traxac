@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
-import { gstinRegistry } from "@traxac/database";
+import { gstinRegistry } from "@ewayvo/database";
 import type {
   EinvoiceProvider,
   EwbProvider,
@@ -9,8 +9,8 @@ import type {
   GatewayResult,
   GstinDetails,
   TransporterDetails,
-} from "@traxac/gst-gateway";
-import { gatewayFail, gatewayOk } from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
+import { gatewayFail, gatewayOk } from "@ewayvo/gst-gateway";
 import { REGISTRY_STALE_AFTER_MS, type Container } from "../src/index.js";
 import { createBusiness, resetDatabase, testContainer, type TestBusiness } from "./helpers.js";
 

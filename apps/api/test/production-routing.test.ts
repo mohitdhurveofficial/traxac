@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 import { buildApp } from "../src/app.js";
 import { testContainer } from "../../../packages/core/test/helpers.js";
 
@@ -26,9 +26,9 @@ describe("production routing", () => {
 
   beforeAll(async () => {
     // A stand-in for the real build: the fallback only needs an index.html.
-    webDist = mkdtempSync(join(tmpdir(), "traxac-web-"));
+    webDist = mkdtempSync(join(tmpdir(), "ewayvo-web-"));
     mkdirSync(join(webDist, "assets"), { recursive: true });
-    writeFileSync(join(webDist, "index.html"), "<!doctype html><title>Traxac</title>");
+    writeFileSync(join(webDist, "index.html"), "<!doctype html><title>Ewayvo</title>");
     writeFileSync(join(webDist, "assets", "app.js"), "export const ok = true;\n");
 
     container = await testContainer({ WEB_DIST_PATH: webDist });

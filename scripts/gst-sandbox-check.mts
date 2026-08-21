@@ -1,7 +1,7 @@
 /**
  * Sandbox verification harness.
  *
- * Answers one question honestly: does Traxac actually talk to the government
+ * Answers one question honestly: does Ewayvo actually talk to the government
  * sandbox? Every other test in this repository uses a stub, and a stub can
  * only prove that our code agrees with our assumptions.
  *
@@ -16,7 +16,7 @@
  *
  *   pnpm test:gst:sandbox
  */
-import { createContainer, loadConfig } from "@traxac/core";
+import { createContainer, loadConfig } from "@ewayvo/core";
 
 type Outcome = "PASS" | "FAIL" | "SKIP";
 
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   if (missing.length > 0) {
     console.log("SANDBOX_NOT_CONFIGURED\n");
     console.log("The government sandbox has not been configured, so nothing was tested.");
-    console.log("Traxac's e-Invoice and e-Way Bill code is IMPLEMENTED but NOT LIVE-VERIFIED.\n");
+    console.log("Ewayvo's e-Invoice and e-Way Bill code is IMPLEMENTED but NOT LIVE-VERIFIED.\n");
     console.log("Missing:");
     console.log(missing.join("\n"));
     console.log("\nHow to obtain these: docs/gst-integration.md");

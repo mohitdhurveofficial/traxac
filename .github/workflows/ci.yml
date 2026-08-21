@@ -13,15 +13,15 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: traxac_test
+          POSTGRES_DB: ewayvo_test
         options: >-
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
         ports: ["5432:5432"]
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/traxac_test
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/traxac_test
-      TRAXAC_MASTER_KEY: dGVzdC1rZXktMzItYnl0ZXMtZm9yLWNpLXVzZS1vbmx5MDA=
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ewayvo_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/ewayvo_test
+      EWAYVO_MASTER_KEY: dGVzdC1rZXktMzItYnl0ZXMtZm9yLWNpLXVzZS1vbmx5MDA=
       NODE_ENV: test
       # RLS is inert for a superuser, so the enforcement suite connects as a
       # dedicated role. This makes its absence a failure rather than a skip.
@@ -58,13 +58,13 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: traxac_e2e
+          POSTGRES_DB: ewayvo_e2e
         options: >-
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
         ports: ["5432:5432"]
     env:
-      E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/traxac_e2e
+      E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/ewayvo_e2e
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -37,7 +37,7 @@ export function createLogger(
   } = {},
 ): Logger {
   return pino({
-    name: options.name ?? "traxac",
+    name: options.name ?? "ewayvo",
     level: options.level ?? "info",
     redact: { paths: REDACTED_PATHS, censor: "[redacted]" },
     formatters: { level: (label) => ({ level: label }) },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { computeValidity, GST_STATE_CODES } from "@traxac/shared";
+import { computeValidity, GST_STATE_CODES } from "@ewayvo/shared";
 import { useCredentials, useInvoice, useInvoiceAction, useInvoiceTimeline } from "../api/hooks.js";
 import type { AddressSnapshot, InvoiceDetail } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";

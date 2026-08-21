@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import postgres from "postgres";
-import { createDatabase, invoices, parties } from "@traxac/database";
-import type { Database } from "@traxac/database";
+import { createDatabase, invoices, parties } from "@ewayvo/database";
+import type { Database } from "@ewayvo/database";
 import type { Container } from "../src/index.js";
 import { and, eq } from "drizzle-orm";
 import {

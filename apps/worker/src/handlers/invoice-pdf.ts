@@ -1,8 +1,8 @@
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
-import type { Job, AddressSnapshot } from "@traxac/database";
-import { systemContext, type Container, type InvoiceDetail } from "@traxac/core";
-import { amountInWords, formatINR, GST_STATE_CODES, toIsoDate, toRupees } from "@traxac/shared";
+import type { Job, AddressSnapshot } from "@ewayvo/database";
+import { systemContext, type Container, type InvoiceDetail } from "@ewayvo/core";
+import { amountInWords, formatINR, GST_STATE_CODES, toIsoDate, toRupees } from "@ewayvo/shared";
 
 /**
  * Invoice PDF.

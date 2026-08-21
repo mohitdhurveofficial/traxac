@@ -14,8 +14,8 @@ import {
   updateProductSchema,
   updateTransporterSchema,
   updateVehicleSchema,
-} from "@traxac/shared/contracts";
-import { GST_STATE_CODES, UQC_UNITS } from "@traxac/shared";
+} from "@ewayvo/shared/contracts";
+import { GST_STATE_CODES, UQC_UNITS } from "@ewayvo/shared";
 import { requireAuth } from "../context.js";
 
 const listQuery = z.object({

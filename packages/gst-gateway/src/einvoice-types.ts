@@ -4,7 +4,7 @@
  * Field names are the portal's own (`SupTyp`, `SellerDtls`, …) rather than
  * friendlier ones, because a rename here is a rejected invoice there. The
  * builder that produces these objects lives alongside so the mapping from the
- * Traxac domain model is in exactly one place.
+ * Ewayvo domain model is in exactly one place.
  */
 
 export interface IrpTransactionDetails {

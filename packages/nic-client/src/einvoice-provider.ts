@@ -8,7 +8,7 @@ import {
   type IrnResult,
   type IrpInvoicePayload,
   type GstinDetails,
-} from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
 import { aesDecrypt, aesEncrypt } from "./crypto.js";
 import { IRP_PATHS, resolveBaseUrl } from "./endpoints.js";
 import { isPermanentPortalError, NicHttpError, nicFetch, toGatewayError } from "./http.js";

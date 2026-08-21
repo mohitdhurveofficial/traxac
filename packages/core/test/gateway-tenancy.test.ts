@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { gatewayCalls, gatewayTokens, gstCredentials } from "@traxac/database";
+import { gatewayCalls, gatewayTokens, gstCredentials } from "@ewayvo/database";
 import { systemContext, type Container } from "../src/index.js";
 import {
   createBusiness,

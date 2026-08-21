@@ -1,11 +1,11 @@
-# Deploying Traxac on Railway
+# Deploying Ewayvo on Railway
 
 Two services and one database.
 
 | Service         | Root           | Start command       | Notes                                               |
 | --------------- | -------------- | ------------------- | --------------------------------------------------- |
-| `traxac-app`    | repo root      | `pnpm start`        | Fastify API **and** the built web app on one origin |
-| `traxac-worker` | repo root      | `pnpm start:worker` | Compliance jobs, PDFs, e-Way Bill expiry sweep      |
+| `ewayvo-app`    | repo root      | `pnpm start`        | Fastify API **and** the built web app on one origin |
+| `ewayvo-worker` | repo root      | `pnpm start:worker` | Compliance jobs, PDFs, e-Way Bill expiry sweep      |
 | Postgres        | Railway plugin | —                   | `DATABASE_URL` is injected automatically            |
 
 ## Why the API also serves the web app
@@ -44,7 +44,7 @@ assumes co-location.
 4. **Set the variables** (below) on both services.
 5. **Run migrations.** Set the release command to `pnpm db:migrate`, or run it
    once from the Railway shell. Migrations are forward-only and idempotent.
-6. **Seed reference data**: `pnpm --filter @traxac/core exec tsx -e "…"` or let
+6. **Seed reference data**: `pnpm --filter @ewayvo/core exec tsx -e "…"` or let
    the first `pnpm db:seed` populate UQC units and common HSN codes.
 
 ## Environment variables
@@ -54,7 +54,7 @@ Required on **both** services:
 ```
 NODE_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-TRAXAC_MASTER_KEY=<openssl rand -base64 32>
+EWAYVO_MASTER_KEY=<openssl rand -base64 32>
 ```
 
 Required on the **app** service:
@@ -78,7 +78,7 @@ Object storage (production refuses to start on the local driver):
 
 ```
 STORAGE_DRIVER=s3
-S3_BUCKET=traxac-documents
+S3_BUCKET=ewayvo-documents
 S3_REGION=auto
 S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
 S3_ACCESS_KEY_ID=…
@@ -136,7 +136,7 @@ deployment that connects as the database owner therefore has RLS in name only.
 Provision the application role once, then point `DATABASE_URL` at it:
 
 ```bash
-TARGET_DATABASE_URL="postgres://owner@host/traxac" node scripts/create-app-role.mjs
+TARGET_DATABASE_URL="postgres://owner@host/ewayvo" node scripts/create-app-role.mjs
 ```
 
 It creates `traxac_app` with `SELECT/INSERT/UPDATE/DELETE` on the public schema
@@ -147,15 +147,15 @@ the tests.
 
 ## The master key
 
-`TRAXAC_MASTER_KEY` wraps every stored GST credential and cached portal token.
+`EWAYVO_MASTER_KEY` wraps every stored GST credential and cached portal token.
 
 - **Losing it means losing every stored credential.** Back it up somewhere
   other than Railway.
-- **Rotating it** is online: set `TRAXAC_MASTER_KEY` to the new key,
-  `TRAXAC_MASTER_KEY_PREVIOUS` to the old one, and bump
-  `TRAXAC_MASTER_KEY_VERSION`. Existing ciphertext keeps decrypting with the
+- **Rotating it** is online: set `EWAYVO_MASTER_KEY` to the new key,
+  `EWAYVO_MASTER_KEY_PREVIOUS` to the old one, and bump
+  `EWAYVO_MASTER_KEY_VERSION`. Existing ciphertext keeps decrypting with the
   previous key and is re-wrapped with the new one the next time it is read.
-  Remove `TRAXAC_MASTER_KEY_PREVIOUS` once `SELECT count(*) FROM
+  Remove `EWAYVO_MASTER_KEY_PREVIOUS` once `SELECT count(*) FROM
 gst_credentials WHERE key_version < <new version>` reaches zero.
 
 ## Scaling
@@ -174,7 +174,7 @@ Railway's Postgres plugin takes automated snapshots; verify the retention on
 your plan. Two things are **not** in the database and must be backed up
 separately:
 
-- `TRAXAC_MASTER_KEY` — without it the credential rows are unreadable.
+- `EWAYVO_MASTER_KEY` — without it the credential rows are unreadable.
 - The object storage bucket — invoice PDFs and signed e-Invoice JSON. Enable
   versioning and a lifecycle policy on the bucket rather than relying on the
   application never deleting.

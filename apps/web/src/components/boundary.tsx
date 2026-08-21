@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { crashed:
             className="btn-primary mt-4"
             onClick={() => window.location.reload()}
           >
-            Reload Traxac
+            Reload Ewayvo
           </button>
         </div>
       </div>

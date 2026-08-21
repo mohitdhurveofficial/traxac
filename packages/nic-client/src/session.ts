@@ -1,4 +1,4 @@
-import type { GatewayRequestContext, GatewayTelemetry } from "@traxac/gst-gateway";
+import type { GatewayRequestContext, GatewayTelemetry } from "@ewayvo/gst-gateway";
 import {
   aesDecrypt,
   aesDecryptToBase64,

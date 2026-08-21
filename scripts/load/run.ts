@@ -36,9 +36,9 @@ async function signIn(email: string, password: string): Promise<string> {
     throw new Error(`Sign-in failed for ${email}: HTTP ${response.status}`);
   }
   const cookie = response.headers.get("set-cookie");
-  const match = cookie?.match(/traxac_session=([^;]+)/);
+  const match = cookie?.match(/ewayvo_session=([^;]+)/);
   if (!match) throw new Error("No session cookie returned");
-  return `traxac_session=${match[1]}`;
+  return `ewayvo_session=${match[1]}`;
 }
 
 async function run(scenario: Scenario, cookie: string): Promise<Result> {
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
     }
   }
   if (cookies.length === 0) {
-    cookies.push(await signIn("owner@demo.traxac.in", "TraxacDemo2026!"));
+    cookies.push(await signIn("owner@demo.ewayvo.in", "EwayvoDemo2026!"));
     console.log("[load] using the demo account — run `pnpm load:seed` for a realistic dataset\n");
   }
 

@@ -9,8 +9,8 @@ import {
   partBSchema,
   saveCredentialSchema,
   updateEwbTransporterSchema,
-} from "@traxac/shared/contracts";
-import { AppError, computeValidity, canExtend, canCancel } from "@traxac/shared";
+} from "@ewayvo/shared/contracts";
+import { AppError, computeValidity, canExtend, canCancel } from "@ewayvo/shared";
 import { requireAuth } from "../context.js";
 
 const idParam = z.object({ id: z.string().uuid() });

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 
-const SESSION_COOKIE = "traxac_session";
+const SESSION_COOKIE = "ewayvo_session";
 
 /**
  * Every API route hangs off this prefix, and the web client requests the same

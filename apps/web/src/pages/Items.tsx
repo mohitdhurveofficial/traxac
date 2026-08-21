@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { UQC_UNITS } from "@traxac/shared";
+import { UQC_UNITS } from "@ewayvo/shared";
 import { useArchiveProduct, useProducts, useSaveProduct } from "../api/hooks.js";
 import type { Product } from "../api/types.js";
 import { Page, PageHeader } from "../components/shell.js";

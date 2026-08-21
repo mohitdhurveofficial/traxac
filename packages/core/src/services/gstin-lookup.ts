@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
-import { gstinRegistry, type Database, requireScope } from "@traxac/database";
-import { AppError, isValidGstin, isValidTransin, normaliseGstin } from "@traxac/shared";
+import { gstinRegistry, type Database, requireScope } from "@ewayvo/database";
+import { AppError, isValidGstin, isValidTransin, normaliseGstin } from "@ewayvo/shared";
 import type {
   GatewayRegistry,
   GatewayRequestContext,
   GatewayResult,
   GstinDetails,
   TransporterDetails,
-} from "@traxac/gst-gateway";
+} from "@ewayvo/gst-gateway";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

@@ -55,7 +55,7 @@ export function GettingStarted() {
   return (
     <section className="mb-5 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-medium">Set up Traxac</h2>
+        <h2 className="text-sm font-medium">Set up Ewayvo</h2>
         <p className="text-xs text-muted">
           {steps.length - remaining.length} of {steps.length} done
         </p>

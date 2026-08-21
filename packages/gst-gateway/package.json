@@ -1,5 +1,5 @@
 {
-  "name": "@traxac/gst-gateway",
+  "name": "@ewayvo/gst-gateway",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@traxac/shared": "workspace:*"
+    "@ewayvo/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -1,4 +1,4 @@
-# Traxac
+# Ewayvo
 
 Multi-tenant Indian GST billing SaaS with e-Invoice (IRN) and e-Way Bill built in.
 
@@ -43,7 +43,7 @@ the worker — a preview can never disagree with what is filed.
 
 ## Government integrations
 
-Traxac never fabricates an IRN, QR code or e-Way Bill number. The gateway
+Ewayvo never fabricates an IRN, QR code or e-Way Bill number. The gateway
 packages define provider interfaces; the NIC client speaks the real protocol
 against:
 
@@ -57,13 +57,13 @@ fail loudly with `CREDENTIALS_MISSING` rather than returning fake data.
 ## Local development
 
 ```bash
-createdb traxac_dev
+createdb ewayvo_dev
 pnpm setup     # install, generate the master key, migrate, seed
 pnpm dev       # web on :5173, API on :3000, worker in the background
 ```
 
-Open <http://localhost:5173> and sign in with `owner@demo.traxac.in` /
-`TraxacDemo2026!`.
+Open <http://localhost:5173> and sign in with `owner@demo.ewayvo.in` /
+`EwayvoDemo2026!`.
 
 The seed builds a business with enough history that every screen has something
 to show — four customers across three states, a seven-item catalogue, a
@@ -119,7 +119,7 @@ Chromium on a single origin, exactly as it is deployed: sign-in and session
 expiry, creating a GSTIN, customer and item, the full invoice lifecycle
 including tax splits and payments, attachments, PDFs, reports, GSTIN switching,
 team invitations, offline behaviour, error wording and tenant isolation. They
-run against a dedicated `traxac_e2e` database and start their own API and
+run against a dedicated `ewayvo_e2e` database and start their own API and
 worker. They have caught bugs no unit test could: a routing mismatch that made
 the whole SPA silently fail, an authentication loop, and a PDF that was never
 rendered unless an IRN existed.

@@ -1,5 +1,5 @@
 {
-  "name": "@traxac/worker",
+  "name": "@ewayvo/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,10 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@traxac/core": "workspace:*",
-    "@traxac/database": "workspace:*",
-    "@traxac/gst-gateway": "workspace:*",
-    "@traxac/shared": "workspace:*",
+    "@ewayvo/core": "workspace:*",
+    "@ewayvo/database": "workspace:*",
+    "@ewayvo/gst-gateway": "workspace:*",
+    "@ewayvo/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "pdfkit": "^0.15.1",
     "qrcode": "^1.5.4",

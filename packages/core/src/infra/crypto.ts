@@ -30,7 +30,7 @@ function keyBytes(secret: string): Buffer {
   if (cached) return cached;
   const raw = Buffer.from(secret, "base64");
   // A 32-byte base64 secret is used directly; anything else is stretched.
-  const key = raw.length === 32 ? raw : scryptSync(secret, "traxac.kdf.v1", 32);
+  const key = raw.length === 32 ? raw : scryptSync(secret, "ewayvo.kdf.v1", 32);
   derivedCache.set(secret, key);
   return key;
 }

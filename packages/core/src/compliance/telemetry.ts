@@ -1,6 +1,6 @@
-import type { Database } from "@traxac/database";
-import { gatewayCalls } from "@traxac/database";
-import type { GatewayTelemetry } from "@traxac/gst-gateway";
+import type { Database } from "@ewayvo/database";
+import { gatewayCalls } from "@ewayvo/database";
+import type { GatewayTelemetry } from "@ewayvo/gst-gateway";
 
 /**
  * Persists every outbound government API call. When a portal disputes what was

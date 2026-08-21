@@ -1,4 +1,4 @@
-import { GST_STATE_CODES } from "@traxac/shared";
+import { GST_STATE_CODES } from "@ewayvo/shared";
 import {
   useBranches,
   useGstins,

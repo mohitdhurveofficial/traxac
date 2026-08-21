@@ -1,4 +1,4 @@
-import { AppError, type Permission, type Role, roleHasPermission } from "@traxac/shared";
+import { AppError, type Permission, type Role, roleHasPermission } from "@ewayvo/shared";
 
 /**
  * The authenticated caller. Every service function takes this as its first

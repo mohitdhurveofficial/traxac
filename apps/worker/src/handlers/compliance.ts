@@ -1,6 +1,6 @@
-import type { Job } from "@traxac/database";
-import { systemContext, type Container } from "@traxac/core";
-import { AppError } from "@traxac/shared";
+import type { Job } from "@ewayvo/database";
+import { systemContext, type Container } from "@ewayvo/core";
+import { AppError } from "@ewayvo/shared";
 
 /**
  * Compliance handlers.

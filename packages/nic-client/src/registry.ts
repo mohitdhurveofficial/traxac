@@ -1,4 +1,4 @@
-import type { EinvoiceProvider, EwbProvider, GatewayRegistry } from "@traxac/gst-gateway";
+import type { EinvoiceProvider, EwbProvider, GatewayRegistry } from "@ewayvo/gst-gateway";
 import { NicEinvoiceProvider } from "./einvoice-provider.js";
 import { NicEwbProvider } from "./ewb-provider.js";
 import { NicSessionManager, type NicClientOptions } from "./session.js";

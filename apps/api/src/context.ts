@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
-import type { AuthContext, Container } from "@traxac/core";
-import { AppError } from "@traxac/shared";
+import type { AuthContext, Container } from "@ewayvo/core";
+import { AppError } from "@ewayvo/shared";
 
 /**
  * Every route handler works from an `AuthContext`, never from the raw request.

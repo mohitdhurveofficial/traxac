@@ -51,7 +51,7 @@ export function LoginPage() {
             <span className="grid size-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">
               T
             </span>
-            <span className="text-lg font-semibold tracking-tight">Traxac</span>
+            <span className="text-lg font-semibold tracking-tight">Ewayvo</span>
           </div>
 
           <h1 className="text-xl font-semibold tracking-tight">
@@ -124,7 +124,7 @@ export function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
-            {mode === "login" ? "New to Traxac?" : "Already have an account?"}{" "}
+            {mode === "login" ? "New to Ewayvo?" : "Already have an account?"}{" "}
             <button
               type="button"
               className="font-medium text-brand-700 hover:underline"

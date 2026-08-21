@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
-import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@traxac/database";
+import type { AddressSnapshot, Database, DbExecutor, Invoice } from "@ewayvo/database";
 import {
   branches,
   einvoices,
@@ -17,7 +17,7 @@ import {
   tenantSettings,
   transporters,
   requireScope,
-} from "@traxac/database";
+} from "@ewayvo/database";
 import {
   AppError,
   calculateInvoiceTax,
@@ -33,7 +33,7 @@ import {
   type DocType,
   type TaxLineInput,
   type TaxTotals,
-} from "@traxac/shared";
+} from "@ewayvo/shared";
 import type {
   CreateInvoiceInput,
   InvoiceListQuery,

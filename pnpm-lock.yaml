@@ -25,18 +25,18 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.39.5
+      '@ewayvo/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@ewayvo/database':
+        specifier: workspace:*
+        version: link:packages/database
+      '@ewayvo/shared':
+        specifier: workspace:*
+        version: link:packages/shared
       '@playwright/test':
         specifier: 1.62.1
         version: 1.62.1
-      '@traxac/core':
-        specifier: workspace:*
-        version: link:packages/core
-      '@traxac/database':
-        specifier: workspace:*
-        version: link:packages/database
-      '@traxac/shared':
-        specifier: workspace:*
-        version: link:packages/shared
       '@types/autocannon':
         specifier: ^7.12.7
         version: 7.12.7
@@ -73,6 +73,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@ewayvo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@ewayvo/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@ewayvo/gst-gateway':
+        specifier: workspace:*
+        version: link:../../packages/gst-gateway
+      '@ewayvo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@fastify/cors':
         specifier: ^10.0.1
         version: 10.1.0
@@ -97,18 +109,6 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.2.0
         version: 5.2.6
-      '@traxac/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@traxac/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@traxac/gst-gateway':
-        specifier: workspace:*
-        version: link:../../packages/gst-gateway
-      '@traxac/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(gel@2.2.0)(postgres@3.4.9)
@@ -131,12 +131,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@ewayvo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.4(react@18.3.1)
-      '@traxac/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -171,16 +171,16 @@ importers:
 
   apps/worker:
     dependencies:
-      '@traxac/core':
+      '@ewayvo/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@traxac/database':
+      '@ewayvo/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@traxac/gst-gateway':
+      '@ewayvo/gst-gateway':
         specifier: workspace:*
         version: link:../../packages/gst-gateway
-      '@traxac/shared':
+      '@ewayvo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       drizzle-orm:
@@ -217,16 +217,16 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.700.0
         version: 3.1111.0
-      '@traxac/database':
+      '@ewayvo/database':
         specifier: workspace:*
         version: link:../database
-      '@traxac/gst-gateway':
+      '@ewayvo/gst-gateway':
         specifier: workspace:*
         version: link:../gst-gateway
-      '@traxac/nic-client':
+      '@ewayvo/nic-client':
         specifier: workspace:*
         version: link:../nic-client
-      '@traxac/shared':
+      '@ewayvo/shared':
         specifier: workspace:*
         version: link:../shared
       drizzle-orm:
@@ -276,7 +276,7 @@ importers:
 
   packages/gst-gateway:
     dependencies:
-      '@traxac/shared':
+      '@ewayvo/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -289,10 +289,10 @@ importers:
 
   packages/nic-client:
     dependencies:
-      '@traxac/gst-gateway':
+      '@ewayvo/gst-gateway':
         specifier: workspace:*
         version: link:../gst-gateway
-      '@traxac/shared':
+      '@ewayvo/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:

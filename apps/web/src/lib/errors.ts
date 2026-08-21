@@ -36,7 +36,7 @@ export function describeError(error: unknown): FriendlyError | null {
   // fetch() rejects rather than resolving when the network is unreachable.
   if (error instanceof TypeError || (error instanceof Error && error.name === "TypeError")) {
     return {
-      title: navigator.onLine ? "Could not reach Traxac" : "You are offline",
+      title: navigator.onLine ? "Could not reach Ewayvo" : "You are offline",
       detail: navigator.onLine
         ? "The connection dropped mid-request. Check your internet and try again."
         : "Reconnect to the internet and try again. Nothing you had typed has been lost.",
@@ -99,7 +99,7 @@ const BY_CODE: Record<string, FriendlyError> = {
   },
   GATEWAY_ERROR: {
     title: "The GST portal could not complete this",
-    detail: "This is on the government portal's side. Traxac will keep retrying automatically.",
+    detail: "This is on the government portal's side. Ewayvo will keep retrying automatically.",
     retryable: true,
   },
   RATE_LIMITED: {

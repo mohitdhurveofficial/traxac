@@ -21,7 +21,7 @@ const here = dirname(fileURLToPath(import.meta.url));
  * SQL predicates and row locks. A mocked database would assert nothing.
  */
 export const TEST_DATABASE_URL =
-  process.env["TEST_DATABASE_URL"] ?? "postgres://localhost:5432/traxac_test";
+  process.env["TEST_DATABASE_URL"] ?? "postgres://localhost:5432/ewayvo_test";
 
 const TEST_KEY = Buffer.alloc(32, 7).toString("base64");
 
@@ -49,9 +49,9 @@ export async function testContainer(
     // GUC is transaction-local), so the pool must exceed the concurrency the
     // tests exercise — the numbering test alone finalizes 12 invoices at once.
     DATABASE_POOL_MAX: 30,
-    TRAXAC_MASTER_KEY: TEST_KEY,
-    TRAXAC_MASTER_KEY_VERSION: 1,
-    TRAXAC_MASTER_KEY_PREVIOUS: undefined,
+    EWAYVO_MASTER_KEY: TEST_KEY,
+    EWAYVO_MASTER_KEY_VERSION: 1,
+    EWAYVO_MASTER_KEY_PREVIOUS: undefined,
     SESSION_TTL_DAYS: 7,
     RATE_LIMIT_MAX: undefined,
     CORS_ORIGINS: "",
@@ -108,8 +108,8 @@ export async function testContainer(
   const config = merged as Parameters<typeof createContainer>[0]["config"];
   const container = createContainer(
     registry
-      ? { processName: "traxac-test", config, registry }
-      : { processName: "traxac-test", config },
+      ? { processName: "ewayvo-test", config, registry }
+      : { processName: "ewayvo-test", config },
   );
   return withTestScopes(container);
 }

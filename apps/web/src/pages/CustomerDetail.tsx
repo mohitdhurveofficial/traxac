@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { GST_STATE_CODES } from "@traxac/shared";
+import { GST_STATE_CODES } from "@ewayvo/shared";
 import { useCustomerLedger } from "../api/hooks.js";
 import { Page, PageHeader } from "../components/shell.js";
 import { InvoiceStatus, PaymentStatus } from "../components/status.js";

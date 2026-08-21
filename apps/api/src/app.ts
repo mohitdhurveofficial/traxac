@@ -8,7 +8,7 @@ import fastifyStatic from "@fastify/static";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
-import type { Container } from "@traxac/core";
+import type { Container } from "@ewayvo/core";
 import { API_PREFIX, isApiPath, registerAuth } from "./plugins/auth.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { registerDbScope } from "./plugins/db-scope.js";
@@ -99,7 +99,7 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
 
       /** Machine-readable route list — a stand-in until OpenAPI is generated. */
       api.get("/v1", async () => ({
-        name: "Traxac API",
+        name: "Ewayvo API",
         version: "1",
         routes: app.printRoutes({ commonPrefix: false }).split("\n").filter(Boolean),
       }));

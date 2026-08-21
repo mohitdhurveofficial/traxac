@@ -1,6 +1,6 @@
-import type { Database } from "@traxac/database";
-import { hsnCodes, units } from "@traxac/database";
-import { UQC_UNITS } from "@traxac/shared";
+import type { Database } from "@ewayvo/database";
+import { hsnCodes, units } from "@ewayvo/database";
+import { UQC_UNITS } from "@ewayvo/shared";
 
 /**
  * Reference data that every tenant shares. Idempotent, so it can run on every

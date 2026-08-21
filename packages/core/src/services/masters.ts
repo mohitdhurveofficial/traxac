@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   branches,
   gstins,
@@ -11,8 +11,8 @@ import {
   hsnCodes,
   units,
   requireScope,
-} from "@traxac/database";
-import { AppError, gstinStateCode, normaliseVehicleNo, toPaise } from "@traxac/shared";
+} from "@ewayvo/database";
+import { AppError, gstinStateCode, normaliseVehicleNo, toPaise } from "@ewayvo/shared";
 import type {
   CreateBranchInput,
   CreateGstinInput,
@@ -21,7 +21,7 @@ import type {
   CreateProductInput,
   CreateTransporterInput,
   CreateVehicleInput,
-} from "@traxac/shared/contracts";
+} from "@ewayvo/shared/contracts";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById, scopedToGstin } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

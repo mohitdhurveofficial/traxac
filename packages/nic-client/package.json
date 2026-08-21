@@ -1,5 +1,5 @@
 {
-  "name": "@traxac/nic-client",
+  "name": "@ewayvo/nic-client",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@traxac/gst-gateway": "workspace:*",
-    "@traxac/shared": "workspace:*"
+    "@ewayvo/gst-gateway": "workspace:*",
+    "@ewayvo/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",

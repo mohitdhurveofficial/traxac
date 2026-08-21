@@ -1,4 +1,4 @@
-import { createContainer } from "@traxac/core";
+import { createContainer, legacyEnvNamesInUse } from "@ewayvo/core";
 import { buildApp } from "./app.js";
 
 /**
@@ -9,7 +9,7 @@ import { buildApp } from "./app.js";
  * exit is what makes a rolling restart invisible to users.
  */
 async function main(): Promise<void> {
-  const container = createContainer({ processName: "traxac-api" });
+  const container = createContainer({ processName: "ewayvo-api" });
   const app = await buildApp(container);
 
   const close = async (signal: string): Promise<void> => {
@@ -30,6 +30,16 @@ async function main(): Promise<void> {
     container.logger.error({ reason }, "unhandled promise rejection");
   });
 
+  // A deployment still on the pre-rename variable names works, but should be
+  // migrated — the fallback is temporary.
+  const legacy = legacyEnvNamesInUse();
+  if (legacy.length > 0) {
+    container.logger.warn(
+      { legacy },
+      "using pre-rename environment variables; rename them to their EWAYVO_ equivalents",
+    );
+  }
+
   await app.listen({ port: container.config.PORT, host: "0.0.0.0" });
   container.logger.info(
     {
@@ -38,7 +48,7 @@ async function main(): Promise<void> {
       gst: container.config.GST_ENVIRONMENT,
       storage: container.config.STORAGE_DRIVER,
     },
-    "Traxac API ready",
+    "Ewayvo API ready",
   );
 }
 

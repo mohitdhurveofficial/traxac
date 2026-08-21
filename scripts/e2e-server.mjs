@@ -3,7 +3,7 @@
  *
  * One process serving both the API and the built SPA on a single origin, so
  * the tests exercise the real routing rather than a dev proxy. The database is
- * a dedicated `traxac_e2e` so a test run can never touch development data.
+ * a dedicated `ewayvo_e2e` so a test run can never touch development data.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const port = process.env["E2E_PORT"] ?? "4319";
-const databaseUrl = process.env["E2E_DATABASE_URL"] ?? "postgres://localhost:5432/traxac_e2e";
+const databaseUrl = process.env["E2E_DATABASE_URL"] ?? "postgres://localhost:5432/ewayvo_e2e";
 
 function run(command, args, options = {}) {
   execFileSync(command, args, { cwd: root, stdio: "inherit", ...options });
@@ -34,7 +34,7 @@ run("npx", ["tsx", "src/migrate.ts"], {
 });
 
 if (!existsSync(resolve(root, "apps/web/dist/index.html"))) {
-  run("pnpm", ["--filter", "@traxac/web", "build"]);
+  run("pnpm", ["--filter", "@ewayvo/web", "build"]);
 }
 
 const env = {
@@ -48,8 +48,8 @@ const env = {
   DATABASE_URL: databaseUrl,
   // Deterministic key: these are throwaway databases, and a rotating key
   // would make stored credentials unreadable between runs.
-  TRAXAC_MASTER_KEY: Buffer.alloc(32, 9).toString("base64"),
-  TRAXAC_MASTER_KEY_VERSION: "1",
+  EWAYVO_MASTER_KEY: Buffer.alloc(32, 9).toString("base64"),
+  EWAYVO_MASTER_KEY_VERSION: "1",
   COOKIE_SECURE: "false",
   // The suite signs in and registers repeatedly from one address; the real
   // limits (300/min global, 10 per 5 min on credentials) exist to stop

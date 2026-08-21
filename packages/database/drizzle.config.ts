@@ -5,7 +5,7 @@ export default defineConfig({
   schema: "./dist/schema/index.js",
   out: "./migrations",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/traxac_dev",
+    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/ewayvo_dev",
   },
   verbose: true,
   strict: true,

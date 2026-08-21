@@ -1,7 +1,7 @@
 import { pgTable, text, uuid, boolean, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
 
-/** Tenant = one business on Traxac. Every tenant-owned row references this. */
+/** Tenant = one business on Ewayvo. Every tenant-owned row references this. */
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),

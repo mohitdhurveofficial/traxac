@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
-import type { Database, Notification } from "@traxac/database";
-import { notifications, requireScope } from "@traxac/database";
+import type { Database, Notification } from "@ewayvo/database";
+import { notifications, requireScope } from "@ewayvo/database";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuthContext } from "../auth/context.js";
 import { countExpr } from "./query.js";

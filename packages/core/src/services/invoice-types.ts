@@ -4,7 +4,7 @@ import type {
   invoiceListQuerySchema,
   previewInvoiceSchema,
   recordPaymentSchema,
-} from "@traxac/shared/contracts";
+} from "@ewayvo/shared/contracts";
 
 /** Parsed contract types, re-exported so services do not import zod directly. */
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;

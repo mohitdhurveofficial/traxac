@@ -1,6 +1,6 @@
-import type { AddressSnapshot, Branch, Gstin, Party, PartyAddress } from "@traxac/database";
-import { GST_STATE_CODES } from "@traxac/shared";
-import type { AddressSnapshotInput } from "@traxac/shared/contracts";
+import type { AddressSnapshot, Branch, Gstin, Party, PartyAddress } from "@ewayvo/database";
+import { GST_STATE_CODES } from "@ewayvo/shared";
+import type { AddressSnapshotInput } from "@ewayvo/shared/contracts";
 
 /**
  * Address snapshotting. A document must keep the address exactly as it was

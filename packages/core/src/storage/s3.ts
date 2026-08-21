@@ -8,7 +8,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { AppError } from "@traxac/shared";
+import { AppError } from "@ewayvo/shared";
 import type { ObjectStorage, PutObjectInput, StoredObject } from "./types.js";
 
 export interface S3StorageConfig {

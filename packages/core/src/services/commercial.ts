@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
-import type { Database } from "@traxac/database";
+import type { Database } from "@ewayvo/database";
 import {
   gstins,
   parties,
@@ -7,9 +7,9 @@ import {
   taxSettings,
   hsnCodes,
   requireScope,
-} from "@traxac/database";
-import { AppError } from "@traxac/shared";
-import type { PaymentTermInput, TaxSettingsInput } from "@traxac/shared/contracts";
+} from "@ewayvo/database";
+import { AppError } from "@ewayvo/shared";
+import type { PaymentTermInput, TaxSettingsInput } from "@ewayvo/shared/contracts";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

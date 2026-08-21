@@ -1,4 +1,4 @@
-import { createContainer } from "@traxac/core";
+import { createContainer } from "@ewayvo/core";
 import { Runner } from "./runner.js";
 import {
   expireAndAlertEwbs,
@@ -17,7 +17,7 @@ import { handleRenderInvoicePdf } from "./handlers/invoice-pdf.js";
  * unavailable government portal never blocks someone raising an invoice.
  */
 async function main(): Promise<void> {
-  const container = createContainer({ processName: "traxac-worker" });
+  const container = createContainer({ processName: "ewayvo-worker" });
 
   const runner = new Runner(container, {
     concurrency: container.config.WORKER_CONCURRENCY,

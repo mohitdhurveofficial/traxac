@@ -1,6 +1,6 @@
-import { createDatabase, shouldUseSsl, type Database } from "@traxac/database";
-import type { GatewayRegistry } from "@traxac/gst-gateway";
-import { createNicRegistry, MemorySessionStore, type SessionStore } from "@traxac/nic-client";
+import { createDatabase, shouldUseSsl, type Database } from "@ewayvo/database";
+import type { GatewayRegistry } from "@ewayvo/gst-gateway";
+import { createNicRegistry, MemorySessionStore, type SessionStore } from "@ewayvo/nic-client";
 import { loadConfig, type AppConfig } from "./config.js";
 import { createLogger, type Logger } from "./infra/logger.js";
 import { SecretBox } from "./infra/crypto.js";
@@ -75,7 +75,7 @@ export function createContainer(options: ContainerOptions = {}): Container {
     createLogger({
       level: config.LOG_LEVEL,
       pretty: config.isDevelopment,
-      name: options.processName ?? "traxac",
+      name: options.processName ?? "ewayvo",
     });
 
   const database = createDatabase(config.DATABASE_URL, {
@@ -84,9 +84,9 @@ export function createContainer(options: ContainerOptions = {}): Container {
   });
 
   const secrets = new SecretBox({
-    masterKey: config.TRAXAC_MASTER_KEY,
-    version: config.TRAXAC_MASTER_KEY_VERSION,
-    previousKey: config.TRAXAC_MASTER_KEY_PREVIOUS,
+    masterKey: config.EWAYVO_MASTER_KEY,
+    version: config.EWAYVO_MASTER_KEY_VERSION,
+    previousKey: config.EWAYVO_MASTER_KEY_PREVIOUS,
   });
 
   const audit = new DatabaseAuditWriter(database, (err, entry) => {

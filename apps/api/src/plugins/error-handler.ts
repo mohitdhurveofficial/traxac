@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { ZodError } from "zod";
-import { AppError } from "@traxac/shared";
+import { AppError } from "@ewayvo/shared";
 
 /**
  * One error shape for the whole API:

@@ -1,8 +1,8 @@
 # GST integration
 
-How Traxac talks to the government e-Invoice (IRP) and e-Way Bill systems.
+How Ewayvo talks to the government e-Invoice (IRP) and e-Way Bill systems.
 
-The promise this serves: a business enters an invoice once, in Traxac, and
+The promise this serves: a business enters an invoice once, in Ewayvo, and
 never retypes it into a government portal. Everything below exists to make
 that true without ever inventing a government artefact.
 
@@ -46,7 +46,7 @@ Credentials are per **tenant + GSTIN + service + environment**, enforced by
 `unique(tenant_id, gstin, provider, environment, service)` on `gst_credentials`.
 There is no global credential and no shared token.
 
-- Encrypted at rest with `TRAXAC_MASTER_KEY`; only the server decrypts.
+- Encrypted at rest with `EWAYVO_MASTER_KEY`; only the server decrypts.
 - The browser receives `CredentialSummary` — a masked username hint, status,
   last verified time, last error. Never a secret, in any response.
 - Session tokens are cached under `gateway:environment:gstin:username`, so one
@@ -83,7 +83,7 @@ every request and hammer a rate-limited endpoint.
 Base64 inflates the auth payload by four thirds, against a 245-byte ceiling for
 PKCS#1 v1.5 on a 2048-bit key. **API username and password together must be
 roughly 66 characters or fewer.** Longer credentials cannot be encrypted at
-all; Traxac raises a message naming the cause rather than OpenSSL's opaque
+all; Ewayvo raises a message naming the cause rather than OpenSSL's opaque
 "data too large for key size".
 
 ### The e-Way Bill master APIs are different
@@ -97,12 +97,12 @@ rek  = Encrypt(rek, sek)
 hmac = HMAC-SHA256(Base64(json)) keyed with rek
 ```
 
-Traxac unwraps this and verifies the HMAC — the only integrity check on data
+Ewayvo unwraps this and verifies the HMAC — the only integrity check on data
 that gets written into a customer record.
 
 ## Signed responses
 
-`SignedInvoice` and `SignedQRCode` are JWS (`SHA256RSA`). Traxac verifies them
+`SignedInvoice` and `SignedQRCode` are JWS (`SHA256RSA`). Ewayvo verifies them
 against `NIC_SIGNING_CERT_*` — a **different key** from the auth public key —
 and stores the outcome per document: `verified`, `invalid`, `unverified`,
 `absent`, `malformed`.
@@ -128,7 +128,7 @@ because verification was unavailable.
 
 **Cancel e-Way Bill via the IRP is sandbox-only.** The specification states
 that in production the e-Way Bill System's own cancel API must be used, which
-is the path Traxac takes.
+is the path Ewayvo takes.
 
 ## Error handling
 
@@ -143,7 +143,7 @@ temporary, or permanent. Only genuinely retryable ones are retried.
 ## Idempotency
 
 A timeout does not mean the portal rejected the request — it may have succeeded
-while the response was lost. Traxac never blindly resends a document-creating
+while the response was lost. Ewayvo never blindly resends a document-creating
 call. On a duplicate rejection it reads back the existing IRN by document
 number and links that, so one invoice can never end up with two IRNs.
 
@@ -241,7 +241,7 @@ the cache key. Revoking is deleting the credential — the affected GSTIN
 immediately reports "not connected" and invoices continue to be raised without
 compliance, which is the correct degradation.
 
-`TRAXAC_MASTER_KEY` rotation is online via `TRAXAC_MASTER_KEY_PREVIOUS`; see
+`EWAYVO_MASTER_KEY` rotation is online via `EWAYVO_MASTER_KEY_PREVIOUS`; see
 [deployment.md](deployment.md).
 
 ## Troubleshooting

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Container } from "../src/index.js";
-import { financialYear } from "@traxac/shared";
+import { financialYear } from "@ewayvo/shared";
 import {
   createBusiness,
   invoiceInput,

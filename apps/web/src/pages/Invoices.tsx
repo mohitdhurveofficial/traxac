@@ -9,7 +9,7 @@ import { formatDate, money, moneyCompact } from "../lib/format.js";
 /**
  * The home screen.
  *
- * A trader opening Traxac has one of two questions: "what have I billed?" and
+ * A trader opening Ewayvo has one of two questions: "what have I billed?" and
  * "what needs me right now?". The attention strip answers the second in one
  * line; the list answers the first. Nothing else competes for space.
  */

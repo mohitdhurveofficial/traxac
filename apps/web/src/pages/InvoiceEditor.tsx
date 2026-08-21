@@ -5,7 +5,7 @@ import {
   evaluateEwbRequirement,
   GST_STATE_CODES,
   UQC_UNITS,
-} from "@traxac/shared";
+} from "@ewayvo/shared";
 import {
   useBranches,
   useGstins,
@@ -33,7 +33,7 @@ import { checked, dateInputValue, field, money, numberField, toPaise } from "../
  * until it is needed, because most invoices never need it.
  *
  * Totals are computed in the browser with the **same** engine the server uses
- * (`calculateInvoiceTax` from @traxac/shared), so the number on screen is the
+ * (`calculateInvoiceTax` from @ewayvo/shared), so the number on screen is the
  * number that gets filed. There is no second implementation to drift.
  */
 

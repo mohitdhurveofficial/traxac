@@ -10,12 +10,12 @@ import { createBusiness, resetDatabase, testContainer, type TestBusiness } from 
  * unless every piece of integration material is present, so ordinary CI never
  * depends on NIC being reachable:
  *
- *   TRAXAC_SANDBOX_ENABLED=1
- *   TRAXAC_SANDBOX_GSTIN            the GSTIN the sandbox account is issued for
- *   TRAXAC_SANDBOX_USERNAME         API username (not the portal login)
- *   TRAXAC_SANDBOX_PASSWORD
- *   TRAXAC_SANDBOX_CLIENT_ID
- *   TRAXAC_SANDBOX_CLIENT_SECRET
+ *   EWAYVO_SANDBOX_ENABLED=1
+ *   EWAYVO_SANDBOX_GSTIN            the GSTIN the sandbox account is issued for
+ *   EWAYVO_SANDBOX_USERNAME         API username (not the portal login)
+ *   EWAYVO_SANDBOX_PASSWORD
+ *   EWAYVO_SANDBOX_CLIENT_ID
+ *   EWAYVO_SANDBOX_CLIENT_SECRET
  *   NIC_PUBLIC_KEY_SANDBOX          NIC's RSA public key for the sandbox
  *   NIC_IRP_SANDBOX_BASE_URL        base URL NIC issues on registration
  *
@@ -28,22 +28,22 @@ import { createBusiness, resetDatabase, testContainer, type TestBusiness } from 
  */
 
 const REQUIRED = [
-  "TRAXAC_SANDBOX_GSTIN",
-  "TRAXAC_SANDBOX_USERNAME",
-  "TRAXAC_SANDBOX_PASSWORD",
-  "TRAXAC_SANDBOX_CLIENT_ID",
-  "TRAXAC_SANDBOX_CLIENT_SECRET",
+  "EWAYVO_SANDBOX_GSTIN",
+  "EWAYVO_SANDBOX_USERNAME",
+  "EWAYVO_SANDBOX_PASSWORD",
+  "EWAYVO_SANDBOX_CLIENT_ID",
+  "EWAYVO_SANDBOX_CLIENT_SECRET",
   "NIC_PUBLIC_KEY_SANDBOX",
   "NIC_IRP_SANDBOX_BASE_URL",
 ] as const;
 
 const missing = REQUIRED.filter((key) => !process.env[key]);
-const enabled = process.env["TRAXAC_SANDBOX_ENABLED"] === "1" && missing.length === 0;
+const enabled = process.env["EWAYVO_SANDBOX_ENABLED"] === "1" && missing.length === 0;
 
 if (!enabled) {
   const reason =
-    process.env["TRAXAC_SANDBOX_ENABLED"] !== "1"
-      ? "TRAXAC_SANDBOX_ENABLED is not 1"
+    process.env["EWAYVO_SANDBOX_ENABLED"] !== "1"
+      ? "EWAYVO_SANDBOX_ENABLED is not 1"
       : `missing ${missing.join(", ")}`;
   // eslint-disable-next-line no-console
   console.info(`[sandbox] skipping live NIC tests — ${reason}`);
@@ -62,8 +62,8 @@ describe.skipIf(!enabled)("NIC sandbox — live round trip", () => {
     await resetDatabase(container);
     business = await createBusiness(container, {
       slug: "sandbox",
-      gstin: process.env["TRAXAC_SANDBOX_GSTIN"] as string,
-      stateCode: (process.env["TRAXAC_SANDBOX_GSTIN"] as string).slice(0, 2),
+      gstin: process.env["EWAYVO_SANDBOX_GSTIN"] as string,
+      stateCode: (process.env["EWAYVO_SANDBOX_GSTIN"] as string).slice(0, 2),
     });
 
     for (const service of ["einvoice", "ewb"] as const) {
@@ -72,10 +72,10 @@ describe.skipIf(!enabled)("NIC sandbox — live round trip", () => {
         provider: "nic",
         environment: "sandbox",
         service,
-        username: process.env["TRAXAC_SANDBOX_USERNAME"] as string,
-        password: process.env["TRAXAC_SANDBOX_PASSWORD"] as string,
-        clientId: process.env["TRAXAC_SANDBOX_CLIENT_ID"],
-        clientSecret: process.env["TRAXAC_SANDBOX_CLIENT_SECRET"],
+        username: process.env["EWAYVO_SANDBOX_USERNAME"] as string,
+        password: process.env["EWAYVO_SANDBOX_PASSWORD"] as string,
+        clientId: process.env["EWAYVO_SANDBOX_CLIENT_ID"],
+        clientSecret: process.env["EWAYVO_SANDBOX_CLIENT_SECRET"],
         baseUrl:
           service === "einvoice"
             ? process.env["NIC_IRP_SANDBOX_BASE_URL"]
@@ -88,13 +88,13 @@ describe.skipIf(!enabled)("NIC sandbox — live round trip", () => {
 
   it("A. authenticates against the sandbox", async () => {
     const resolved = await container.credentials.resolve(business.ctx, {
-      gstin: business.ctx.tenantId ? (process.env["TRAXAC_SANDBOX_GSTIN"] as string) : "",
+      gstin: business.ctx.tenantId ? (process.env["EWAYVO_SANDBOX_GSTIN"] as string) : "",
       service: "einvoice",
       environment: "sandbox",
     });
     const result = await container.registry.einvoice("sandbox").verify({
       tenantId: business.tenantId,
-      gstin: process.env["TRAXAC_SANDBOX_GSTIN"] as string,
+      gstin: process.env["EWAYVO_SANDBOX_GSTIN"] as string,
       environment: "sandbox",
       credentials: resolved.credentials,
       idempotencyKey: `sandbox-verify:${runId}`,
@@ -196,8 +196,8 @@ describe.skipIf(!enabled)("NIC sandbox — live round trip", () => {
     `;
     expect(rows.length).toBeGreaterThan(0);
     const serialised = JSON.stringify(rows);
-    expect(serialised).not.toContain(process.env["TRAXAC_SANDBOX_PASSWORD"] as string);
-    expect(serialised).not.toContain(process.env["TRAXAC_SANDBOX_CLIENT_SECRET"] as string);
+    expect(serialised).not.toContain(process.env["EWAYVO_SANDBOX_PASSWORD"] as string);
+    expect(serialised).not.toContain(process.env["EWAYVO_SANDBOX_CLIENT_SECRET"] as string);
   }, 30_000);
 });
 

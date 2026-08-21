@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import "@fastify/multipart";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { tenantSettings, tenants } from "@traxac/database";
-import { AppError, DEFAULT_EWB_THRESHOLD_PAISE, toPaise, toRupees } from "@traxac/shared";
+import { tenantSettings, tenants } from "@ewayvo/database";
+import { AppError, DEFAULT_EWB_THRESHOLD_PAISE, toPaise, toRupees } from "@ewayvo/shared";
 import { requireAuth } from "../context.js";
 import { API_PREFIX } from "../plugins/auth.js";
 

@@ -51,7 +51,7 @@ test.describe("working across registrations", () => {
     await signUp(page);
     await page.goto("/overview");
 
-    await expect(page.getByText(/set up traxac/i)).toBeVisible();
+    await expect(page.getByText(/set up ewayvo/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /add gstin/i })).toBeVisible();
   });
 

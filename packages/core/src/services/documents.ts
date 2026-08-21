@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
-import type { Database, Document } from "@traxac/database";
-import { documents, requireScope } from "@traxac/database";
-import { AppError, type DocumentKind } from "@traxac/shared";
+import type { Database, Document } from "@ewayvo/database";
+import { documents, requireScope } from "@ewayvo/database";
+import { AppError, type DocumentKind } from "@ewayvo/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuditWriter } from "../infra/audit.js";

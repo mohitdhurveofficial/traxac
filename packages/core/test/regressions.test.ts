@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { ewayBills, parties, products, transporters, vehicles } from "@traxac/database";
+import { ewayBills, parties, products, transporters, vehicles } from "@ewayvo/database";
 import type { AuthContext, Container } from "../src/index.js";
 import {
   createBusiness,
