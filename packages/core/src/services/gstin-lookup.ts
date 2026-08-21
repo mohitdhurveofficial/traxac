@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
-import { gstinRegistry, type Database } from "@traxac/database";
+import { gstinRegistry, type Database, requireScope } from "@traxac/database";
 import { AppError, isValidGstin, isValidTransin, normaliseGstin } from "@traxac/shared";
 import type {
   GatewayRegistry,
   GatewayRequestContext,
+  GatewayResult,
   GstinDetails,
   TransporterDetails,
 } from "@traxac/gst-gateway";
@@ -82,7 +83,9 @@ export class GstinLookupService {
   constructor(private readonly deps: GstinLookupDeps) {}
 
   private get db() {
-    return this.deps.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /**
@@ -167,7 +170,16 @@ export class GstinLookupService {
       return (await this.cached(ctx, normalised, "gstin")) ?? notConnected(normalised, "gstin");
     }
 
-    const result = await provider.call(normalised);
+    /*
+     * A refresh must actually refresh. The plain lookup serves the IRP's own
+     * copy of the register, so re-reading it returns the same answer that was
+     * already cached. The sync operation makes the IRP re-read the Common
+     * Portal, which is what a user pressing "refresh" means.
+     */
+    const result =
+      options.force && provider.sync
+        ? await provider.sync(normalised)
+        : await provider.call(normalised);
     if (!result.ok) {
       const fallback = await this.cached(ctx, normalised, "gstin");
       if (fallback) return { ...fallback, stale: true };
@@ -248,12 +260,20 @@ export class GstinLookupService {
    */
   private async pickGstinProvider(ctx: AuthContext): Promise<{
     source: "irp" | "ewb";
-    call: (gstin: string) => ReturnType<ReturnType<GatewayRegistry["einvoice"]>["getGstinDetails"]>;
+    call: (gstin: string) => Promise<GatewayResult<GstinDetails>>;
+    /** Only the IRP can re-read the Common Portal; the EWB register cannot. */
+    sync?: (gstin: string) => Promise<GatewayResult<GstinDetails>>;
   } | null> {
     const irp = await this.resolve(ctx, "einvoice");
     if (irp) {
       const provider = this.deps.registry.einvoice(this.deps.environment);
-      return { source: "irp", call: (gstin) => provider.getGstinDetails(irp, gstin) };
+      return {
+        source: "irp",
+        call: (gstin) => provider.getGstinDetails(irp, gstin),
+        // Only the IRP can reach the Common Portal; the e-Way Bill register
+        // has no equivalent, so a refresh there is just another read.
+        sync: (gstin) => provider.syncGstinDetails(irp, gstin),
+      };
     }
     const ewb = await this.resolve(ctx, "ewb");
     if (ewb) {
@@ -327,6 +347,8 @@ export class GstinLookupService {
       buildingName: gstinShaped?.buildingName ?? null,
       stateCode: details.stateCode ?? null,
       pincode: details.pincode ?? null,
+      registeredOn: gstinShaped?.registeredOn ?? null,
+      deregisteredOn: gstinShaped?.deregisteredOn ?? null,
       jurisdiction: gstinShaped?.jurisdiction ?? null,
       source,
       environment: this.deps.environment,
@@ -393,6 +415,8 @@ function toResult(row: RegistryRow, origin: "cache" | "portal"): GstinLookupResu
           buildingName: row.buildingName,
           stateCode: row.stateCode,
           pincode: row.pincode,
+          registeredOn: row.registeredOn,
+          deregisteredOn: row.deregisteredOn,
           jurisdiction: row.jurisdiction,
         } satisfies GstinDetails);
 

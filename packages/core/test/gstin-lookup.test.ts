@@ -41,8 +41,13 @@ interface Behaviour {
 }
 
 /** Counts calls so "served from cache" can be proved, not assumed. */
-function stubRegistry(behaviour: Behaviour): { registry: GatewayRegistry; calls: () => number } {
+function stubRegistry(behaviour: Behaviour): {
+  registry: GatewayRegistry;
+  calls: () => number;
+  syncCalls: () => number;
+} {
   let calls = 0;
+  let syncCalls = 0;
   const bump = (): void => {
     calls += 1;
     behaviour.onCall?.();
@@ -61,6 +66,19 @@ function stubRegistry(behaviour: Behaviour): { registry: GatewayRegistry; calls:
     getIrnByDocument: notUsed,
     async getGstinDetails(_ctx: GatewayRequestContext, gstin: string) {
       bump();
+      return (
+        behaviour.gstin ??
+        gatewayFail<GstinDetails>({
+          code: "NOT_CONFIGURED",
+          message: `no stub for ${gstin}`,
+          retryable: false,
+        })
+      );
+    },
+    /** A refresh calls the Common Portal sync, not the plain lookup. */
+    async syncGstinDetails(_ctx: GatewayRequestContext, gstin: string) {
+      bump();
+      syncCalls += 1;
       return (
         behaviour.gstin ??
         gatewayFail<GstinDetails>({
@@ -97,7 +115,11 @@ function stubRegistry(behaviour: Behaviour): { registry: GatewayRegistry; calls:
     },
   } as unknown as EwbProvider;
 
-  return { registry: { einvoice: () => einvoice, ewb: () => ewb }, calls: () => calls };
+  return {
+    registry: { einvoice: () => einvoice, ewb: () => ewb },
+    calls: () => calls,
+    syncCalls: () => syncCalls,
+  };
 }
 
 const ACTIVE_TAXPAYER: GstinDetails = {

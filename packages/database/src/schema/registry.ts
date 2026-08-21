@@ -51,6 +51,9 @@ export const gstinRegistry = pgTable(
     buildingName: text("building_name"),
     stateCode: text("state_code"),
     pincode: text("pincode"),
+    /** Portal's own date strings; never reformatted, never guessed. */
+    registeredOn: text("registered_on"),
+    deregisteredOn: text("deregistered_on"),
     jurisdiction: text("jurisdiction"),
 
     /** Which register answered: "irp" or "ewb". */

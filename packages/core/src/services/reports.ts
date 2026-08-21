@@ -1,6 +1,13 @@
 import { and, asc, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import type { Database } from "@traxac/database";
-import { einvoices, ewayBills, invoiceLines, invoices, parties } from "@traxac/database";
+import {
+  einvoices,
+  ewayBills,
+  invoiceLines,
+  invoices,
+  parties,
+  requireScope,
+} from "@traxac/database";
 import { financialYear, financialYearStart, financialYearEnd } from "@traxac/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped } from "../auth/tenant-guard.js";
@@ -52,7 +59,9 @@ export class ReportService {
   constructor(private readonly database: Database) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   private defaultWindow(): DateWindow {

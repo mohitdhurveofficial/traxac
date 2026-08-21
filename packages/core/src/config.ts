@@ -46,7 +46,15 @@ const configSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+  /**
+   * Connections in the pool.
+   *
+   * Each request holds one for its whole duration: row-level security reads
+   * the tenant from a connection setting, so the setting and the queries must
+   * share a connection. In-flight requests are therefore bounded by this
+   * number — size it above expected concurrency, not below.
+   */
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(20),
 
   /** 32-byte base64 key that wraps every tenant secret. Rotate via KEY_VERSION. */
   TRAXAC_MASTER_KEY: z.string().min(32, "TRAXAC_MASTER_KEY must be at least 32 chars"),

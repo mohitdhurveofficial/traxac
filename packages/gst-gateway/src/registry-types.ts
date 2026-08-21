@@ -48,6 +48,16 @@ export interface GstinDetails {
   stateCode?: string | null;
   pincode?: string | null;
   /**
+   * Registration and de-registration dates, as the portal spells them.
+   *
+   * Kept as the portal's own strings rather than parsed into Dates: the
+   * format is not documented alongside the field, and guessing between
+   * dd/mm/yyyy and yyyy-mm-dd would silently mis-date a registration.
+   * Only v1.04 of the IRP lookup returns these; the e-Way Bill one does not.
+   */
+  registeredOn?: string | null;
+  deregisteredOn?: string | null;
+  /**
    * Neither the IRP nor the e-Way Bill lookup returns jurisdiction, so this is
    * present in the shape only for a provider that does. It is never derived.
    */

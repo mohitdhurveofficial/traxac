@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { Database, GstCredential } from "@traxac/database";
-import { gatewayTokens, gstCredentials, gstins } from "@traxac/database";
+import { gatewayTokens, gstCredentials, gstins, requireScope } from "@traxac/database";
 import { AppError } from "@traxac/shared";
 import type { GatewayCredentials, GatewayEnvironment } from "@traxac/gst-gateway";
 import type { NicSession, SessionStore } from "@traxac/nic-client";
@@ -65,7 +65,9 @@ export class CredentialService {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   async list(ctx: AuthContext): Promise<CredentialSummary[]> {

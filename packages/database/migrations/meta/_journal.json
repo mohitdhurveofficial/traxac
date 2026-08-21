@@ -43,6 +43,13 @@
       "when": 1786963357953,
       "tag": "0005_gstin_registry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786963358953,
+      "tag": "0006_registry_registration_dates",
+      "breakpoints": true
     }
   ]
 }

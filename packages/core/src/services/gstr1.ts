@@ -11,7 +11,14 @@
  */
 import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { Database } from "@traxac/database";
-import { einvoices, gstins, gstReturns, invoiceLines, invoices } from "@traxac/database";
+import {
+  einvoices,
+  gstins,
+  gstReturns,
+  invoiceLines,
+  invoices,
+  requireScope,
+} from "@traxac/database";
 import { AppError, isValidGstin, rupeeNumber, toIsoDate } from "@traxac/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
@@ -65,7 +72,9 @@ export class Gstr1Service {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /**

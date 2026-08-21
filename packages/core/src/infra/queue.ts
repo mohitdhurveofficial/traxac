@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { Database, Job } from "@traxac/database";
-import { jobs } from "@traxac/database";
+import { jobs, requireScope } from "@traxac/database";
 import type { JobKind } from "@traxac/shared";
 
 /**
@@ -35,7 +35,10 @@ export class JobQueue {
   constructor(private readonly database: Database) {}
 
   private get db() {
-    return this.database.db;
+    // Whichever scope the caller established. Enqueue runs inside the
+    // requesting tenant's scope; the worker's own bookkeeping runs inside a
+    // system scope it opens explicitly below.
+    return requireScope();
   }
 
   async enqueue(options: EnqueueOptions): Promise<EnqueueResult> {
@@ -103,32 +106,43 @@ export class JobQueue {
    * means several workers can poll the same table without contending.
    */
   async claim(workerId: string, limit = 1, kinds?: JobKind[]): Promise<Job[]> {
-    const kindFilter = kinds?.length
-      ? this.database.client`AND kind = ANY(${this.database.client.array(kinds)})`
-      : this.database.client``;
+    /*
+     * Claiming spans tenants by nature: the worker does not know whose job is
+     * next until it has taken one. It therefore runs in an explicit system
+     * scope rather than on the bare pool — under the non-superuser role the
+     * bare pool sees no rows at all and the queue silently stops.
+     *
+     * The claim stays a single statement so `FOR UPDATE SKIP LOCKED` still
+     * does its job: several workers poll the same table without contending,
+     * and none of them can take a row another already holds.
+     */
+    return this.database.withSystemScope("queue.claim", async () => {
+      const kindFilter = kinds?.length ? sql`AND kind = ANY(${sql.param(kinds)})` : sql``;
 
-    const rows = await this.database.client<Job[]>`
-      WITH claimed AS (
-        SELECT id FROM jobs
-        WHERE status = 'pending'
-          AND run_at <= now()
-          ${kindFilter}
-        ORDER BY priority ASC, run_at ASC
-        LIMIT ${limit}
-        FOR UPDATE SKIP LOCKED
-      )
-      UPDATE jobs j
-      SET status = 'running',
-          attempts = j.attempts + 1,
-          locked_by = ${workerId},
-          locked_at = now(),
-          started_at = COALESCE(j.started_at, now()),
-          updated_at = now()
-      FROM claimed
-      WHERE j.id = claimed.id
-      RETURNING j.*
-    `;
-    return rows.map(normaliseJobRow);
+      const result = await requireScope().execute(sql`
+        WITH claimed AS (
+          SELECT id FROM jobs
+          WHERE status = 'pending'
+            AND run_at <= now()
+            ${kindFilter}
+          ORDER BY priority ASC, run_at ASC
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE jobs j
+        SET status = 'running',
+            attempts = j.attempts + 1,
+            locked_by = ${workerId},
+            locked_at = now(),
+            started_at = COALESCE(j.started_at, now()),
+            updated_at = now()
+        FROM claimed
+        WHERE j.id = claimed.id
+        RETURNING j.*
+      `);
+      const rows = result as unknown as Array<Record<string, unknown>>;
+      return rows.map((row) => normaliseJobRow(row as never));
+    });
   }
 
   async complete(jobId: string, result?: unknown): Promise<void> {

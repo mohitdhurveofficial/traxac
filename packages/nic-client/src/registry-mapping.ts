@@ -57,6 +57,9 @@ export function mapIrpGstinDetails(data: Record<string, unknown>, requested: str
     addressLine2: joinAddress([data["AddrSt"], data["AddrLoc"]]),
     stateCode: stateCode(data["StateCode"]),
     pincode: text(data["AddrPncd"]),
+    // v1.04 only; absent from v1.03 and from the e-Way Bill register.
+    registeredOn: text(data["DtReg"]),
+    deregisteredOn: text(data["DtDReg"]),
     jurisdiction: null,
   };
 }
@@ -80,6 +83,9 @@ export function mapEwbGstinDetails(data: Record<string, unknown>, requested: str
     buildingName: null,
     stateCode: stateCode(data["stateCode"]),
     pincode: text(data["pinCode"]),
+    // The e-Way Bill register does not carry registration dates.
+    registeredOn: null,
+    deregisteredOn: null,
     jurisdiction: null,
   };
 }

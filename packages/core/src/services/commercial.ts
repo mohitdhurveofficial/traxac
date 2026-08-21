@@ -1,6 +1,13 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import type { Database } from "@traxac/database";
-import { gstins, parties, paymentTerms, taxSettings, hsnCodes } from "@traxac/database";
+import {
+  gstins,
+  parties,
+  paymentTerms,
+  taxSettings,
+  hsnCodes,
+  requireScope,
+} from "@traxac/database";
 import { AppError } from "@traxac/shared";
 import type { PaymentTermInput, TaxSettingsInput } from "@traxac/shared/contracts";
 import { requirePermission, type AuthContext } from "../auth/context.js";
@@ -19,7 +26,9 @@ export class CommercialService {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /* --------------------------- Payment terms --------------------------- */

@@ -125,13 +125,28 @@ export class Runner {
 
     const startedAt = Date.now();
     try {
-      const result = await handler(job, this.container);
-      await this.container.queue.complete(job.id, result);
+      /*
+       * The job's tenant comes from the `jobs` row the worker just claimed —
+       * the authoritative record — and never from the payload. A payload is
+       * whatever the enqueuer wrote; treating it as the tenant would let a
+       * crafted job act on another business's data.
+       *
+       * A job with no tenant is platform housekeeping (expiring e-Way Bills,
+       * purging sessions) and gets an explicit, named system scope instead.
+       * The scope is per job and transaction-local, so it cannot survive into
+       * the next one.
+       */
+      const result = await this.runScoped(job, () => handler(job, this.container));
+      await this.container.database.withSystemScope("queue.complete", () =>
+        this.container.queue.complete(job.id, result),
+      );
       log.info({ durationMs: Date.now() - startedAt }, "job done");
     } catch (err) {
       const retryable = isRetryable(err);
       const message = err instanceof Error ? err.message : String(err);
-      const outcome = await this.container.queue.fail(job.id, message, { retryable });
+      const outcome = await this.container.database.withSystemScope("queue.fail", () =>
+        this.container.queue.fail(job.id, message, { retryable }),
+      );
       log.warn(
         { err, retryable, willRetry: outcome.willRetry, nextRunAt: outcome.nextRunAt },
         outcome.willRetry ? "job failed, will retry" : "job failed permanently",
@@ -140,23 +155,60 @@ export class Runner {
     }
   }
 
+  /**
+   * Run a handler pinned to its own tenant, letting deliberate failure state
+   * survive.
+   *
+   * The tenant comes from the claimed `jobs` row — the authoritative record —
+   * never from the payload, which is whatever the enqueuer wrote.
+   *
+   * The try/catch is load-bearing rather than defensive. Compliance handlers
+   * record *why* a portal call failed (status, error code, audit entry) and
+   * then throw so the job is marked failed. If that throw escaped the scope,
+   * the transaction would roll back and erase the record of the failure —
+   * leaving an invoice stuck with no explanation. So the error is caught
+   * inside the scope, the transaction commits with the failure state intact,
+   * and the error is rethrown outside for the retry logic to handle.
+   */
+  private async runScoped<T>(job: Job, fn: () => Promise<T>): Promise<T> {
+    const origin = `job:${job.kind}:${job.id}`;
+    const capture = async (): Promise<{ ok: true; value: T } | { ok: false; error: unknown }> => {
+      try {
+        return { ok: true, value: await fn() };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    };
+
+    const outcome = job.tenantId
+      ? await this.container.database.withTenantScope(job.tenantId, origin, capture)
+      : await this.container.database.withSystemScope(origin, capture);
+
+    if (!outcome.ok) throw outcome.error;
+    return outcome.value;
+  }
+
   /** A permanently failed compliance job becomes a visible alert. */
   private async notifyFailure(job: Job, message: string): Promise<void> {
     if (!job.tenantId) return;
+    // Written as the owning tenant so the alert lands inside their boundary.
+    const tenantId = job.tenantId;
     const payload = job.payload as { invoiceId?: string };
     const label = job.kind.startsWith("einvoice") ? "e-Invoice" : "e-Way Bill";
     if (!job.kind.startsWith("einvoice") && !job.kind.startsWith("ewb")) return;
-    await this.container.notifications
-      .create({
-        tenantId: job.tenantId,
-        kind: `${job.kind}.failed`,
-        severity: "error",
-        title: `${label} could not be generated`,
-        body: message,
-        entityType: "invoice",
-        entityId: payload.invoiceId,
-        dedupeWithinHours: 1,
-      })
+    await this.container.database
+      .withTenantScope(tenantId, `job.notifyFailure:${job.kind}`, () =>
+        this.container.notifications.create({
+          tenantId,
+          kind: `${job.kind}.failed`,
+          severity: "error",
+          title: `${label} could not be generated`,
+          body: message,
+          entityType: "invoice",
+          entityId: payload.invoiceId,
+          dedupeWithinHours: 1,
+        }),
+      )
       .catch(() => undefined);
   }
 }

@@ -9,6 +9,7 @@ import {
   invoiceLines,
   invoices,
   transporters,
+  requireScope,
 } from "@traxac/database";
 import {
   AppError,
@@ -72,7 +73,9 @@ export class ComplianceService {
   constructor(private readonly deps: ComplianceDeps) {}
 
   private get db() {
-    return this.deps.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /* ------------------------------ Queueing ----------------------------- */

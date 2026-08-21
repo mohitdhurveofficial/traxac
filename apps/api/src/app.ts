@@ -11,6 +11,7 @@ import { resolve, sep } from "node:path";
 import type { Container } from "@traxac/core";
 import { API_PREFIX, isApiPath, registerAuth } from "./plugins/auth.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
+import { registerDbScope } from "./plugins/db-scope.js";
 import { registerOpenApi } from "./plugins/openapi.js";
 import { authRoutes } from "./routes/auth.js";
 import { complianceRoutes } from "./routes/compliance.js";
@@ -64,6 +65,9 @@ export async function buildApp(container: Container): Promise<FastifyInstance> {
 
   registerErrorHandler(app);
   registerAuth(app, container);
+  // Must come after registerAuth: the wrapper reads the resolved tenant, and
+  // onRoute hooks apply to routes registered after this point.
+  registerDbScope(app, container);
 
   // Registered before the routes so every one of them is captured.
   await registerOpenApi(app, container);

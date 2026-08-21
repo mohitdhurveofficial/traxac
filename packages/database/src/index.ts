@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { currentScope, runInScope } from "./scope.js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
@@ -37,6 +38,18 @@ export interface Database {
    * housekeeping. Explicit and auditable rather than implicit.
    */
   withoutTenantScope<T>(fn: (db: Transaction) => Promise<T>): Promise<T>;
+  /**
+   * Run `fn` pinned to one tenant, with the transaction published as the
+   * ambient scope so every service picks it up without threading a parameter
+   * through hundreds of call sites.
+   */
+  withTenantScope<T>(tenantId: string, origin: string, fn: () => Promise<T>): Promise<T>;
+  /**
+   * Run `fn` deliberately across tenants — the job claimer, housekeeping,
+   * resolving a session before the tenant is known. `origin` is required so
+   * every bypass is attributable in a trace.
+   */
+  withSystemScope<T>(origin: string, fn: () => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -85,6 +98,39 @@ export function createDatabase(databaseUrl: string, options: CreateDatabaseOptio
     schema,
     withTenant: (tenantId, fn) => withSettings({ "traxac.tenant_id": tenantId }, fn),
     withoutTenantScope: (fn) => withSettings({ "traxac.bypass": "on" }, fn),
+    /*
+     * Nesting reuses the ambient transaction rather than opening another.
+     *
+     * A second transaction would land on a different pooled connection and
+     * immediately contend for the locks the outer one already holds — a
+     * self-deadlock that only shows up under load. One scope per unit of work
+     * is also what makes the tenant setting meaningful: the whole request
+     * either sees one tenant or fails.
+     */
+    withTenantScope: (tenantId, origin, fn) => {
+      const active = currentScope();
+      if (active) {
+        if (active.kind === "tenant" && active.tenantId !== tenantId) {
+          throw new Error(
+            `Refusing to switch tenant mid-transaction: scope "${active.origin}" is pinned to ` +
+              `${active.tenantId}, but "${origin}" asked for ${tenantId}.`,
+          );
+        }
+        return fn();
+      }
+      return withSettings({ "traxac.tenant_id": tenantId }, (tx) =>
+        runInScope({ kind: "tenant", tenantId, tx, origin }, fn),
+      );
+    },
+    withSystemScope: (origin, fn) => {
+      const active = currentScope();
+      // A system scope inside a tenant scope would widen visibility silently,
+      // so it is only reused when the ambient scope is already system-level.
+      if (active?.kind === "system") return fn();
+      return withSettings({ "traxac.bypass": "on" }, (tx) =>
+        runInScope({ kind: "system", tx, origin }, fn),
+      );
+    },
     close: async () => {
       await client.end({ timeout: 5 });
     },
@@ -99,5 +145,6 @@ export function shouldUseSsl(databaseUrl: string): boolean {
 }
 
 export { schema };
+export * from "./scope.js";
 export * from "./schema/index.js";
 export * from "./types.js";

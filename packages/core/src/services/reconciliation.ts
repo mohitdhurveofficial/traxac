@@ -7,6 +7,7 @@ import {
   invoices,
   reconciliationItems,
   reconciliationRuns,
+  requireScope,
 } from "@traxac/database";
 import { AppError } from "@traxac/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
@@ -71,7 +72,9 @@ export class ReconciliationService {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /**

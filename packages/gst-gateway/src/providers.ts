@@ -45,6 +45,15 @@ export interface EinvoiceProvider {
    * what the portal actually sent — a field the portal omitted stays absent.
    */
   getGstinDetails(ctx: GatewayRequestContext, gstin: string): Promise<GatewayResult<GstinDetails>>;
+
+  /**
+   * Force the IRP to re-read a taxpayer from the GST Common Portal.
+   *
+   * `getGstinDetails` serves the IRP's own copy, which can lag. This is what
+   * an explicit user refresh should call, or the refresh just re-reads the
+   * same stale answer.
+   */
+  syncGstinDetails(ctx: GatewayRequestContext, gstin: string): Promise<GatewayResult<GstinDetails>>;
 }
 
 /** e-Way Bill portal capabilities. */

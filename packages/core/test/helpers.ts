@@ -45,7 +45,10 @@ export async function testContainer(
     PORT: 0,
     LOG_LEVEL: "error",
     DATABASE_URL: TEST_DATABASE_URL,
-    DATABASE_POOL_MAX: 5,
+    // Every unit of work now holds a connection for its duration (the tenant
+    // GUC is transaction-local), so the pool must exceed the concurrency the
+    // tests exercise — the numbering test alone finalizes 12 invoices at once.
+    DATABASE_POOL_MAX: 30,
     TRAXAC_MASTER_KEY: TEST_KEY,
     TRAXAC_MASTER_KEY_VERSION: 1,
     TRAXAC_MASTER_KEY_PREVIOUS: undefined,
@@ -103,11 +106,94 @@ export async function testContainer(
   );
 
   const config = merged as Parameters<typeof createContainer>[0]["config"];
-  return createContainer(
+  const container = createContainer(
     registry
       ? { processName: "traxac-test", config, registry }
       : { processName: "traxac-test", config },
   );
+  return withTestScopes(container);
+}
+
+/**
+ * Give test service calls the same database scope the API gives real requests.
+ *
+ * In production a Fastify `onRoute` wrapper opens a transaction, sets
+ * `traxac.tenant_id` on it and publishes it as the ambient scope; services
+ * then resolve their executor from that scope and throw if it is missing.
+ * Tests call services directly, so without an equivalent every call would
+ * fail closed.
+ *
+ * Rather than weaken the guard for tests, the harness reproduces the wrapper.
+ * The tenant is taken from the `AuthContext` the test already passes as the
+ * first argument — exactly the value the API takes from the resolved session —
+ * so these tests now exercise the real RLS path rather than bypassing it.
+ * A call with no AuthContext is platform-level and gets a system scope, which
+ * is what the equivalent production path does.
+ */
+function withTestScopes(container: Container): Container {
+  const scoped = new Map<string, unknown>();
+
+  return new Proxy(container, {
+    get(target, prop: string, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      // Only service objects are wrapped; config, logger, database and the
+      // like must stay exactly as they are.
+      if (!value || typeof value !== "object" || prop === "database" || prop === "config") {
+        return value;
+      }
+      if (scoped.has(prop)) return scoped.get(prop);
+
+      const wrapped = new Proxy(value as Record<string, unknown>, {
+        get(svc, method: string, svcReceiver) {
+          const fn = Reflect.get(svc, method, svcReceiver);
+          if (typeof fn !== "function") return fn;
+          /*
+           * Synchronous methods cannot perform database I/O — every drizzle
+           * query is async — so they need no scope, and wrapping them would
+           * turn a plain return value into a promise the caller never awaits.
+           */
+          if (fn.constructor.name !== "AsyncFunction") {
+            return (...args: unknown[]) => Reflect.apply(fn, svc, args) as unknown;
+          }
+          return (...args: unknown[]) => {
+            const first = args[0] as { tenantId?: string } | undefined;
+            const tenantId =
+              first && typeof first === "object" && typeof first.tenantId === "string"
+                ? first.tenantId
+                : undefined;
+            const origin = `test:${prop}.${method}`;
+            /*
+             * Mirrors the worker: a service that records failure state and
+             * then throws must keep that state. Catching inside the scope
+             * lets the transaction commit before the error is rethrown, which
+             * is what production does — otherwise these tests would pass
+             * against semantics the real system does not have.
+             */
+            const capture = async (): Promise<
+              { ok: true; value: unknown } | { ok: false; error: unknown }
+            > => {
+              try {
+                return { ok: true, value: await Reflect.apply(fn, svc, args) };
+              } catch (error) {
+                return { ok: false, error };
+              }
+            };
+            const settle = (
+              outcome: { ok: true; value: unknown } | { ok: false; error: unknown },
+            ): unknown => {
+              if (!outcome.ok) throw outcome.error;
+              return outcome.value;
+            };
+            return tenantId
+              ? container.database.withTenantScope(tenantId, origin, capture).then(settle)
+              : container.database.withSystemScope(origin, capture).then(settle);
+          };
+        },
+      });
+      scoped.set(prop, wrapped);
+      return wrapped;
+    },
+  });
 }
 
 /** Wipe every tenant-owned table between tests. */

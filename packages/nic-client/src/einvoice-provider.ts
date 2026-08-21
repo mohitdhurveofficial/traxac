@@ -186,6 +186,24 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     }
   }
 
+  /**
+   * Re-read a taxpayer from the Common Portal rather than the IRP's copy.
+   *
+   * Same response shape as the plain lookup, so the mapping is shared.
+   */
+  async syncGstinDetails(
+    ctx: GatewayRequestContext,
+    gstin: string,
+  ): Promise<GatewayResult<GstinDetails>> {
+    try {
+      const body = await this.call(ctx, "syncGstinDetails", "GET", IRP_PATHS.syncGstin(gstin));
+      if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
+      return gatewayOk(mapIrpGstinDetails(body.data, gstin), body.raw);
+    } catch (err) {
+      return gatewayFail(this.mapError(err));
+    }
+  }
+
   /** NIC's signing certificate for this environment, if one is configured. */
   private signingCert(ctx: GatewayRequestContext): string | undefined {
     return this.options.signingCerts?.[ctx.environment];

@@ -132,7 +132,24 @@ export class NicSessionManager {
     const cached = await this.options.store.read(key);
     if (cached && cached.expiresAt.getTime() - EXPIRY_MARGIN_MS > Date.now()) return cached;
 
-    const session = await this.authenticate(gateway, ctx);
+    /*
+     * Re-authenticating inside the refresh window needs the flag, or nothing
+     * changes.
+     *
+     * The portal returns the *same* token for any auth call within the token's
+     * life — "Any hits to this API within these 360 minutes will return the
+     * same token". So asking again without ForceRefreshAccessToken hands back
+     * the same nearly-expired token, we cache it, and the next request is
+     * still inside the window and asks again. Every request in the final ten
+     * minutes of a token's life would hit a rate-limited endpoint.
+     *
+     * The flowchart is explicit about the escape: within ten minutes of
+     * expiry, set the flag. A cold cache does not need it — there is no token
+     * to displace.
+     *
+     * @see https://einv-apisandbox.nic.in/version1.04/authentication.html
+     */
+    const session = await this.authenticate(gateway, ctx, { forceRefresh: Boolean(cached) });
     await this.options.store.write(key, session);
     return session;
   }
@@ -145,6 +162,7 @@ export class NicSessionManager {
   private async authenticate(
     gateway: "irp" | "ewb",
     ctx: GatewayRequestContext,
+    options: { forceRefresh?: boolean } = {},
   ): Promise<NicSession> {
     const appKey = generateAppKey();
     const publicKeyPem = this.publicKey(ctx.environment);
@@ -159,7 +177,8 @@ export class NicSessionManager {
       UserName: ctx.credentials.username,
       Password: ctx.credentials.password,
       AppKey: appKey,
-      ForceRefreshAccessToken: false,
+      // True only when displacing a token that is inside its refresh window.
+      ForceRefreshAccessToken: options.forceRefresh ?? false,
     };
 
     const response = await nicFetch({

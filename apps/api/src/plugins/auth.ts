@@ -65,10 +65,21 @@ export function registerAuth(app: FastifyInstance, container: Container): void {
       userAgent: request.headers["user-agent"],
     };
 
-    // API keys carry a recognisable prefix, so there is no ambiguity.
-    const auth = token.startsWith("txk_")
-      ? await container.auth.resolveApiKey(token, meta)
-      : await container.auth.resolveSession(token, meta);
+    /*
+     * Resolving the caller is the one genuine chicken-and-egg in the system:
+     * `sessions`, `api_keys` and `memberships` are all tenant-scoped by RLS,
+     * but the tenant is precisely what this lookup is trying to establish.
+     *
+     * So it runs in a system scope — narrowly, around this call only. The
+     * tenant it returns then pins every query the handler makes. API keys
+     * carry a recognisable prefix, so there is no ambiguity about which
+     * credential is being presented.
+     */
+    const auth = await container.database.withSystemScope("auth.resolveCaller", () =>
+      token.startsWith("txk_")
+        ? container.auth.resolveApiKey(token, meta)
+        : container.auth.resolveSession(token, meta),
+    );
 
     if (!auth) {
       return reply.status(401).send({

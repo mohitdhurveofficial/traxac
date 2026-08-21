@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "@traxac/database";
-import { parties, products, transporters, vehicles } from "@traxac/database";
+import { parties, products, transporters, vehicles, requireScope } from "@traxac/database";
 import {
   AppError,
   isValidGstin,
@@ -70,7 +70,9 @@ export class ImportService {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   async run(

@@ -9,6 +9,7 @@ import {
   products,
   transporters,
   vehicles,
+  requireScope,
 } from "@traxac/database";
 import { AppError } from "@traxac/shared";
 import { requirePermission, type AuthContext } from "../auth/context.js";
@@ -40,7 +41,9 @@ export class LedgerService {
   constructor(private readonly database: Database) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   /* --------------------------- Customer ledger -------------------------- */

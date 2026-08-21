@@ -5,9 +5,10 @@ import {
   gstins,
   memberships,
   passwordResets,
+  requireScope,
   sessions,
-  tenants,
   tenantSettings,
+  tenants,
   users,
 } from "@traxac/database";
 import { AppError, ROLE_PERMISSIONS, type Role } from "@traxac/shared";
@@ -53,7 +54,10 @@ export class AuthService {
   ) {}
 
   private get db() {
-    return this.database.db;
+    // Auth runs inside whichever scope the caller established: a system
+    // scope while resolving a caller or signing in, a tenant scope once the
+    // session is known. Never the bare pool.
+    return requireScope();
   }
 
   /** Create a user, their first business, and sign them in. */

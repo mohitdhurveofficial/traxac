@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { Database, Notification } from "@traxac/database";
-import { notifications } from "@traxac/database";
+import { notifications, requireScope } from "@traxac/database";
 import { scoped, scopedById } from "../auth/tenant-guard.js";
 import type { AuthContext } from "../auth/context.js";
 import { countExpr } from "./query.js";
@@ -27,7 +27,9 @@ export class NotificationService {
   constructor(private readonly database: Database) {}
 
   private get db() {
-    return this.database.db;
+    // The ambient transaction carries the tenant GUC that RLS reads.
+    // Unscoped access throws rather than silently using the pool.
+    return requireScope();
   }
 
   async create(input: CreateNotificationInput): Promise<Notification | null> {

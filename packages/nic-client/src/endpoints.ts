@@ -57,13 +57,22 @@ export const IRP_PATHS = {
   /** e-Way Bill generated from an existing IRN. */
   ewbByIrn: "/eiewb/v1.03/ewaybill",
   /**
-   * Taxpayer master lookup. The specification page documents this one at
-   * v1.03 even though the portal index lists "Get GSTIN Details (v1.04)";
-   * kept as written on the page it is specified on.
+   * Taxpayer master lookup. v1.04 is the current version — it adds the
+   * registration and de-registration dates that v1.03 did not carry.
    *
-   * @see https://einv-apisandbox.nic.in/version1.03/get-gstin-details.html
+   * @see https://einv-apisandbox.nic.in/version1.04/get-gstin-details.html
    */
-  getGstin: (gstin: string) => `/eivital/v1.03/Master/gstin/${encodeURIComponent(gstin)}`,
+  getGstin: (gstin: string) => `/eivital/v1.04/Master/gstin/${encodeURIComponent(gstin)}`,
+  /**
+   * Force the IRP to re-read a taxpayer from the GST Common Portal.
+   *
+   * `Master/gstin` serves the IRP's own copy, which can lag the Common
+   * Portal. This is what a user's explicit "refresh" should do — otherwise
+   * refreshing just re-reads the same stale answer.
+   *
+   * @see https://einv-apisandbox.nic.in/version1.04/Sync-GSTIN-Details-from-CP.html
+   */
+  syncGstin: (gstin: string) => `/eivital/v1.04/Master/syncgstin/${encodeURIComponent(gstin)}`,
 } as const;
 
 /** e-Way Bill portal paths. Actions are selected by query string. */
