@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { del, get, patch, post, put } from "./client.js";
+import { clearSessionToken, isNativeApp, storeSessionToken } from "../lib/platform.js";
 import type {
   Branch,
   Credential,
@@ -68,8 +69,16 @@ export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { email: string; password: string }) =>
-      post<{ user: SessionUser }>("/v1/auth/login", input),
-    onSuccess: () => void qc.invalidateQueries(),
+      post<{ user: SessionUser; token?: string }>("/v1/auth/login", input),
+    /*
+     * The browser already has the session as an httpOnly cookie and ignores
+     * the token. The native shell keeps it, because a cookie cannot cross the
+     * capacitor:// origin — see lib/platform.ts.
+     */
+    onSuccess: async (result) => {
+      if (isNativeApp() && result.token) await storeSessionToken(result.token);
+      void qc.invalidateQueries();
+    },
   });
 }
 
@@ -77,8 +86,11 @@ export function useRegister() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { name: string; email: string; password: string; businessName: string }) =>
-      post<{ user: SessionUser }>("/v1/auth/register", input),
-    onSuccess: () => void qc.invalidateQueries(),
+      post<{ user: SessionUser; token?: string }>("/v1/auth/register", input),
+    onSuccess: async (result) => {
+      if (isNativeApp() && result.token) await storeSessionToken(result.token);
+      void qc.invalidateQueries();
+    },
   });
 }
 
@@ -86,7 +98,12 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => post<{ ok: true }>("/v1/auth/logout"),
-    onSuccess: () => qc.clear(),
+    // The server revokes the session; the app must also drop its stored copy,
+    // or the next launch would present a token the server no longer honours.
+    onSuccess: async () => {
+      await clearSessionToken();
+      qc.clear();
+    },
   });
 }
 

@@ -19,6 +19,9 @@ export default tseslint.config(
       "**/migrations/**",
       "**/*.tsbuildinfo",
       "apps/web/dist/**",
+      // The native shell holds a copy of the built web app plus generated
+      // Gradle scaffolding. Neither is source.
+      "apps/web/android/**",
     ],
   },
 

@@ -23,3 +23,15 @@ migrations/meta/_journal.json.bak
 /test-results/
 /playwright-report/
 /.storage-e2e/
+
+# Android native shell — the project is committed, its build output is not.
+apps/web/android/.gradle/
+apps/web/android/build/
+apps/web/android/app/build/
+apps/web/android/local.properties
+apps/web/android/capacitor-cordova-android-plugins/build/
+apps/web/android/app/src/main/assets/public/
+*.apk
+*.aab
+*.keystore
+*.jks

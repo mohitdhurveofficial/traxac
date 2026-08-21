@@ -7,6 +7,7 @@ import { ApiError, setSessionExpiredHandler } from "./api/client.js";
 import { ErrorBoundary } from "./components/boundary.js";
 import { Toaster } from "./components/toaster.js";
 import { ConnectionBanner } from "./components/connection.js";
+import { loadSessionToken } from "./lib/platform.js";
 import { notifyError } from "./lib/toast.js";
 import "./index.css";
 
@@ -49,16 +50,35 @@ setSessionExpiredHandler(() => {
 const container = document.getElementById("root");
 if (!container) throw new Error("Missing #root element");
 
-createRoot(container).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ErrorBoundary>
-          <ConnectionBanner />
-          <App />
-          <Toaster />
-        </ErrorBoundary>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
-);
+/*
+ * The native shell keeps its session as a token rather than a cookie, so it
+ * has to be read out of device storage before the first request goes out.
+ * Rendering first would fire the session check unauthenticated and bounce a
+ * signed-in user to the login screen on every cold start.
+ *
+ * On the web this resolves immediately and changes nothing. Kept as an async
+ * bootstrap rather than a top-level await, which the browser build target
+ * does not allow.
+ */
+async function bootstrap(): Promise<void> {
+  await loadSessionToken();
+  renderApp();
+}
+
+function renderApp(): void {
+  createRoot(container as HTMLElement).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ErrorBoundary>
+            <ConnectionBanner />
+            <App />
+            <Toaster />
+          </ErrorBoundary>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+}
+
+void bootstrap();

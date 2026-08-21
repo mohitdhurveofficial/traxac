@@ -1,11 +1,13 @@
 /**
  * API client.
  *
- * The browser authenticates with the httpOnly session cookie, so there is no
- * token in JavaScript to steal. Every failure is normalised to `ApiError`, so
- * screens branch on `code` instead of parsing messages.
+ * On the web the session is an httpOnly cookie, so there is no token in
+ * JavaScript to steal. The native shell cannot use a cookie — its page is not
+ * on the API's origin — so it carries the same session as a Bearer token.
+ * Every failure is normalised to `ApiError`, so screens branch on `code`
+ * instead of parsing messages.
  */
-const BASE = import.meta.env["VITE_API_BASE"] ?? "/api";
+import { apiBaseUrl, isNativeApp, sessionToken } from "../lib/platform.js";
 
 export class ApiError extends Error {
   constructor(
@@ -55,17 +57,29 @@ interface RequestOptions {
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const url = new URL(`${BASE}${path}`, window.location.origin);
+  const url = new URL(`${apiBaseUrl()}${path}`, window.location.origin);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));
     }
   }
 
+  /*
+   * Two ways of proving who we are, one per platform.
+   *
+   * The browser sends the httpOnly session cookie, which no script can read.
+   * The native shell cannot: its page is served from capacitor://localhost, so
+   * the cookie is third-party and the WebView drops it. There the API's Bearer
+   * support is used instead — same endpoints, same session, different carrier.
+   */
+  const token = isNativeApp() ? sessionToken() : null;
   const response = await fetch(url.toString(), {
     method: options.method ?? "GET",
     credentials: "include",
-    headers: options.body === undefined ? {} : { "content-type": "application/json" },
+    headers: {
+      ...(options.body === undefined ? {} : { "content-type": "application/json" }),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
   });

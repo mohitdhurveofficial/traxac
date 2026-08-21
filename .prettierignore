@@ -3,3 +3,4 @@ dist/
 .storage/
 packages/database/migrations/
 *.tsbuildinfo
+apps/web/android/
