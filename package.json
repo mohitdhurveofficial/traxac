@@ -34,7 +34,8 @@
     "load:seed": "tsx --env-file=.env scripts/load/seed-scale.ts",
     "load:run": "tsx --env-file=.env scripts/load/run.ts",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:gst:sandbox": "tsx --env-file-if-exists=.env scripts/gst-sandbox-check.mts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

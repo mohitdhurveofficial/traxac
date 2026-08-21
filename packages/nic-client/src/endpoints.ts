@@ -57,6 +57,19 @@ export const IRP_PATHS = {
   /** e-Way Bill generated from an existing IRN. */
   ewbByIrn: "/eiewb/v1.03/ewaybill",
   /**
+   * Read the e-Way Bill the IRP holds against an IRN.
+   *
+   * Confirmed against the specification. Note the sibling Cancel-EWB API on
+   * the IRP is documented as **sandbox only** — "On the production
+   * environment, the Cancel E Way Bill API of the E Way Bill System only
+   * should be used" — which is why cancellation routes through the e-Way Bill
+   * portal instead.
+   *
+   * @see https://einv-apisandbox.nic.in/version1.03/get-ewaybill-details-by-irn.html
+   * @see https://einv-apisandbox.nic.in/version1.03/cancel-eway-bill.html
+   */
+  ewbByIrnDetails: (irn: string) => `/eiewb/v1.03/ewaybill/irn/${encodeURIComponent(irn)}`,
+  /**
    * Taxpayer master lookup. v1.04 is the current version — it adds the
    * registration and de-registration dates that v1.03 did not carry.
    *

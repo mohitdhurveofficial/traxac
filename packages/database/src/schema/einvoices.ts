@@ -1,4 +1,13 @@
-import { pgTable, text, uuid, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  uuid,
+  integer,
+  jsonb,
+  timestamp,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.js";
 import { invoices } from "./invoices.js";
 import { createdAt, tsCol, updatedAt } from "./_shared.js";
@@ -27,6 +36,18 @@ export const einvoices = pgTable(
     signedInvoice: text("signed_invoice"),
     /** Signed QR code JWS — the payload printed as a QR on the PDF. */
     signedQrCode: text("signed_qr_code"),
+    /*
+     * Whether the portal's JWS signatures were actually checked.
+     *
+     * "unverified" is the honest default and means no signing certificate is
+     * configured — never a claim that the signature was validated. Stored
+     * per document because the certificate can be added later, and a record
+     * signed before that must not retroactively appear verified.
+     */
+    signedInvoiceVerification: text("signed_invoice_verification"),
+    signedQrVerification: text("signed_qr_verification"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    verificationError: text("verification_error"),
     /** EWB number when the IRP generated it together with the IRN. */
     ewbNumber: text("ewb_number"),
 

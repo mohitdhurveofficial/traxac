@@ -311,6 +311,9 @@ export class ComplianceService {
       ewbValidUntil?: Date | null;
       status: string;
       alert?: string | null;
+      /** Outcome of checking the portal's JWS, from the gateway. */
+      signedInvoiceSignature?: string;
+      signedQrSignature?: string;
     },
     options: { raw?: unknown; source?: string } = {},
   ): Promise<Einvoice> {
@@ -323,6 +326,19 @@ export class ComplianceService {
         ackDate: data.ackDate,
         signedInvoice: data.signedInvoice,
         signedQrCode: data.signedQrCode,
+        /*
+         * Recorded exactly as the verifier reported. "unverified" means no
+         * signing certificate is configured — it is never upgraded to
+         * "verified" by assumption, and a response is never rejected merely
+         * because verification was unavailable.
+         */
+        signedInvoiceVerification: data.signedInvoiceSignature ?? "unverified",
+        signedQrVerification: data.signedQrSignature ?? "unverified",
+        verifiedAt: data.signedInvoiceSignature === "verified" ? new Date() : null,
+        verificationError:
+          data.signedInvoiceSignature === "invalid" || data.signedQrSignature === "invalid"
+            ? "The portal signature did not match the configured signing certificate"
+            : null,
         ewbNumber: data.ewbNumber ?? null,
         responsePayload: options.raw ?? { source: options.source ?? "portal" },
         errorCode: null,

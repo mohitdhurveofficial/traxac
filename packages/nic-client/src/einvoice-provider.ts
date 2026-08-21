@@ -204,6 +204,41 @@ export class NicEinvoiceProvider implements EinvoiceProvider {
     }
   }
 
+  /**
+   * Read the e-Way Bill the IRP holds against an IRN.
+   *
+   * A read, so it retries like any other GET. Absent values stay null rather
+   * than becoming zero or an epoch date.
+   */
+  async getEwbByIrn(
+    ctx: GatewayRequestContext,
+    irn: string,
+  ): Promise<
+    GatewayResult<{
+      ewbNumber: string | null;
+      ewbDate: Date | null;
+      validUntil: Date | null;
+      status: string;
+    }>
+  > {
+    try {
+      const body = await this.call(ctx, "getEwbByIrn", "GET", IRP_PATHS.ewbByIrnDetails(irn));
+      if (!body.ok) return gatewayFail(portalError(body.detail), body.raw);
+      const data = body.data;
+      return gatewayOk(
+        {
+          ewbNumber: data["EwbNo"] ? String(data["EwbNo"]) : null,
+          ewbDate: data["EwbDt"] ? parsePortalExpiry(String(data["EwbDt"])) : null,
+          validUntil: data["EwbValidTill"] ? parsePortalExpiry(String(data["EwbValidTill"])) : null,
+          status: String(data["Status"] ?? "UNKNOWN"),
+        },
+        body.raw,
+      );
+    } catch (err) {
+      return gatewayFail(this.mapError(err));
+    }
+  }
+
   /** NIC's signing certificate for this environment, if one is configured. */
   private signingCert(ctx: GatewayRequestContext): string | undefined {
     return this.options.signingCerts?.[ctx.environment];

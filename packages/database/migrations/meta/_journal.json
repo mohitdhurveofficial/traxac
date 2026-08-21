@@ -50,6 +50,13 @@
       "when": 1786963358953,
       "tag": "0006_registry_registration_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786963359953,
+      "tag": "0007_einvoice_signature_verification",
+      "breakpoints": true
     }
   ]
 }

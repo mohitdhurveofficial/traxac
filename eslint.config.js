@@ -94,7 +94,7 @@ export default tseslint.config(
   // Entry points and scripts legitimately write to stdout.
   {
     files: [
-      "scripts/**/*.{ts,mjs}",
+      "scripts/**/*.{ts,mts,mjs}",
       "**/src/server.ts",
       "**/src/worker.ts",
       "**/src/migrate.ts",

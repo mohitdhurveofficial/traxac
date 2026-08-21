@@ -54,6 +54,25 @@ export interface EinvoiceProvider {
    * same stale answer.
    */
   syncGstinDetails(ctx: GatewayRequestContext, gstin: string): Promise<GatewayResult<GstinDetails>>;
+
+  /**
+   * Read the e-Way Bill the IRP holds for an IRN.
+   *
+   * Lets an invoice that already has an IRN show its e-Way Bill without the
+   * user re-entering anything, and lets reconciliation confirm what the
+   * portal believes.
+   */
+  getEwbByIrn(
+    ctx: GatewayRequestContext,
+    irn: string,
+  ): Promise<
+    GatewayResult<{
+      ewbNumber: string | null;
+      ewbDate: Date | null;
+      validUntil: Date | null;
+      status: string;
+    }>
+  >;
 }
 
 /** e-Way Bill portal capabilities. */
