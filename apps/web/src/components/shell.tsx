@@ -116,7 +116,7 @@ export function Shell({ session, children }: { session: SessionResponse; childre
       </aside>
 
       {/* Mobile header */}
-      <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
+      <header className="no-print pt-safe sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
         <Logo />
         <span className="text-sm font-semibold">Ewayvo</span>
         <div className="ml-auto flex items-center gap-1">
@@ -137,10 +137,10 @@ export function Shell({ session, children }: { session: SessionResponse; childre
         </div>
       </header>
 
-      <main className="min-w-0 flex-1 pb-20 lg:pb-0">{children}</main>
+      <main className="scroll-pb-safe min-w-0 flex-1 lg:pb-0">{children}</main>
 
       {/* Mobile bottom navigation with the primary action in the middle */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white/95 backdrop-blur lg:hidden">
+      <nav className="no-print pb-safe fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white/95 backdrop-blur lg:hidden">
         {MOBILE_NAV.slice(0, 2).map((item) => (
           <NavLink key={item.to} to={item.to} className={mobileNavClass}>
             <item.icon /> <span className="text-[10px]">{item.label}</span>

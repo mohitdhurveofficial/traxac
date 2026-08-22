@@ -35,3 +35,4 @@ apps/web/android/app/src/main/assets/public/
 *.aab
 *.keystore
 *.jks
+apps/web/android/keystore.properties

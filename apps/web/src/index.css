@@ -29,6 +29,47 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * Device safe areas.
+   *
+   * `viewport-fit=cover` lets the page paint edge to edge, which is what makes
+   * the app look native rather than letterboxed — but it also puts content
+   * under the notch, the status bar and the home indicator. These variables
+   * carry the real inset so each fixed element can reserve exactly the space
+   * it needs. On a browser and on hardware without cutouts they resolve to
+   * zero, so the web layout is unchanged.
+   */
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  /*
+   * The WebView is not a browser: rubber-band scrolling on the document
+   * reveals the shell behind it, and a long-press text selection on a button
+   * reads as a bug. Both are disabled only inside the native shell, where the
+   * page is the whole application.
+   */
+  html.native,
+  html.native body {
+    overscroll-behavior-y: none;
+  }
+
+  html.native {
+    -webkit-touch-callout: none;
+  }
+
+  html.native button,
+  html.native a,
+  html.native [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    /* Removes the grey flash Android paints over every tap target. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-canvas text-ink antialiased;
     font-family: var(--font-sans);
@@ -49,6 +90,21 @@
   }
   input[type="number"] {
     -moz-appearance: textfield;
+  }
+}
+
+@layer utilities {
+  /* Reserve the notch/status bar above a fixed header. */
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+  /* Reserve the home indicator below a fixed bottom bar. */
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+  /* Keep scrollable content clear of a fixed bottom bar plus the indicator. */
+  .scroll-pb-safe {
+    padding-bottom: calc(4rem + var(--safe-bottom));
   }
 }
 

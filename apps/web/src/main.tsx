@@ -8,6 +8,7 @@ import { ErrorBoundary } from "./components/boundary.js";
 import { Toaster } from "./components/toaster.js";
 import { ConnectionBanner } from "./components/connection.js";
 import { loadSessionToken } from "./lib/platform.js";
+import { hideSplash, initialiseNativeShell } from "./lib/native.js";
 import { notifyError } from "./lib/toast.js";
 import "./index.css";
 
@@ -61,8 +62,12 @@ if (!container) throw new Error("Missing #root element");
  * does not allow.
  */
 async function bootstrap(): Promise<void> {
+  // Both are no-ops on the web and resolve immediately.
   await loadSessionToken();
+  await initialiseNativeShell();
   renderApp();
+  // Only now is there something to look at.
+  void hideSplash();
 }
 
 function renderApp(): void {

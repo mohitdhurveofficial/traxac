@@ -16,10 +16,61 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    /*
+     * Release signing.
+     *
+     * The keystore is supplied from keystore.properties or the environment,
+     * never committed. Losing the upload key means the app can never be
+     * updated on Play again, so it belongs in a password manager and a backup,
+     * not in this repository.
+     *
+     * When no keystore is configured the release build stays unsigned rather
+     * than silently falling back to the debug key — a debug-signed AAB is
+     * rejected by Play, and finding that out at upload time is worse than
+     * finding it out here.
+     */
+    signingConfigs {
+        release {
+            def props = new Properties()
+            def propsFile = rootProject.file("keystore.properties")
+            if (propsFile.exists()) {
+                propsFile.withInputStream { props.load(it) }
+            }
+
+            def storePathValue = props.getProperty("storeFile") ?: System.getenv("EWAYVO_KEYSTORE")
+            def storePasswordValue = props.getProperty("storePassword") ?: System.getenv("EWAYVO_KEYSTORE_PASSWORD")
+            def keyAliasValue = props.getProperty("keyAlias") ?: System.getenv("EWAYVO_KEY_ALIAS")
+            def keyPasswordValue = props.getProperty("keyPassword") ?: System.getenv("EWAYVO_KEY_PASSWORD")
+
+            if (storePathValue && file(storePathValue).exists()) {
+                storeFile file(storePathValue)
+                storePassword storePasswordValue
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Shrinks and obfuscates. The app is a WebView shell, so there is
+            // little Java to break, and Play expects a shrunk release.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            def signing = signingConfigs.release
+            if (signing.storeFile != null) {
+                signingConfig signing
+            } else {
+                logger.warn("EWAYVO: no keystore configured — the release build will be UNSIGNED " +
+                            "and Google Play will reject it. See docs/mobile-app.md.")
+            }
+        }
+        debug {
+            // Keeps the debug build installable alongside a release install.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
         }
     }
 }
